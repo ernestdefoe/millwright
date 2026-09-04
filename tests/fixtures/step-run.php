@@ -35,6 +35,10 @@ $steps = new class($plan, $logPath, $killInside) implements Steps {
 
     public function doItem(string $phase, string $item, Run $run): ?string
     {
+        // A moment of work, so concurrent drivers genuinely overlap rather than
+        // finishing too fast to collide.
+        usleep(40000);
+
         // The record of the work, written before the driver saves progress —
         // so a kill in between shows up as a repeat, which is exactly the
         // behaviour the test is there to characterise.
@@ -50,7 +54,7 @@ $steps = new class($plan, $logPath, $killInside) implements Steps {
 };
 
 $store  = new RunStore($dir);
-$runner = new StepRunner($store, $steps, fn () => time());
+$runner = new StepRunner($store, $steps, fn () => time(), $dir . '/locks');
 
 if ($store->load($runId) === null) {
     $runner->begin($runId);

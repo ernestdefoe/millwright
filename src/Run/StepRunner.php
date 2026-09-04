@@ -29,12 +29,25 @@ use Throwable;
  */
 class StepRunner
 {
+    /**
+     * True when the last call to step() did nothing because another driver was
+     * already working on the run. Not an error — the caller should report it and
+     * carry on polling.
+     */
+    private bool $busy = false;
+
     /** @param callable():int $clock */
     public function __construct(
         private RunStore $store,
         private Steps $steps,
         private $clock,
+        private ?string $lockDir = null,
     ) {
+    }
+
+    public function wasBusy(): bool
+    {
+        return $this->busy;
     }
 
     public function begin(string $id): Run
@@ -50,11 +63,85 @@ class StepRunner
      */
     public function step(string $id): Run
     {
+        $this->busy = false;
+
         $run = $this->store->load($id);
 
         if ($run === null) {
             throw new \RuntimeException("No run called $id");
         }
+
+        if ($run->isFinished()) {
+            return $run;
+        }
+
+        /*
+         * 🚨 One driver at a time.
+         *
+         * The whole point of the design is that anything can turn the handle —
+         * the admin page polling, a cron tick, a queue worker — and on a forum
+         * that has a queue, two of them WILL run at once. Without this, both
+         * read the same index, both do the same item, and a package gets applied
+         * twice.
+         *
+         * Non-blocking on purpose. A second driver arriving mid-step should say
+         * "someone else has it" and let the caller poll again, not queue up
+         * behind a lock and pile requests on a host that is already busy.
+         */
+        $lock = $this->acquire($id);
+
+        if ($lock === null) {
+            $this->busy = true;
+
+            return $run;
+        }
+
+        try {
+            return $this->work($run);
+        } finally {
+            flock($lock, LOCK_UN);
+            fclose($lock);
+        }
+    }
+
+    /** @return resource|null */
+    private function acquire(string $id)
+    {
+        $dir = $this->lockDir;
+
+        if ($dir === null) {
+            return fopen('php://memory', 'r+') ?: null;   // no lock configured
+        }
+
+        if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
+            return fopen('php://memory', 'r+') ?: null;
+        }
+
+        $handle = fopen($dir . '/' . preg_replace('/[^A-Za-z0-9_-]/', '', $id) . '.lock', 'c');
+
+        if ($handle === false) {
+            return null;
+        }
+
+        if (! flock($handle, LOCK_EX | LOCK_NB)) {
+            fclose($handle);
+
+            return null;
+        }
+
+        return $handle;
+    }
+
+    private function work(Run $run): Run
+    {
+        $id = $run->id;
+
+        /*
+         * Re-read inside the lock. Between loading it above and taking the lock,
+         * another driver may have finished a step — carrying on from the stale
+         * copy would repeat that item.
+         */
+        $run = $this->store->load($id) ?? $run;
 
         if ($run->isFinished()) {
             return $run;

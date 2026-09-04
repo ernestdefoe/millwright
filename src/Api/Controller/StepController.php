@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use ErnestDefoe\Millwright\Run\Drivers;
 use ErnestDefoe\Millwright\Run\RunStore;
 use Flarum\Http\RequestUtil;
 use Laminas\Diactoros\Response\JsonResponse;
@@ -22,8 +23,10 @@ use Psr\Http\Server\RequestHandlerInterface;
  */
 class StepController implements RequestHandlerInterface
 {
-    public function __construct(private RunStore $runs)
-    {
+    public function __construct(
+        private RunStore $runs,
+        private Drivers $drivers,
+    ) {
     }
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -34,12 +37,19 @@ class StepController implements RequestHandlerInterface
 
         if ($run === null) {
             return new JsonResponse([
-                'run'   => null,
-                'ready' => false,
-                'why'   => 'Millwright can inspect this host, but it cannot run updates yet — Composer support is the next piece of work.',
+                'run'      => null,
+                'ready'    => false,
+                'why'      => 'Millwright can inspect this host, but it cannot run updates yet — Composer support is the next piece of work.',
+                'driver'   => $this->drivers->describe(),
+                'hasWorker' => $this->drivers->hasWorker(),
             ]);
         }
 
-        return new JsonResponse(['run' => $run->toArray(), 'ready' => false]);
+        return new JsonResponse([
+            'run'       => $run->toArray(),
+            'ready'     => false,
+            'driver'    => $this->drivers->describe(),
+            'hasWorker' => $this->drivers->hasWorker(),
+        ]);
     }
 }
