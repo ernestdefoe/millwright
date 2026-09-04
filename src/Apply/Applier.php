@@ -182,7 +182,7 @@ class Applier
         if (is_dir($target)) {
             // Left by an earlier attempt at this same change. The live copy is
             // the newer truth, so the stale stash goes.
-            $this->deleteTree($target);
+            Tree::delete($target);
         }
 
         $this->ensureDir(dirname($target));
@@ -213,7 +213,7 @@ class Applier
              * intact even on the paths nobody expects to hit.
              */
             $orphan = $this->path($this->trashDir, $change->trashName() . '.superseded');
-            $this->deleteTree($orphan);
+            Tree::delete($orphan);
             @rename($live, $orphan);
         }
 
@@ -239,52 +239,5 @@ class Applier
         if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
             throw new RuntimeException("Could not create $dir");
         }
-    }
-
-    /**
-     * 🚨 Never walks through a symlink.
-     *
-     * RecursiveDirectoryIterator follows them by default, and is_dir() is true
-     * for a link that points at a directory — so the obvious version of this
-     * method descends through a link and unlinks the files on the other side.
-     * On a developer's machine the other side is a working repository: Composer
-     * installs a path repository AS A SYMLINK, so vendor/vendor/pkg is a link
-     * into a checkout somebody is editing. Deleting a stale stash would have
-     * emptied it.
-     *
-     * SKIP_DOTS gets the iteration right; only unlinking links rather than
-     * recursing into them gets the deletion right. A link is one thing to
-     * remove, never a door.
-     */
-    private function deleteTree(string $dir): void
-    {
-        if (is_link($dir)) {
-            @unlink($dir);
-
-            return;
-        }
-
-        if (! is_dir($dir)) {
-            return;
-        }
-
-        $items = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::CHILD_FIRST
-        );
-
-        foreach ($items as $item) {
-            $path = $item->getPathname();
-
-            if (is_link($path)) {
-                @unlink($path);
-
-                continue;
-            }
-
-            $item->isDir() ? @rmdir($path) : @unlink($path);
-        }
-
-        @rmdir($dir);
     }
 }

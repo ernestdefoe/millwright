@@ -25,10 +25,17 @@ use RuntimeException;
  */
 class Rollback
 {
+    /**
+     * @param ?string $installPath the forum root, when the manifests should be
+     *        put back too. Optional so the recovery tests can exercise the
+     *        filesystem half on a bare tree with no Composer project in it.
+     */
     public function __construct(
         private string $vendorDir,
         private string $trashDir,
         private Journal $journal,
+        private ?string $installPath = null,
+        private ?string $savedManifests = null,
     ) {
     }
 
@@ -63,7 +70,55 @@ class Rollback
             $undone[] = $change->describe();
         }
 
+        foreach ($this->restoreManifests() as $line) {
+            $undone[] = $line;
+        }
+
         return $undone;
+    }
+
+    /**
+     * Put composer.lock — and composer.json, if installing changed it — back.
+     *
+     * 🚨 Without this a rollback is only half a rollback, and the half it leaves
+     * out is the half that misleads. The plan phase runs `composer update
+     * --no-install`, which rewrites the lock immediately; moving the files back
+     * afterwards while leaving the lock claiming the new versions gives a site
+     * whose record of itself is wrong. Nothing looks broken. The damage appears
+     * at the NEXT update, when Composer diffs from a lock that says work was
+     * done that was undone, and plans around packages it believes are already in
+     * place.
+     *
+     * Copied rather than renamed, so a failure part-way leaves the saved copy
+     * intact and this can simply be run again.
+     *
+     * @return list<string>
+     */
+    private function restoreManifests(): array
+    {
+        if ($this->installPath === null || $this->savedManifests === null) {
+            return [];
+        }
+
+        $done = [];
+
+        foreach (['composer.lock', 'composer.json'] as $file) {
+            $saved = $this->savedManifests . '/' . $file . '.before';
+
+            if (! is_file($saved)) {
+                // composer.json is only saved when the run was an install, so
+                // its absence is the normal case rather than a problem.
+                continue;
+            }
+
+            if (! @copy($saved, $this->installPath . '/' . $file)) {
+                throw new RuntimeException("Could not put $file back from $saved");
+            }
+
+            $done[] = "restored $file";
+        }
+
+        return $done;
     }
 
     /** Put the stashed version back, discarding whatever is live. */
@@ -85,7 +140,7 @@ class Rollback
         if (is_dir($live)) {
             // The new version. Moved aside, not deleted — see the class comment.
             $aside = $this->path($this->trashDir, $change->trashName() . '.rolledback');
-            $this->deleteTree($aside);
+            Tree::delete($aside);
 
             if (! @rename($live, $aside)) {
                 throw new RuntimeException("Could not move $live aside during rollback");
@@ -110,7 +165,7 @@ class Rollback
         }
 
         $aside = $this->path($this->trashDir, $change->trashName() . '.rolledback');
-        $this->deleteTree($aside);
+        Tree::delete($aside);
         $this->ensureDir(dirname($aside));
 
         if (! @rename($live, $aside)) {
@@ -128,23 +183,5 @@ class Rollback
         if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
             throw new RuntimeException("Could not create $dir");
         }
-    }
-
-    private function deleteTree(string $dir): void
-    {
-        if (! is_dir($dir)) {
-            return;
-        }
-
-        $items = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::CHILD_FIRST
-        );
-
-        foreach ($items as $item) {
-            $item->isDir() ? @rmdir($item->getPathname()) : @unlink($item->getPathname());
-        }
-
-        @rmdir($dir);
     }
 }

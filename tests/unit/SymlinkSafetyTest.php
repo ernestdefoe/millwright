@@ -4,6 +4,7 @@ namespace ErnestDefoe\Millwright\Tests\Unit;
 
 use ErnestDefoe\Millwright\Apply\Applier;
 use ErnestDefoe\Millwright\Apply\Journal;
+use ErnestDefoe\Millwright\Apply\Rollback;
 use ErnestDefoe\Millwright\Plan\Change;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -76,6 +77,40 @@ class SymlinkSafetyTest extends TestCase
             'clearing a stale stash must not reach through a symlink into a real checkout'
         );
         $this->assertDirectoryExists($checkout . '/src');
+    }
+
+    public function test_the_rollback_does_not_reach_through_a_link_either(): void
+    {
+        /*
+         * 🚨 The applier and the rollback each had their own copy of the delete,
+         * and they drifted — the hole was closed in one and left open in the
+         * other. There is one copy now (Apply\Tree), and this is here so the
+         * second caller cannot quietly regrow its own.
+         */
+        $checkout = $this->dir . '/my-repo';
+        mkdir($checkout . '/src', 0775, true);
+        file_put_contents($checkout . '/src/Unpushed.php', '<?php // three days of work');
+
+        $change = new Change(Change::REPLACE, 'acme/widget', '1.0.0', '2.0.0');
+
+        mkdir($this->dir . '/vendor/acme/widget', 0775, true);
+        file_put_contents($this->dir . '/vendor/acme/widget/old.php', 'old');
+        mkdir($this->dir . '/staging/acme/widget', 0775, true);
+        file_put_contents($this->dir . '/staging/acme/widget/new.php', 'new');
+
+        $this->applier()->applyOne($change);
+
+        // A leftover from an earlier rollback, sitting exactly where the next one
+        // clears before it moves the live copy aside.
+        symlink($checkout, $this->dir . '/trash/' . $change->trashName() . '.rolledback');
+
+        (new Rollback(
+            $this->dir . '/vendor',
+            $this->dir . '/trash',
+            new Journal($this->dir . '/journal.jsonl')
+        ))->run();
+
+        $this->assertFileExists($checkout . '/src/Unpushed.php');
     }
 
     public function test_a_path_installed_package_is_refused_rather_than_swapped(): void

@@ -76,7 +76,15 @@ class ComposerSteps implements Steps
         $lockPath = $this->installPath . '/composer.lock';
         $before   = $this->readJson($lockPath);
 
+        /*
+         * 🚨 Saved BEFORE Composer is allowed to rewrite them, and used by the
+         * rollback. `--no-install` updates the lock the moment it succeeds, so
+         * without a copy taken here there is no way back to the site's own
+         * record of itself — and a rollback that restores the files but not the
+         * lock leaves a site whose manifest describes work that was undone.
+         */
         copy($lockPath, $this->workDir . '/composer.lock.before');
+        copy($this->installPath . '/composer.json', $this->workDir . '/composer.json.before');
 
         $args = array_merge(['update'], $this->requested, ['--with-all-dependencies', '--no-install']);
         $result = $this->composer->run($args);

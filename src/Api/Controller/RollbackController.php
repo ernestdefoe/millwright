@@ -48,7 +48,13 @@ class RollbackController implements RequestHandlerInterface
             ], 422);
         }
 
-        $undone = (new Rollback($this->paths->vendor, $workDir->trash(), $journal))->run();
+        $undone = (new Rollback(
+            $this->paths->vendor,
+            $workDir->trash(),
+            $journal,
+            $this->paths->base,
+            $workDir->root()
+        ))->run();
 
         $this->runs->save($run->rolledBack(time(), $undone));
 
