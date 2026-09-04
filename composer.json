@@ -1,28 +1,57 @@
 {
     "name": "ernestdefoe/millwright",
-    "description": "Millwright for Flarum 2 — install, update and roll back extensions and Flarum itself, on any host. Every step is a checkpoint, so an interrupted update loses progress, never the site.",
-    "keywords": ["flarum", "flarum-extension", "composer", "updates", "rollback"],
+    "description": "Millwright for Flarum 2 \u2014 install, update and roll back extensions and Flarum itself, on any host. Every step is a checkpoint, so an interrupted update loses progress, never the site.",
+    "keywords": [
+        "flarum",
+        "flarum-extension",
+        "composer",
+        "updates",
+        "rollback"
+    ],
     "type": "flarum-extension",
     "license": "proprietary",
-    "authors": [{ "name": "ernestdefoe", "email": "ernestdefoe@gmail.com" }],
+    "authors": [
+        {
+            "name": "ernestdefoe",
+            "email": "ernestdefoe@gmail.com"
+        }
+    ],
     "homepage": "https://github.com/ernestdefoe/millwright",
     "support": {
         "issues": "https://github.com/ernestdefoe/millwright/issues",
         "source": "https://github.com/ernestdefoe/millwright"
     },
     "require": {
-        "php": "^8.3"
+        "php": "^8.3",
+        "flarum/core": "^2.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^11.0"
     },
     "autoload": {
-        "psr-4": { "ErnestDefoe\\Millwright\\": "src/" }
+        "psr-4": {
+            "ErnestDefoe\\Millwright\\": "src/"
+        }
     },
     "autoload-dev": {
-        "psr-4": { "ErnestDefoe\\Millwright\\Tests\\": "tests/" }
+        "psr-4": {
+            "ErnestDefoe\\Millwright\\Tests\\": "tests/"
+        }
     },
-    "config": { "sort-packages": true },
-    "minimum-stability": "stable",
-    "prefer-stable": true
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "extra": {
+        "flarum-extension": {
+            "title": "Millwright",
+            "category": "feature",
+            "icon": {
+                "name": "fas fa-screwdriver-wrench",
+                "backgroundColor": "#b0561f",
+                "color": "#fff"
+            }
+        }
+    }
 }

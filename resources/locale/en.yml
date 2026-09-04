@@ -1,0 +1,11 @@
+ernestdefoe-millwright:
+  admin:
+    not_yet_updating: >-
+      Millwright can tell you what this host will and will not allow. It cannot
+      run updates yet — that is the next piece of work. Nothing here will change
+      your site.
+    tab_installed: "Installed ({count})"
+    tab_host: This host
+    enabled: enabled
+    disabled: disabled
+    version_unknown: version unknown

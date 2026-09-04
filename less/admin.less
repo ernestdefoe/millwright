@@ -1,0 +1,79 @@
+/* Millwright admin. Card grid rather than a list, because that is the shape
+ * people already know from Extension Manager and there is no value in making
+ * them relearn where things are. */
+.Millwright-grid {
+  /* 🚨 auto-FIT, not auto-fill: with three extensions installed the cards should
+   * fill the row rather than sit at their minimum width beside empty tracks. */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(268px, 1fr));
+  grid-auto-rows: max-content;
+  gap: 16px;
+}
+
+.Millwright-card {
+  border: 1px solid var(--control-bg);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--body-bg);
+}
+
+.Millwright-cardTop { display: flex; gap: 12px; align-items: flex-start; }
+
+.Millwright-icon {
+  width: 40px; height: 40px; border-radius: 10px; flex: none;
+  display: grid; place-items: center; color: #fff; font-size: 17px;
+}
+
+.Millwright-name { font-weight: 700; font-size: 15px; line-height: 1.3; }
+.Millwright-pkg {
+  font-family: var(--code-font, monospace);
+  font-size: 11.5px; color: var(--muted-color); word-break: break-all;
+}
+.Millwright-meta {
+  font-family: var(--code-font, monospace);
+  font-size: 11px; color: var(--muted-color);
+  display: flex; flex-wrap: wrap; gap: 4px 10px;
+}
+.Millwright-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  border-top: 1px solid var(--control-bg); padding-top: 11px; margin-top: auto;
+}
+
+.Millwright-tag {
+  display: inline-block; font-family: var(--code-font, monospace);
+  font-size: 11px; padding: 2px 7px; border-radius: 20px;
+  background: var(--control-bg); color: var(--muted-color);
+}
+.Millwright-tag--ok { background: rgba(15,115,96,.12); color: #0f7360; }
+.Millwright-tag--warn { background: rgba(138,90,0,.14); color: #8a5a00; }
+
+/* The host panel — the thing the current tooling has no equivalent of. */
+.Millwright-host { margin-bottom: 24px; }
+.Millwright-summary {
+  border: 1px solid var(--control-bg);
+  border-left: 3px solid var(--primary-color);
+  border-radius: 0 10px 10px 0;
+  padding: 14px 18px; margin-bottom: 16px;
+}
+.Millwright-summary h3 { margin: 0 0 4px; font-size: 16px; }
+.Millwright-summary p { margin: 0; color: var(--muted-color); max-width: 68ch; }
+
+.Millwright-checks {
+  display: grid; gap: 1px; background: var(--control-bg);
+  border: 1px solid var(--control-bg); border-radius: 11px; overflow: hidden;
+}
+.Millwright-check {
+  background: var(--body-bg); padding: 13px 16px;
+  display: grid; grid-template-columns: 24px 1fr; gap: 12px; align-items: start;
+}
+.Millwright-check-what { font-weight: 600; }
+.Millwright-check-why { color: var(--muted-color); font-size: 13px; margin-top: 2px; max-width: 70ch; }
+
+.Millwright-notice {
+  border: 1px solid var(--control-bg);
+  border-radius: 10px; padding: 14px 18px; margin-bottom: 22px;
+  color: var(--muted-color);
+}
