@@ -72,29 +72,44 @@ class Applier
             );
         }
 
-        $this->ensureDir($this->trashDir);
         $done = [];
 
         foreach ($changes as $change) {
-            $seq = $this->journal->begin([
-                'change' => $change->toArray(),
-                'trash'  => $change->trashName(),
-            ]);
-
-            $this->observe('journalled', $change);
-
-            match ($change->op) {
-                Change::REPLACE => $this->replace($change),
-                Change::ADD     => $this->add($change),
-                Change::REMOVE  => $this->remove($change),
-            };
-
-            $this->journal->complete($seq);
-            $this->observe('completed', $change);
-            $done[] = $change->describe();
+            $done[] = $this->applyOne($change);
         }
 
         return $done;
+    }
+
+    /**
+     * One package, journalled.
+     *
+     * 🚨 No "did the last run finish" guard here, unlike apply(). When the step
+     * driver is doing the sequencing, an unfinished journal is the NORMAL state
+     * — it is the record of the run currently in progress. Refusing on it would
+     * make the second step of every update fail.
+     */
+    public function applyOne(Change $change): string
+    {
+        $this->ensureDir($this->trashDir);
+
+        $seq = $this->journal->begin([
+            'change' => $change->toArray(),
+            'trash'  => $change->trashName(),
+        ]);
+
+        $this->observe('journalled', $change);
+
+        match ($change->op) {
+            Change::REPLACE => $this->replace($change),
+            Change::ADD     => $this->add($change),
+            Change::REMOVE  => $this->remove($change),
+        };
+
+        $this->journal->complete($seq);
+        $this->observe('completed', $change);
+
+        return $change->describe();
     }
 
     private function replace(Change $change): void
