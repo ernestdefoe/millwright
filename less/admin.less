@@ -77,3 +77,47 @@
   border-radius: 10px; padding: 14px 18px; margin-bottom: 22px;
   color: var(--muted-color);
 }
+
+/* The dashboard banner. Deliberately quiet: it is information, not an alarm —
+ * an update existing is not an emergency, and styling it like one is how a
+ * notice becomes something people click past without reading. */
+.Millwright-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--control-bg);
+  border-left: 3px solid var(--primary-color);
+  border-radius: 0 10px 10px 0;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  background: var(--body-bg);
+}
+
+.Millwright-banner-title { font-weight: 700; }
+.Millwright-banner-body { color: var(--muted-color); font-size: 13px; max-width: 74ch; }
+.Millwright-banner-actions { display: flex; gap: 8px; align-items: center; }
+
+.Millwright-count {
+  display: inline-block;
+  margin-left: 7px;
+  padding: 0 7px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--control-bg);
+  color: var(--muted-color);
+}
+.Button--primary .Millwright-count { background: rgba(255,255,255,.24); color: #fff; }
+
+.Millwright-checkline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted-color);
+  font-size: 13px;
+  margin-bottom: 16px;
+}

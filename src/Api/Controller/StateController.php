@@ -4,6 +4,7 @@ namespace ErnestDefoe\Millwright\Api\Controller;
 
 use ErnestDefoe\Millwright\Host\Capability;
 use ErnestDefoe\Millwright\Run\RunStore;
+use ErnestDefoe\Millwright\Work\UpdateCheck;
 use Flarum\Extension\ExtensionManager;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
@@ -35,16 +36,31 @@ class StateController implements RequestHandlerInterface
 
         $run = $this->runs->latest();
 
+        $check = new UpdateCheck($this->paths->storage . '/millwright/updates.json');
+        $cached = $check->cached();
+
         return new JsonResponse([
             'host'       => (new Capability($this->paths->base))->report(),
-            'installed'  => $this->installed(),
+            'installed'  => $this->installed($cached['updates'] ?? []),
             'run'        => $run?->toArray(),
             'runIsStale' => $run !== null && $run->isStale(time()),
+            /*
+             * 🚨 Sent with its age and its blind spots, never as a bare count.
+             * "3 updates" is a claim; "3 updates, checked 2 hours ago, and 4
+             * packages could not be checked at all" is the truth, and the second
+             * is what lets somebody decide whether to trust it.
+             */
+            'updates'    => [
+                'available'   => $cached['updates'] ?? [],
+                'checkedAt'   => $cached['checkedAt'] ?? null,
+                'stale'       => $check->isStale(),
+                'uncheckable' => $cached['uncheckable'] ?? [],
+            ],
         ]);
     }
 
     /** @return list<array<string,mixed>> */
-    private function installed(): array
+    private function installed(array $updates): array
     {
         $out = [];
 
@@ -57,12 +73,12 @@ class StateController implements RequestHandlerInterface
                 'icon'    => $extension->getIcon(),
                 'enabled' => $this->extensions->isEnabled($extension->getId()),
                 /*
-                 * 🚨 Deliberately absent, rather than guessed at: whether an
-                 * update exists is a question only a resolve can answer, and
-                 * resolving is the plan phase. Showing "up to date" here on no
-                 * evidence would be a lie the user could act on.
+                 * 🚨 A HINT from the cheap Packagist check, not a promise. It
+                 * means "a newer version exists", not "you can have it" — only
+                 * the plan answers that, and the screen has to keep the two
+                 * apart or the badge becomes something people learn to ignore.
                  */
-                'update'  => null,
+                'update'  => $updates[$extension->name] ?? null,
             ];
         }
 

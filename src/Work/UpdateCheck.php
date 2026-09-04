@@ -32,6 +32,43 @@ class UpdateCheck
     }
 
     /**
+     * 🚨 Only things the site actually chose.
+     *
+     * Running this against a real forum returned 59 "updates", of which nearly
+     * all were transitive dependencies — illuminate/collections 13.30.0 →
+     * 13.30.1, guzzle 7 → 8, doctrine 3 → 4. Nobody updates those individually;
+     * they arrive with the extension that needs them, and several are pinned by
+     * flarum/core so the newer version is not installable at all.
+     *
+     * Reporting them would be worse than reporting nothing: a badge showing 59
+     * when 4 things matter is a badge people stop reading. So the check is
+     * limited to Flarum extensions and Flarum itself — the things somebody
+     * deliberately installed and might deliberately update.
+     *
+     * @param list<array{name:string,version:string,type?:string}> $packages
+     * @return array<string,string>
+     */
+    public function interesting(array $packages): array
+    {
+        $out = [];
+
+        foreach ($packages as $package) {
+            $name = (string) ($package['name'] ?? '');
+            $type = (string) ($package['type'] ?? '');
+
+            if ($name === '') {
+                continue;
+            }
+
+            if ($type === 'flarum-extension' || $name === 'flarum/core') {
+                $out[$name] = (string) ($package['version'] ?? '');
+            }
+        }
+
+        return $out;
+    }
+
+    /**
      * @param array<string,string> $installed package => installed version
      * @param callable(string):?array $fetch  overridable so this is testable
      *                                        without a network

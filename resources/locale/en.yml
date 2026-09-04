@@ -9,3 +9,26 @@ ernestdefoe-millwright:
     enabled: enabled
     disabled: disabled
     version_unknown: version unknown
+
+    # 🚨 "A newer version exists" — never "an update is available". The cheap
+    # check knows the first and cannot know the second, and a badge that
+    # overstates itself is one people stop reading.
+    none_newer: Everything checkable is up to date.
+    some_newer: "{count} package(s) have a newer version."
+    checked_ago: "Checked {when}."
+    never_checked: Not checked yet.
+    uncheckable: "{count} could not be checked — they are not on Packagist."
+    check_now: Check now
+    checking: Checking…
+
+    banner_title: "{count} package(s) have a newer version"
+    banner_body: >-
+      That does not always mean you can install it — what else has to change, and
+      whether anything blocks it, is worked out when you ask.
+    banner_checked: "Last checked {when}."
+    banner_uncheckable: "{count} package(s) could not be checked at all."
+    banner_open: Take a look
+    banner_dismiss: Not now
+    ago_minutes: "{count} minutes ago"
+    ago_hours: "{count} hours ago"
+    ago_days: "{count} days ago"

@@ -118,6 +118,29 @@ class UpdateCheckTest extends TestCase
         $this->assertSame(['from' => '1.0.0', 'to' => '2.0.0'], $check->cached()['updates']['a/b']);
     }
 
+    public function test_only_extensions_and_flarum_itself_are_worth_checking(): void
+    {
+        /*
+         * 🚨 Run against a real forum this returned 59 "updates", nearly all
+         * transitive — illuminate/collections 13.30.0 → 13.30.1, guzzle 7 → 8.
+         * Nobody updates those individually; they arrive with the extension that
+         * needs them, and several are pinned by flarum/core so the newer version
+         * cannot be installed at all. A badge showing 59 when 4 things matter is
+         * a badge people stop reading.
+         */
+        $interesting = $this->check()->interesting([
+            ['name' => 'ernestdefoe/page-builder', 'version' => '3.5.0', 'type' => 'flarum-extension'],
+            ['name' => 'flarum/core', 'version' => '2.0.0-rc.8', 'type' => 'library'],
+            ['name' => 'illuminate/collections', 'version' => '13.30.0', 'type' => 'library'],
+            ['name' => 'guzzlehttp/guzzle', 'version' => '7.15.5', 'type' => 'library'],
+        ]);
+
+        $this->assertSame(
+            ['ernestdefoe/page-builder', 'flarum/core'],
+            array_keys($interesting)
+        );
+    }
+
     public function test_a_never_checked_cache_reads_as_empty_rather_than_erroring(): void
     {
         $cached = $this->check()->cached();
