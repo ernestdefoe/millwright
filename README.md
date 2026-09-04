@@ -41,8 +41,8 @@ copying `vendor/` would not.
 | Phase | | |
 |---|---|---|
 | 1 | Plan, measured against a constrained host | ✅ done |
-| 2 | Journal apply + rollback | ✅ **this** |
-| 3 | Step driver + admin UI | — |
+| 2 | Journal apply + rollback | ✅ done |
+| 3 | Step driver | ✅ **this** — admin UI still to come |
 | 4 | Discovery, Flarum 2 only | — |
 | 5 | Core updates + compatibility verdict | — |
 | 6 | Symlinked vendor slots for capable hosts | — |
@@ -61,3 +61,18 @@ rolls back and asserts the tree is byte-for-byte what it was.
 
 A thrown exception would be a weaker test: it unwinds the stack and runs
 destructors, which a host killing an overrunning request does not.
+
+`ResumabilityTest` goes further and kills at *random* points, repeatedly, until
+a run completes — a better model of a real host, where the cut lands wherever
+the clock happens to be. One case kills in the single gap that matters: between
+doing an item and recording it. That item is then redone on resume, and the test
+asserts the repeat rather than pretending it cannot happen. Everything in the
+applier is built so a repeat is a no-op.
+
+## How it survives a 30-second host
+
+Nothing loops. A call to `StepRunner::step()` does exactly one item and returns,
+so progress is a function of how many times something calls it — the admin screen
+polling, a cron tick, or a queue worker, interchangeably. A host that cuts every
+request at thirty seconds can therefore finish a ten-minute update, which no
+amount of making the update faster would have achieved.
