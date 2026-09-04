@@ -2,7 +2,7 @@
   "private": true,
   "name": "@ernestdefoe/millwright",
   "version": "0.1.0",
-  "description": "Client Area for Flarum 2",
+  "description": "Millwright for Flarum 2",
   "dependencies": {},
   "devDependencies": {
     "flarum-tsconfig": "^2.0.0",

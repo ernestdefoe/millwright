@@ -121,3 +121,123 @@
   font-size: 13px;
   margin-bottom: 16px;
 }
+
+// ── A run in progress ────────────────────────────────────────────────────────
+//
+// 🚨 Deliberately plain. This panel is read while somebody is anxious about
+// their site, so nothing here animates, pulses, or draws the eye away from the
+// two things that matter: which step it is on, and what the log says.
+
+.Millwright-run {
+  border: 1px solid var(--control-bg);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 24px;
+  background: var(--body-bg);
+}
+
+.Millwright-run--failed { border-color: var(--alert-error-color, #d95a4e); }
+
+.Millwright-runHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  align-items: baseline;
+  justify-content: space-between;
+
+  h3 { margin: 0; font-size: 16px; }
+}
+
+.Millwright-driver { color: var(--muted-color); font-size: 12px; max-width: 52ch; }
+
+.Millwright-phases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  font-size: 12px;
+
+  .Millwright-phase {
+    color: var(--muted-color);
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: var(--control-bg);
+
+    // The phase being worked on reads first; finished ones stay legible rather
+    // than fading out, because "what has already happened" is what somebody
+    // checks when something goes wrong.
+    &.is-now { background: var(--primary-color); color: #fff; font-weight: 600; }
+    &.is-done { color: var(--text-color); }
+  }
+}
+
+.Millwright-progress { margin-top: 16px; }
+
+.Millwright-progressBar {
+  height: 6px;
+  border-radius: 6px;
+  background: var(--control-bg);
+  overflow: hidden;
+}
+
+.Millwright-progressFill {
+  height: 100%;
+  background: var(--primary-color);
+  transition: width .3s ease;
+}
+
+.Millwright-progressText {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--muted-color);
+  font-variant-numeric: tabular-nums;
+}
+
+.Millwright-error { margin-top: 18px; }
+.Millwright-errorWhere { font-weight: 700; margin-bottom: 6px; }
+
+.Millwright-errorText {
+  // Composer's own words, at full width, scrolling sideways rather than
+  // wrapping mid-constraint — the exact string is what somebody searches for.
+  white-space: pre;
+  overflow-x: auto;
+  max-height: 260px;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--control-bg);
+  margin-bottom: 12px;
+}
+
+.Millwright-stall,
+.Millwright-next {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--muted-color);
+  max-width: 74ch;
+}
+
+.Millwright-log {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--control-bg);
+  font-size: 13px;
+  max-height: 320px;
+  overflow-y: auto;
+
+  li {
+    padding: 3px 0;
+    color: var(--muted-color);
+  }
+
+  // The most recent line is the one being looked for.
+  li:last-child { color: var(--text-color); font-weight: 600; }
+}
+
+.Millwright-dismiss { margin-top: 14px; padding-left: 0; }
+.Millwright-updateAll { margin-bottom: 16px; }
+.Millwright-tag--muted { background: var(--control-bg); color: var(--muted-color); }

@@ -2,6 +2,7 @@ import app from 'flarum/admin/app';
 import ExtensionPage from 'flarum/admin/components/ExtensionPage';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import HostPanel from './HostPanel';
+import RunPanel from './RunPanel';
 
 declare const m: any;
 
@@ -14,6 +15,8 @@ interface Installed {
   enabled: boolean;
   /** A hint from the cheap check: a newer version exists. Not a promise. */
   update: { from: string; to: string } | null;
+  /** Installed from a local path, i.e. a symlink into somebody's checkout. */
+  pathInstall: boolean;
 }
 
 const t = (k: string, p?: any) => app.translator.trans('ernestdefoe-millwright.admin.' + k, p);
@@ -25,6 +28,14 @@ export default class MillwrightPage extends ExtensionPage {
   updates: any = { available: {}, checkedAt: null, stale: true, uncheckable: [] };
   checking = false;
   tab: 'installed' | 'host' = 'installed';
+  run: any = null;
+  driver: string | null = null;
+  busy = false;
+  stale = false;
+  starting = false;
+  notice: string | null = null;
+  rollbackNote: string | null = null;
+  dismissed = false;
 
   oninit(vnode: any) {
     super.oninit(vnode);
@@ -38,6 +49,14 @@ export default class MillwrightPage extends ExtensionPage {
         this.host = data.host;
         this.installed = data.installed || [];
         this.updates = data.updates || this.updates;
+        /*
+         * 🚨 An unfinished run found on load is picked straight back up. Closing
+         * the tab is not abandoning the update — the state is on disk and any
+         * driver can carry it on — so reopening the page should show it running,
+         * not an empty screen that invites somebody to start a second one.
+         */
+        this.run = data.run || null;
+        this.stale = !!data.runIsStale;
         this.loading = false;
         m.redraw();
       })
@@ -61,15 +80,17 @@ export default class MillwrightPage extends ExtensionPage {
     return (
       <div className="ExtensionPage-settings">
         <div className="container">
-          {/*
-            * 🚨 Said plainly, at the top, rather than by disabling a button and
-            * leaving people to work it out. Millwright can inspect a host today;
-            * it cannot run updates until the Composer work lands. A tool whose
-            * whole pitch is that it tells you the truth has to start by telling
-            * the truth about itself.
-            */}
-          <div className="Millwright-notice">{t('not_yet_updating')}</div>
+          {this.notice ? <div className="Millwright-notice">{this.notice}</div> : null}
 
+          {/*
+            * 🚨 While a run is live the panel is the ONLY thing on screen, and
+            * the tabs go away. A grid of Update buttons beside a running update
+            * invites somebody to start a second one, and the honest answer to
+            * the second press is a refusal — better not to offer it.
+            */}
+          {this.showingRun() ? this.runPanel() : null}
+
+          {this.showingRun() ? null : (
           <div className="ButtonGroup" style={{ marginBottom: '20px' }}>
             <button
               className={'Button' + (this.tab === 'installed' ? ' Button--primary' : '')}
@@ -87,11 +108,116 @@ export default class MillwrightPage extends ExtensionPage {
               {t('tab_host')}
             </button>
           </div>
+          )}
 
-          {this.tab === 'host' ? <HostPanel host={this.host} /> : [this.checkLine(), this.grid()]}
+          {this.showingRun()
+            ? null
+            : this.tab === 'host'
+              ? <HostPanel host={this.host} />
+              : [this.updateAll(), this.checkLine(), this.grid()]}
         </div>
       </div>
     );
+  }
+
+  /**
+   * 🚨 A FINISHED run keeps its panel until somebody dismisses it. The screen
+   * returning to normal on its own would throw away the log at the exact moment
+   * it becomes useful — what changed, in what order, and what to check.
+   */
+  showingRun(): boolean {
+    return !!this.run && !this.dismissed;
+  }
+
+  runPanel() {
+    return (
+      <RunPanel
+        run={this.run}
+        driver={this.driver}
+        busy={this.busy}
+        stale={this.stale}
+        rollbackNote={this.rollbackNote}
+        ondismiss={() => {
+          this.dismissed = true;
+          this.rollbackNote = null;
+        }}
+        onprogress={(data: any) => {
+          this.run = data.run;
+          this.busy = !!data.busy;
+          this.stale = !!data.stale;
+        }}
+        ondone={(run: any) => {
+          this.run = run;
+          // Versions on the cards are stale the moment an update lands.
+          this.load();
+        }}
+        onrollback={(data: any) => {
+          this.run = data.run;
+          this.rollbackNote = data.next || null;
+          this.load();
+        }}
+        onerror={(message: string) => (this.notice = message)}
+      />
+    );
+  }
+
+  /**
+   * Every package with a newer version, in one press.
+   *
+   * 🚨 Resolved TOGETHER rather than as a queue of separate updates. Two
+   * extensions can each have a newer version and still be uninstallable side by
+   * side; asking Composer about all of them at once is the only way to find that
+   * out before anything moves, rather than halfway through the second one.
+   */
+  updateAll() {
+    const names = this.installed.filter((e) => e.update && !e.pathInstall).map((e) => e.package);
+
+    if (names.length === 0) return null;
+
+    return (
+      <div className="Millwright-updateAll" key="updateall">
+        <button className="Button Button--primary" disabled={this.starting} onclick={() => this.start(names)}>
+          {this.starting ? t('starting') : t('update_all', { count: names.length })}
+        </button>
+      </div>
+    );
+  }
+
+  start(packages: string[]) {
+    this.starting = true;
+    this.notice = null;
+    this.rollbackNote = null;
+    this.dismissed = false;
+    m.redraw();
+
+    app
+      .request({
+        method: 'POST',
+        url: app.forum.attribute('apiUrl') + '/millwright/update',
+        body: { packages },
+      })
+      .then((data: any) => {
+        this.starting = false;
+        this.run = data.run;
+        this.driver = data.driver || null;
+        m.redraw();
+      })
+      .catch((e: any) => {
+        this.starting = false;
+        /*
+         * 🚨 The server's own words. Every refusal it sends names the situation
+         * — a host too small, a run already going and how long since it moved —
+         * and paraphrasing that into "could not start" throws away the only
+         * part anybody can act on.
+         */
+        const body = e?.response || {};
+        this.notice = body.error || t('start_failed');
+        if (body.run) {
+          this.run = body.run;
+          this.stale = !!body.stale;
+        }
+        m.redraw();
+      });
   }
 
   updateCount(): number {
@@ -186,6 +312,22 @@ export default class MillwrightPage extends ExtensionPage {
                   {e.enabled ? t('enabled') : t('disabled')}
                 </span>
               )}
+
+              {/*
+                * 🚨 A path install is explained here rather than refused later.
+                * The extension is a symlink into a checkout on this machine, so
+                * replacing it would leave the forum running a downloaded copy
+                * while its owner carries on editing a directory nothing reads.
+                */}
+              {e.pathInstall ? (
+                <span className="Millwright-tag Millwright-tag--muted" title={t('path_install_why') as unknown as string}>
+                  {t('path_install')}
+                </span>
+              ) : e.update ? (
+                <button className="Button Button--primary Button--sm" disabled={this.starting} onclick={() => this.start([e.package])}>
+                  {t('update')}
+                </button>
+              ) : null}
             </div>
           </div>
         ))}

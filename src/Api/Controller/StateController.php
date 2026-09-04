@@ -79,6 +79,16 @@ class StateController implements RequestHandlerInterface
                  * apart or the badge becomes something people learn to ignore.
                  */
                 'update'  => $updates[$extension->name] ?? null,
+                /*
+                 * 🚨 Reported so the SCREEN can explain, rather than the apply
+                 * refusing later. Composer installs a path repository as a
+                 * symlink into a checkout on this machine — the way every
+                 * extension developer runs their own work. Millwright will not
+                 * replace one, and finding that out after planning and
+                 * downloading is a worse way to learn it than not being offered
+                 * the button.
+                 */
+                'pathInstall' => is_link($this->paths->vendor . '/' . $extension->name),
             ];
         }
 
