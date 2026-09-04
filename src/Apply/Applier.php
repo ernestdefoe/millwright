@@ -91,6 +91,8 @@ class Applier
      */
     public function applyOne(Change $change): string
     {
+        $this->refusePathInstall($change);
+
         $this->ensureDir($this->trashDir);
 
         $seq = $this->journal->begin([
@@ -110,6 +112,33 @@ class Applier
         $this->observe('completed', $change);
 
         return $change->describe();
+    }
+
+    /**
+     * 🚨 A package installed as a symlink belongs to somebody else.
+     *
+     * Composer installs a path repository by linking vendor/<pkg> at a checkout
+     * on disk — the way every extension developer runs their own work, and the
+     * way this forum is set up. Replacing one would move that link to the trash
+     * and put a downloaded copy where it stood: the developer's forum quietly
+     * stops using the tree they are editing, and nothing on screen says so.
+     *
+     * Refused BEFORE the journal is opened, so a refusal leaves no half-record
+     * to reason about later. The message names the situation rather than the
+     * symptom, because "could not move" would send somebody hunting for a
+     * permissions problem that does not exist.
+     */
+    private function refusePathInstall(Change $change): void
+    {
+        $live = $this->path($this->vendorDir, $change->relativePath());
+
+        if (is_link($live)) {
+            throw new RuntimeException(
+                "{$change->package} is installed from a local path — vendor/{$change->relativePath()} is a symlink "
+                . 'into a checkout on this machine. Millwright will not replace it, because the copy you are editing '
+                . 'would stop being the copy the forum uses. Update it with git instead.'
+            );
+        }
     }
 
     private function replace(Change $change): void
@@ -212,8 +241,29 @@ class Applier
         }
     }
 
+    /**
+     * 🚨 Never walks through a symlink.
+     *
+     * RecursiveDirectoryIterator follows them by default, and is_dir() is true
+     * for a link that points at a directory — so the obvious version of this
+     * method descends through a link and unlinks the files on the other side.
+     * On a developer's machine the other side is a working repository: Composer
+     * installs a path repository AS A SYMLINK, so vendor/vendor/pkg is a link
+     * into a checkout somebody is editing. Deleting a stale stash would have
+     * emptied it.
+     *
+     * SKIP_DOTS gets the iteration right; only unlinking links rather than
+     * recursing into them gets the deletion right. A link is one thing to
+     * remove, never a door.
+     */
     private function deleteTree(string $dir): void
     {
+        if (is_link($dir)) {
+            @unlink($dir);
+
+            return;
+        }
+
         if (! is_dir($dir)) {
             return;
         }
@@ -224,7 +274,15 @@ class Applier
         );
 
         foreach ($items as $item) {
-            $item->isDir() ? @rmdir($item->getPathname()) : @unlink($item->getPathname());
+            $path = $item->getPathname();
+
+            if (is_link($path)) {
+                @unlink($path);
+
+                continue;
+            }
+
+            $item->isDir() ? @rmdir($path) : @unlink($path);
         }
 
         @rmdir($dir);

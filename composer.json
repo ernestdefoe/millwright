@@ -23,7 +23,8 @@
     },
     "require": {
         "php": "^8.3",
-        "flarum/core": "^2.0"
+        "flarum/core": "^2.0",
+        "composer/composer": "^2.7"
     },
     "require-dev": {
         "phpunit/phpunit": "^11.0"

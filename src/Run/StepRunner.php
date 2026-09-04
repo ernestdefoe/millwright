@@ -36,13 +36,29 @@ class StepRunner
      */
     private bool $busy = false;
 
-    /** @param callable():int $clock */
+    /**
+     * 🚨 A factory is preferred over a fixed Steps, so the run id is an argument
+     * rather than something the container decided once and remembered. Inside a
+     * queue worker — a long-lived process — a remembered one carries the
+     * previous run's staging directory and journal into the next run. A bare
+     * Steps is still accepted, because tests supply deterministic work with no
+     * run of its own.
+     *
+     * @param callable():int $clock
+     */
     public function __construct(
         private RunStore $store,
-        private Steps $steps,
+        private Steps|StepsFactory $steps,
         private $clock,
         private ?string $lockDir = null,
     ) {
+    }
+
+    private function stepsFor(string $runId): Steps
+    {
+        return $this->steps instanceof StepsFactory
+            ? $this->steps->for($runId)
+            : $this->steps;
     }
 
     public function wasBusy(): bool
@@ -149,6 +165,7 @@ class StepRunner
 
         $phase = $run->phase;
         $item  = null;
+        $steps = $this->stepsFor($id);
 
         try {
             /*
@@ -158,7 +175,7 @@ class StepRunner
              * before the first item.
              */
             if ($run->total() === 0 && $run->index === 0) {
-                $items = $this->steps->itemsFor($phase, $run);
+                $items = $steps->itemsFor($phase, $run);
 
                 if ($items === []) {
                     return $this->leavePhase($run);
@@ -176,7 +193,7 @@ class StepRunner
                 return $this->leavePhase($run);
             }
 
-            $note = $this->steps->doItem($phase, $item, $run);
+            $note = $steps->doItem($phase, $item, $run);
 
             /*
              * 🚨 Saved AFTER the work, which means a process killed in between

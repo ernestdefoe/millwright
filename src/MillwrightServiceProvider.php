@@ -2,16 +2,11 @@
 
 namespace ErnestDefoe\Millwright;
 
-use ErnestDefoe\Millwright\Apply\Applier;
-use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Run\Drivers;
 use ErnestDefoe\Millwright\Run\RunStore;
 use ErnestDefoe\Millwright\Run\StepRunner;
-use ErnestDefoe\Millwright\Run\Steps;
-use ErnestDefoe\Millwright\Work\ComposerRunner;
-use ErnestDefoe\Millwright\Work\ComposerSteps;
-use ErnestDefoe\Millwright\Work\Fetcher;
-use ErnestDefoe\Millwright\Work\WorkDir;
+use ErnestDefoe\Millwright\Run\StepsFactory;
+use ErnestDefoe\Millwright\Work\ComposerStepsFactory;
 use Flarum\Foundation\AbstractServiceProvider;
 use Flarum\Foundation\Paths;
 use Illuminate\Contracts\Bus\Dispatcher;
@@ -38,27 +33,19 @@ class MillwrightServiceProvider extends AbstractServiceProvider
         });
 
         /*
-         * 🚨 Steps are built for the run CURRENTLY in flight, because every path
-         * they need — the plan, the staging area, the journal — is that run's own
-         * scratch space. There is one active run at a time by design, so "the
-         * latest run" is unambiguous, and a driver that knows only an id can
-         * still reconstruct everything it needs.
+         * 🚨 Bound as a FACTORY, never as the work for "the current run".
+         *
+         * The obvious binding — ask the store for the latest run and build the
+         * work around it — is correct under PHP-FPM and wrong in a queue worker,
+         * which is a long-lived process where a singleton outlives the job that
+         * created it. That worker would carry the finished run's staging
+         * directory and journal into the next run, and a journal that disagrees
+         * with what happened is a rollback that restores the wrong files.
+         *
+         * Handing the id in at step() time removes the question entirely.
          */
-        $this->container->singleton(Steps::class, function ($container) {
-            $paths   = $container->make(Paths::class);
-            $run     = $container->make(RunStore::class)->latest();
-            $workDir = new WorkDir($paths->storage, $run?->id ?? 'none');
-            $journal = new Journal($workDir->journalPath());
-
-            return new ComposerSteps(
-                $paths->base,
-                $workDir->root(),
-                new ComposerRunner($paths->base, null, $paths->storage . '/.composer'),
-                new Fetcher($workDir->staging(), $paths->base . '/auth.json'),
-                new Applier($paths->vendor, $workDir->staging(), $workDir->trash(), $journal),
-                $journal,
-                $workDir->requested()
-            );
+        $this->container->singleton(StepsFactory::class, function ($container) {
+            return new ComposerStepsFactory($container->make(Paths::class));
         });
 
         /*
@@ -72,7 +59,7 @@ class MillwrightServiceProvider extends AbstractServiceProvider
 
             return new StepRunner(
                 $container->make(RunStore::class),
-                $container->make(Steps::class),
+                $container->make(StepsFactory::class),
                 fn () => time(),
                 $storage . '/millwright/locks'
             );

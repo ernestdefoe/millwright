@@ -7,6 +7,7 @@ use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Plan\Change;
 use ErnestDefoe\Millwright\Plan\LockDiff;
 use ErnestDefoe\Millwright\Run\Run;
+use ErnestDefoe\Millwright\Host\PhpBinary;
 use ErnestDefoe\Millwright\Run\Steps;
 use RuntimeException;
 
@@ -169,12 +170,28 @@ class ComposerSteps implements Steps
          * These boot Flarum, and booting it inside the request that just
          * replaced its files means loading a half-old, half-new class map. A
          * fresh process gets the tree as it now is.
+         *
+         * 🚨 Through the same PhpBinary the Composer phases use. When these
+         * disagreed, an update could get through planning, downloading and the
+         * swap — every expensive, risky part — and then fail on the last phase
+         * because this one alone was spawned with a binary that cannot run a
+         * script. Under FPM, PHP_BINARY is php-fpm.
          */
-        $cmd = escapeshellcmd(PHP_BINARY) . ' ' . escapeshellarg($this->installPath . '/flarum') . ' ' . escapeshellarg($command);
-        exec($cmd . ' 2>&1', $out, $code);
+        $php = (new PhpBinary())->path();
 
-        if ($code !== 0) {
-            throw new RuntimeException("`flarum $command` failed:\n" . implode("\n", array_slice($out, -12)));
+        if ($php === null) {
+            throw new RuntimeException(
+                "The files are updated, but `flarum $command` could not be run: no command-line PHP was found on "
+                . 'this host. Run it yourself, or ask your host where the PHP CLI binary lives.'
+            );
+        }
+
+        $result = Process::run([$php, $this->installPath . '/flarum', $command], $this->installPath);
+
+        if ($result['code'] !== 0) {
+            $lines = explode("\n", $result['output']);
+
+            throw new RuntimeException("`flarum $command` failed:\n" . implode("\n", array_slice($lines, -12)));
         }
 
         return $note;
