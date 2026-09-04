@@ -8,7 +8,14 @@ Install, update and roll back Flarum extensions — and Flarum itself — on any
 
 ## Why
 
-Flarum's Extension Manager fails in a way that takes sites down. It runs Composer
+Flarum's Extension Manager fails in a way that takes sites down.
+
+This is not a criticism of the people who wrote it. It is an older design that
+predates Flarum 2, and the specific code involved has not been touched upstream
+since 2024. A fix for the worst of it has been offered back — see
+[flarum/framework#5034](https://github.com/flarum/framework/pull/5034) — but
+some of what follows cannot be fixed without changing the shape of the thing,
+which is why this exists separately rather than as a patch. It runs Composer
 inside the PHP worker serving the request, caps memory at 1 GB from inside that
 process, and swaps the vendor directory by **deleting it and moving a new one
 over the top** — leaving the forum with no `vendor/` at all for as long as that
@@ -43,7 +50,7 @@ copying `vendor/` would not.
 | 1 | Plan, measured against a constrained host | ✅ done |
 | 2 | Journal apply + rollback | ✅ done |
 | 3 | Step driver | ✅ **this** — admin UI still to come |
-| 4 | Discovery, Flarum 2 only | — |
+| 4 | Discovery, Flarum 2 only | in progress |
 | 5 | Core updates + compatibility verdict | — |
 | 6 | Symlinked vendor slots for capable hosts | — |
 

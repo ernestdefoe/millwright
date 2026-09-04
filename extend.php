@@ -27,5 +27,7 @@ return [
      */
     (new Extend\Routes('api'))
         ->get('/millwright/state', 'millwright.state', Controller\StateController::class)
-        ->post('/millwright/step', 'millwright.step', Controller\StepController::class),
+        ->post('/millwright/update', 'millwright.update', Controller\StartController::class)
+        ->post('/millwright/step', 'millwright.step', Controller\StepController::class)
+        ->post('/millwright/rollback', 'millwright.rollback', Controller\RollbackController::class),
 ];

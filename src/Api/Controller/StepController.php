@@ -4,6 +4,7 @@ namespace ErnestDefoe\Millwright\Api\Controller;
 
 use ErnestDefoe\Millwright\Run\Drivers;
 use ErnestDefoe\Millwright\Run\RunStore;
+use ErnestDefoe\Millwright\Run\StepRunner;
 use Flarum\Http\RequestUtil;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -11,20 +12,22 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
 /**
- * Advance the current run by one unit of work.
+ * Advance the current run by exactly one unit of work.
  *
- * 🚨 There is nothing to advance yet, and this says so rather than pretending.
+ * 🚨 This is what the admin page calls every couple of seconds, and it is why an
+ * update finishes on a host that cuts every request at thirty seconds. It never
+ * loops: one item, then it returns whatever it now knows.
  *
- * The driver behind this is built and tested — see StepRunner and the crash
- * suite — but the work it drives is Composer resolution, download and install,
- * which is the next phase. Wiring a button to a pipeline with no steps in it
- * would produce exactly the failure this whole extension exists to replace: a
- * control that looks like it did something and did not.
+ * It also never lies by omission. A run that is finished says so; a run another
+ * driver is holding says that too. Returning an unchanged run with no
+ * explanation is the spinner problem, and the whole point of this extension is
+ * not to have it.
  */
 class StepController implements RequestHandlerInterface
 {
     public function __construct(
         private RunStore $runs,
+        private StepRunner $runner,
         private Drivers $drivers,
     ) {
     }
@@ -36,19 +39,21 @@ class StepController implements RequestHandlerInterface
         $run = $this->runs->latest();
 
         if ($run === null) {
-            return new JsonResponse([
-                'run'      => null,
-                'ready'    => false,
-                'why'      => 'Millwright can inspect this host, but it cannot run updates yet — Composer support is the next piece of work.',
-                'driver'   => $this->drivers->describe(),
-                'hasWorker' => $this->drivers->hasWorker(),
-            ]);
+            return new JsonResponse(['run' => null, 'idle' => true]);
         }
+
+        if ($run->isFinished()) {
+            return new JsonResponse(['run' => $run->toArray(), 'idle' => true]);
+        }
+
+        $run = $this->runner->step($run->id);
 
         return new JsonResponse([
             'run'       => $run->toArray(),
-            'ready'     => false,
-            'driver'    => $this->drivers->describe(),
+            'idle'      => $run->isFinished(),
+            // Not an error. Another driver has it; keep polling.
+            'busy'      => $this->runner->wasBusy(),
+            'stale'     => $run->isStale(time()),
             'hasWorker' => $this->drivers->hasWorker(),
         ]);
     }

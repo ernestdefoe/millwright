@@ -1,6 +1,6 @@
 {
     "name": "ernestdefoe/millwright",
-    "description": "Millwright for Flarum 2 \u2014 install, update and roll back extensions and Flarum itself, on any host. Every step is a checkpoint, so an interrupted update loses progress, never the site.",
+    "description": "Install, update and roll back Flarum extensions and Flarum itself, on any host including shared hosting. Nothing is deleted; every step is a checkpoint, so an interrupted update loses progress, never your site.",
     "keywords": [
         "flarum",
         "flarum-extension",
@@ -9,7 +9,7 @@
         "rollback"
     ],
     "type": "flarum-extension",
-    "license": "proprietary",
+    "license": "MIT",
     "authors": [
         {
             "name": "ernestdefoe",
