@@ -241,3 +241,42 @@
 .Millwright-dismiss { margin-top: 14px; padding-left: 0; }
 .Millwright-updateAll { margin-bottom: 16px; }
 .Millwright-tag--muted { background: var(--control-bg); color: var(--muted-color); }
+
+// ── Discovery ────────────────────────────────────────────────────────────────
+
+.Millwright-search {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+
+  .FormControl { flex: 1; min-width: 0; }
+}
+
+.Millwright-searchNote {
+  color: var(--muted-color);
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+
+.Millwright-desc {
+  color: var(--muted-color);
+  font-size: 13px;
+  line-height: 1.45;
+  margin-top: 10px;
+
+  // Two lines, so every card in a row is the same height and the grid does not
+  // develop a ragged bottom edge as descriptions vary.
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.9em;
+}
+
+.Millwright-empty {
+  color: var(--muted-color);
+  padding: 28px 0;
+}
+
+// Two facts can be true of one package at once — abandoned, and works here.
+.Millwright-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }

@@ -61,10 +61,18 @@ class WorkDir
         return $this;
     }
 
-    /** @param list<string> $packages */
-    public function remember(array $packages): void
+    /**
+     * @param list<string> $packages
+     * @param string $mode 'update' for packages already installed, 'install' for
+     *        ones being added. The difference decides which Composer command the
+     *        plan phase runs, and it has to survive the request that chose it.
+     */
+    public function remember(array $packages, string $mode = 'update'): void
     {
-        file_put_contents($this->root() . '/requested.json', json_encode(array_values($packages)));
+        file_put_contents($this->root() . '/requested.json', json_encode([
+            'mode'     => $mode === 'install' ? 'install' : 'update',
+            'packages' => array_values($packages),
+        ]));
     }
 
     /**
@@ -79,12 +87,34 @@ class WorkDir
      */
     public function requested(): array
     {
+        return array_values((array) ($this->manifest()['packages'] ?? []));
+    }
+
+    /**
+     * 'install' or 'update'.
+     *
+     * 🚨 Read from disk rather than passed along, for the same reason as the
+     * package list: a run outlives the request that started it, and a worker
+     * picking it up an hour later has only the id. Running `update` on a package
+     * that is not installed does nothing at all and reports success, so getting
+     * this wrong is silent.
+     */
+    public function mode(): string
+    {
+        return ($this->manifest()['mode'] ?? 'update') === 'install' ? 'install' : 'update';
+    }
+
+    /** @return array<string,mixed> */
+    private function manifest(): array
+    {
         $path = $this->root() . '/requested.json';
 
         if (! is_file($path)) {
             return [];
         }
 
-        return array_values((array) json_decode((string) file_get_contents($path), true));
+        $data = json_decode((string) file_get_contents($path), true);
+
+        return is_array($data) ? $data : [];
     }
 }

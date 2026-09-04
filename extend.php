@@ -41,5 +41,14 @@ return [
         ->post('/millwright/check', 'millwright.check', Controller\CheckController::class)
         ->post('/millwright/update', 'millwright.update', Controller\StartController::class)
         ->post('/millwright/step', 'millwright.step', Controller\StepController::class)
-        ->post('/millwright/rollback', 'millwright.rollback', Controller\RollbackController::class),
+        ->post('/millwright/rollback', 'millwright.rollback', Controller\RollbackController::class)
+        /*
+         * 🚨 Discovery is two endpoints, and the split is deliberate. `discover`
+         * is one call to Packagist's search. `compat` is one call PER PACKAGE to
+         * work out whether each result fits the Flarum actually installed —
+         * doing both in one request would mean a dozen round trips before
+         * anything appeared on a screen somebody is typing into.
+         */
+        ->get('/millwright/discover', 'millwright.discover', Controller\DiscoverController::class)
+        ->post('/millwright/discover/compat', 'millwright.compat', Controller\CompatController::class),
 ];

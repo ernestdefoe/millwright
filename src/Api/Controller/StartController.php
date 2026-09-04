@@ -39,6 +39,7 @@ class StartController implements RequestHandlerInterface
 
         $body = (array) $request->getParsedBody();
         $packages = array_values(array_filter((array) Arr::get($body, 'packages', [])));
+        $mode = Arr::get($body, 'mode') === 'install' ? 'install' : 'update';
 
         foreach ($packages as $package) {
             // The only user-supplied value that reaches a command line.
@@ -48,6 +49,10 @@ class StartController implements RequestHandlerInterface
         }
 
         $capability = new Capability($this->paths->base);
+
+        if ($packages === []) {
+            return new JsonResponse(['error' => 'Nothing was selected, so nothing was started.'], 422);
+        }
 
         if ($capability->resolveTier() === Capability::NONE) {
             return new JsonResponse([
@@ -76,7 +81,7 @@ class StartController implements RequestHandlerInterface
 
         $id = 'r' . date('Ymd-His') . '-' . bin2hex(random_bytes(3));
 
-        (new WorkDir($this->paths->storage, $id))->create()->remember($packages);
+        (new WorkDir($this->paths->storage, $id))->create()->remember($packages, $mode);
 
         $run = $this->runner->begin($id);
 

@@ -35,7 +35,8 @@ class ComposerStepsFactory implements StepsFactory
             new Fetcher($workDir->staging(), $this->paths->base . '/auth.json'),
             new Applier($this->paths->vendor, $workDir->staging(), $workDir->trash(), $journal),
             $journal,
-            $workDir->requested()
+            $workDir->requested(),
+            $workDir->mode()
         );
     }
 }

@@ -78,3 +78,35 @@ ernestdefoe-millwright:
       This page has failed to reach the forum {count} times in a row. The update
       itself is unaffected — it keeps its place on disk — and this will keep
       trying.
+
+    tab_discover: Find extensions
+
+    search: Search
+    searching: Searching…
+    discover_placeholder: Search Packagist for a Flarum extension
+    discover_hint: >-
+      Searches every Flarum extension published on Packagist.
+    # 🚨 Against the version this forum RUNS, not against "Flarum 2". A forum on
+    # 2.0.0 and one on 2.1.0 get different answers, and saying which version was
+    # used is what makes the badge checkable.
+    discover_against: "Checked against the Flarum {version} this forum runs."
+    discover_none: "Nothing on Packagist matches “{query}”."
+    discover_failed: >-
+      The search could not be run. Packagist may be unreachable from this server.
+
+    downloads: "{count} downloads"
+    install: Install
+    already_installed: installed
+    abandoned: abandoned by its author
+
+    # 🚨 "Says it works", never "works". A declared constraint is the author's
+    # claim; whether the rest of this site allows it is a question only the plan
+    # can answer, and it is answered when Install is pressed.
+    compat_no: not for this Flarum
+    compat_no_why: "Its newest release asks for flarum/core {requires}."
+    compat_unknown: could not check
+    compat_prerelease: "{version} — a pre-release"
+    abandoned_why: >-
+      Its author has marked it as no longer maintained. It may still work.
+    abandoned_for: "Its author says to use {replacement} instead."
+

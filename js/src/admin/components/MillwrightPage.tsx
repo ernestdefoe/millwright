@@ -3,6 +3,7 @@ import ExtensionPage from 'flarum/admin/components/ExtensionPage';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import HostPanel from './HostPanel';
 import RunPanel from './RunPanel';
+import DiscoverTab from './DiscoverTab';
 
 declare const m: any;
 
@@ -27,7 +28,7 @@ export default class MillwrightPage extends ExtensionPage {
   installed: Installed[] = [];
   updates: any = { available: {}, checkedAt: null, stale: true, uncheckable: [] };
   checking = false;
-  tab: 'installed' | 'host' = 'installed';
+  tab: 'installed' | 'discover' | 'host' = 'installed';
   run: any = null;
   driver: string | null = null;
   busy = false;
@@ -102,6 +103,12 @@ export default class MillwrightPage extends ExtensionPage {
               ) : null}
             </button>
             <button
+              className={'Button' + (this.tab === 'discover' ? ' Button--primary' : '')}
+              onclick={() => (this.tab = 'discover')}
+            >
+              {t('tab_discover')}
+            </button>
+            <button
               className={'Button' + (this.tab === 'host' ? ' Button--primary' : '')}
               onclick={() => (this.tab = 'host')}
             >
@@ -114,7 +121,9 @@ export default class MillwrightPage extends ExtensionPage {
             ? null
             : this.tab === 'host'
               ? <HostPanel host={this.host} />
-              : [this.updateAll(), this.checkLine(), this.grid()]}
+              : this.tab === 'discover'
+                ? <DiscoverTab starting={this.starting} oninstall={(name: string) => this.start([name], 'install')} />
+                : [this.updateAll(), this.checkLine(), this.grid()]}
         </div>
       </div>
     );
@@ -183,7 +192,13 @@ export default class MillwrightPage extends ExtensionPage {
     );
   }
 
-  start(packages: string[]) {
+  /**
+   * @param mode 'install' adds a package that is not here yet. 🚨 It is not
+   *        cosmetic: `composer update` on an uninstalled package does nothing
+   *        and exits 0, so a run in the wrong mode would pass every phase,
+   *        change nothing, and report success.
+   */
+  start(packages: string[], mode: 'update' | 'install' = 'update') {
     this.starting = true;
     this.notice = null;
     this.rollbackNote = null;
@@ -194,7 +209,7 @@ export default class MillwrightPage extends ExtensionPage {
       .request({
         method: 'POST',
         url: app.forum.attribute('apiUrl') + '/millwright/update',
-        body: { packages },
+        body: { packages, mode },
       })
       .then((data: any) => {
         this.starting = false;

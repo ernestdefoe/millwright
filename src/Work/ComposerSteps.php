@@ -37,6 +37,8 @@ class ComposerSteps implements Steps
         private Journal $journal,
         /** @var list<string> the packages the user asked to change */
         private array $requested = [],
+        /** 'update' for packages already here, 'install' for ones being added */
+        private string $mode = 'update',
     ) {
     }
 
@@ -86,7 +88,21 @@ class ComposerSteps implements Steps
         copy($lockPath, $this->workDir . '/composer.lock.before');
         copy($this->installPath . '/composer.json', $this->workDir . '/composer.json.before');
 
-        $args = array_merge(['update'], $this->requested, ['--with-all-dependencies', '--no-install']);
+        /*
+         * 🚨 `require` for an install, `update` for an update, and they are not
+         * interchangeable: running `update` on a package that is not installed
+         * does nothing whatsoever and exits 0. The run would sail through every
+         * phase, change nothing, and report success — the exact silent failure
+         * this whole extension exists to stop.
+         *
+         * `require --no-install` writes composer.json as well as the lock, and
+         * reverts its own edit if the resolve fails. composer.json.before is
+         * saved above so a rollback after a SUCCESSFUL resolve can undo it too.
+         */
+        $args = $this->mode === 'install'
+            ? array_merge(['require'], $this->requested, ['--no-install', '--no-scripts'])
+            : array_merge(['update'], $this->requested, ['--with-all-dependencies', '--no-install']);
+
         $result = $this->composer->run($args);
 
         if ($result['code'] !== 0) {
@@ -116,7 +132,9 @@ class ComposerSteps implements Steps
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
         if ($changes === []) {
-            return 'Nothing to update — everything is already at the newest version it can be.';
+            return $this->mode === 'install'
+                ? 'Nothing changed — that package is already installed at this version.'
+                : 'Nothing to update — everything is already at the newest version it can be.';
         }
 
         return count($changes) . ' package(s) will change';
