@@ -2,6 +2,7 @@
 
 use ErnestDefoe\Millwright\Api\Controller;
 use ErnestDefoe\Millwright\Console\CheckCommand;
+use ErnestDefoe\Millwright\Console\RepairFormatterCommand;
 use ErnestDefoe\Millwright\MillwrightServiceProvider;
 use Flarum\Extend;
 
@@ -15,6 +16,13 @@ return [
 
     (new Extend\Console())
         ->command(CheckCommand::class)
+        /*
+         * 🚨 Registered as a command so it runs in its OWN process, after the
+         * files have moved. Repairing the formatter means building it, and
+         * building it inside the request that just replaced Flarum's files
+         * loads a half-old class map.
+         */
+        ->command(RepairFormatterCommand::class)
         /*
          * 🚨 Daily, and cheap enough to mean it. This is one HTTP call per
          * installed package with no Composer involved — a resolve on a schedule

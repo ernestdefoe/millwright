@@ -258,44 +258,35 @@ class ComposerSteps implements Steps
      * consistent, where being killed costs a rerun rather than a broken site.
      */
     /**
-     * Clear Flarum's caches, and leave the formatter in a state that works.
+     * Clear Flarum's caches, and leave the formatter able to render.
      *
-     * 🚨 `cache:clear` alone can take a site down, and did take one down.
+     * 🚨 `cache:clear` on its own takes post rendering down, and this is not a
+     * race — it happens every time on any forum whose cache driver is not the
+     * file store, which is every forum running fof/redis.
      *
-     * Flarum caches a SERIALIZED s9e renderer in the cache store, and that
-     * object references a generated PHP class written under storage/formatter.
-     * cache:clear empties the store first and that directory second, so a page
-     * view landing between the two steps regenerates the class, caches the
-     * object — and then has the class deleted out from under it. What is left is
-     * a cached renderer whose class file no longer exists, and every post render
-     * dies with "__PHP_Incomplete_Class returned".
+     * The formatter is two halves that must agree: a serialized renderer cached
+     * under `flarum.formatter`, and the generated
+     * storage/formatter/Renderer_<hash>.php it is an instance of. cache:clear
+     * unlinks that file and flushes the APPLICATION cache — but core gives the
+     * formatter its own FileStore, so the entry survives in a different store,
+     * names a class whose file is gone, and every post render dies with
+     * `__PHP_Incomplete_Class`. `rememberForever` means nothing fixes it later.
      *
-     * The symptom is nasty: the front page and the discussion list still return
-     * 200, because they render no post content. Only opening a discussion fails.
-     * A site can sit like that unnoticed.
+     * 🚨 An earlier version of this method deleted storage/formatter/*.php
+     * itself, on the theory that clearing both halves left a consistent state.
+     * That was precisely backwards: deleting the file while the entry survives
+     * IS the break, so it manufactured the failure it was written to prevent —
+     * twice per run. Two live sites went down that way.
      *
-     * Clearing, then removing the generated class, then clearing again means the
-     * FINAL state is always both-empty, which is consistent — whatever a request
-     * does in between is regenerated correctly afterwards. Ordering cannot fix
-     * this on its own; only the end state can.
+     * The repair command forgets the entry through the formatter's OWN cache and
+     * rebuilds both halves together.
      */
     private function clearCaches(): string
     {
         $this->flarum('cache:clear', 'cleared');
+        $this->flarum('millwright:repair-formatter', 'formatter rebuilt');
 
-        $formatter = $this->installPath . '/storage/formatter';
-
-        if (is_dir($formatter)) {
-            foreach (glob($formatter . '/*') ?: [] as $file) {
-                if (is_file($file) && basename($file) !== '.gitignore') {
-                    @unlink($file);
-                }
-            }
-        }
-
-        $this->flarum('cache:clear', 'cleared');
-
-        return 'caches cleared';
+        return 'caches cleared and the formatter rebuilt';
     }
 
     /**
