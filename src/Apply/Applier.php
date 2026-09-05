@@ -160,6 +160,33 @@ class Applier
     {
         $this->stash($change);
         $this->observe('stashed', $change);
+
+        /*
+         * Only on a REMOVE. A REPLACE stashes and then installs into the same
+         * parent, so tidying between the two would delete a directory that is
+         * about to be recreated.
+         */
+        $this->tidyVendorDir(dirname($this->path($this->vendorDir, $change->relativePath())));
+    }
+
+    /**
+     * Remove the vendor namespace directory if that was the last package in it.
+     *
+     * 🚨 Only when empty, and never above the vendor directory itself. rmdir
+     * refuses a non-empty directory, so the check and the act cannot disagree.
+     * An uninstall that leaves vendor/acme/ behind is not wrong so much as
+     * unfinished, and it is the sort of litter that makes somebody wonder what
+     * else was left half done.
+     */
+    private function tidyVendorDir(string $dir): void
+    {
+        $vendor = rtrim($this->vendorDir, DIRECTORY_SEPARATOR);
+
+        if ($dir === $vendor || ! str_starts_with($dir, $vendor . DIRECTORY_SEPARATOR)) {
+            return;
+        }
+
+        @rmdir($dir);
     }
 
     /** Move the installed version aside. Kept, never deleted. */

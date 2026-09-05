@@ -52,7 +52,24 @@ class RollbackController implements RequestHandlerInterface
         $workDir = new WorkDir($this->paths->storage, $run->id);
         $journal = new Journal($workDir->journalPath());
 
-        if (! $journal->exists()) {
+        /*
+         * 🚨 An empty journal does NOT mean nothing changed.
+         *
+         * The plan phase runs Composer with --no-install, and Composer rewrites
+         * composer.json and composer.lock the moment it succeeds — before a
+         * single file has been moved, so before the journal has anything in it.
+         * A run that then fails leaves the manifests describing a site that does
+         * not exist, and the version of this that refused on an empty journal
+         * said "that update never got as far as changing anything", which was
+         * simply false. Found by a `composer remove` that updated both files and
+         * then exited non-zero.
+         *
+         * So the question is not "is there a journal" but "is there anything
+         * saved to put back".
+         */
+        $savedLock = $workDir->root() . '/composer.lock.before';
+
+        if (! $journal->exists() && ! is_file($savedLock)) {
             return new JsonResponse([
                 'error' => 'That update never got as far as changing anything, so there is nothing to undo.',
             ], 422);

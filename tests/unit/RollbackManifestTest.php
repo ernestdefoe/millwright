@@ -133,6 +133,50 @@ class RollbackManifestTest extends TestCase
         $this->assertDirectoryExists($this->dir . '/install/vendor', 'and never above it');
     }
 
+    public function test_a_run_that_failed_before_moving_any_file_is_still_undone(): void
+    {
+        /*
+         * 🚨 The case that reported "nothing to undo" while leaving a site
+         * broken. Composer rewrites composer.json and composer.lock as soon as
+         * the plan succeeds — before any file moves, so before the journal has
+         * an entry. A failure right after that leaves the manifests describing a
+         * site that does not exist, and an empty journal is not permission to
+         * ignore it.
+         *
+         * Found for real: `composer remove --no-install` updated both files and
+         * then exited non-zero.
+         */
+        file_put_contents($this->dir . '/work/composer.lock.before', '{"packages":[{"name":"acme/widget"}]}');
+        file_put_contents($this->dir . '/work/composer.json.before', '{"require":{"acme/widget":"^1.0"}}');
+        file_put_contents($this->dir . '/install/composer.lock', '{"packages":[]}');
+        file_put_contents($this->dir . '/install/composer.json', '{"require":{}}');
+
+        // No apply at all — the journal was never written to.
+        $undone = $this->rollback()->run();
+
+        $this->assertSame('{"require":{"acme/widget":"^1.0"}}', file_get_contents($this->dir . '/install/composer.json'));
+        $this->assertStringContainsString('acme/widget', file_get_contents($this->dir . '/install/composer.lock'));
+        $this->assertContains('restored composer.lock', $undone);
+    }
+
+    public function test_an_uninstall_leaves_no_empty_vendor_directory_either(): void
+    {
+        mkdir($this->dir . '/install/vendor/lonely/pkg', 0775, true);
+        file_put_contents($this->dir . '/install/vendor/lonely/pkg/it.php', 'x');
+        file_put_contents($this->dir . '/work/composer.lock.before', '{"packages":[]}');
+
+        (new Applier(
+            $this->dir . '/install/vendor',
+            $this->dir . '/staging',
+            $this->dir . '/trash',
+            new Journal($this->dir . '/work/journal.jsonl')
+        ))->applyOne(new Change(Change::REMOVE, 'lonely/pkg', '1.0.0', null));
+
+        $this->assertDirectoryDoesNotExist($this->dir . '/install/vendor/lonely');
+        $this->assertDirectoryExists($this->dir . '/install/vendor');
+        $this->assertDirectoryExists($this->dir . '/trash/lonely+pkg@1.0.0', 'and the files are kept, not deleted');
+    }
+
     public function test_restoring_twice_is_harmless(): void
     {
         // The journal makes every step repeatable, and this one is no exception:

@@ -7,6 +7,7 @@ use ErnestDefoe\Millwright\Run\Drivers;
 use ErnestDefoe\Millwright\Run\RunStore;
 use ErnestDefoe\Millwright\Run\StepRunner;
 use ErnestDefoe\Millwright\Work\WorkDir;
+use Flarum\Extension\ExtensionManager;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
 use Illuminate\Support\Arr;
@@ -30,7 +31,58 @@ class StartController implements RequestHandlerInterface
         private StepRunner $runner,
         private Drivers $drivers,
         private Paths $paths,
+        private ExtensionManager $extensions,
     ) {
+    }
+
+    /**
+     * Why these packages cannot be removed, if they cannot.
+     *
+     * @param list<string> $packages
+     */
+    private function cannotRemove(array $packages): ?string
+    {
+        $json = (array) json_decode((string) @file_get_contents($this->paths->base . '/composer.json'), true);
+        $direct = array_merge((array) ($json['require'] ?? []), (array) ($json['require-dev'] ?? []));
+
+        foreach ($packages as $package) {
+            /*
+             * 🚨 The same guard Extension Manager has, because it is the right
+             * one: `composer remove` on something this site never asked for
+             * fails with a message about a package not being required, which
+             * reads like a bug. An extension that arrived as somebody else's
+             * dependency goes when that dependency goes, and not before.
+             */
+            if (! isset($direct[$package])) {
+                return "$package is not something this site requires directly — it was installed because another "
+                    . 'extension depends on it. Removing that extension will take this one with it.';
+            }
+
+            /*
+             * 🚨 A guard Extension Manager does NOT have, and the reason is
+             * ordering: taking the files away from an extension that is still
+             * switched on leaves Flarum with an enabled extension it cannot
+             * load. Disabling first is one click, and it is the click that makes
+             * the removal safe.
+             */
+            if ($this->isEnabled($package)) {
+                return "$package is still enabled. Turn it off on the Extensions page first, check the forum is "
+                    . 'happy without it, and then remove it.';
+            }
+        }
+
+        return null;
+    }
+
+    private function isEnabled(string $package): bool
+    {
+        foreach ($this->extensions->getExtensions() as $extension) {
+            if ($extension->name === $package) {
+                return $this->extensions->isEnabled($extension->getId());
+            }
+        }
+
+        return false;
     }
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -39,7 +91,9 @@ class StartController implements RequestHandlerInterface
 
         $body = (array) $request->getParsedBody();
         $packages = array_values(array_filter((array) Arr::get($body, 'packages', [])));
-        $mode = Arr::get($body, 'mode') === 'install' ? 'install' : 'update';
+        $mode = in_array(Arr::get($body, 'mode'), ['install', 'remove'], true)
+            ? (string) Arr::get($body, 'mode')
+            : 'update';
 
         foreach ($packages as $package) {
             // The only user-supplied value that reaches a command line.
@@ -52,6 +106,10 @@ class StartController implements RequestHandlerInterface
 
         if ($packages === []) {
             return new JsonResponse(['error' => 'Nothing was selected, so nothing was started.'], 422);
+        }
+
+        if ($mode === 'remove' && ($refusal = $this->cannotRemove($packages)) !== null) {
+            return new JsonResponse(['error' => $refusal], 422);
         }
 
         if ($capability->resolveTier() === Capability::NONE) {

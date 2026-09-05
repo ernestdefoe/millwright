@@ -44,12 +44,18 @@ class Rollback
      */
     public function run(): array
     {
+        /*
+         * 🚨 No early return on an empty journal.
+         *
+         * An empty journal means no FILES were moved. It does not mean nothing
+         * changed: the plan phase runs Composer with --no-install, and Composer
+         * rewrites composer.json and composer.lock the moment it succeeds —
+         * before the journal has a single entry. A run that fails after that
+         * point leaves the manifests describing a site that does not exist, and
+         * returning early here left them that way while reporting that there
+         * was nothing to undo.
+         */
         $entries = $this->journal->entries();
-
-        if ($entries === []) {
-            return [];
-        }
-
         $undone = [];
 
         // Backwards: the last thing done is the first thing undone.

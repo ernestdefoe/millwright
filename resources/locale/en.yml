@@ -135,3 +135,8 @@ ernestdefoe-millwright:
     core_row_updating: "will update to {version}"
     core_row_unknown: could not be checked
 
+    remove: Remove
+    remove_confirm: >-
+      Remove {name} from this site? Its files are kept, so this can be undone —
+      but its settings and any data it stores are left alone either way.
+

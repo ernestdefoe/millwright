@@ -38,7 +38,7 @@ class ComposerSteps implements Steps
         private Journal $journal,
         /** @var list<string> the packages the user asked to change */
         private array $requested = [],
-        /** 'update' for packages already here, 'install' for ones being added */
+        /** 'update', 'install' for something new, or 'remove' to take one out */
         private string $mode = 'update',
     ) {
     }
@@ -100,20 +100,29 @@ class ComposerSteps implements Steps
          * reverts its own edit if the resolve fails. composer.json.before is
          * saved above so a rollback after a SUCCESSFUL resolve can undo it too.
          */
-        $args = $this->mode === 'install'
-            ? array_merge(['require'], $this->requested, ['--no-install', '--no-scripts'])
-            : array_merge(['update'], $this->requested, ['--with-all-dependencies', '--no-install']);
+        $args = match ($this->mode) {
+            'install' => array_merge(['require'], $this->requested, ['--no-install', '--no-scripts']),
+            /*
+             * 🚨 `remove` takes the package out of composer.json AND re-resolves
+             * the lock, which is what makes the dependencies it dragged in go
+             * too. `--no-install` stops Composer touching vendor: the removal
+             * happens through the same journalled apply as everything else, so
+             * the files go to the trash rather than being deleted and an
+             * uninstall is as reversible as an update.
+             */
+            'remove'  => array_merge(['remove'], $this->requested, ['--no-install', '--no-scripts']),
+            default   => array_merge(['update'], $this->requested, ['--with-all-dependencies', '--no-install']),
+        };
 
         $result = $this->composer->run($args);
+        $after  = $this->readJson($lockPath);
 
-        if ($result['code'] !== 0) {
+        if ($result['code'] !== 0 && ! $this->didWhatWasAsked($before, $after)) {
             // Composer's own words, not a summary of them: it is usually precise
             // about which constraint could not be satisfied, and paraphrasing
             // that loses the only part anyone can act on.
             throw new RuntimeException("Composer could not work out an update:\n" . $result['output']);
         }
-
-        $after = $this->readJson($lockPath);
 
         /*
          * 🚨 The new lock is put back immediately. Composer has already written
@@ -133,12 +142,52 @@ class ComposerSteps implements Steps
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
         if ($changes === []) {
-            return $this->mode === 'install'
-                ? 'Nothing changed — that package is already installed at this version.'
-                : 'Nothing to update — everything is already at the newest version it can be.';
+            return match ($this->mode) {
+                'install' => 'Nothing changed — that package is already installed at this version.',
+                'remove'  => 'Nothing changed — that package was not a direct requirement of this site.',
+                default   => 'Nothing to update — everything is already at the newest version it can be.',
+            };
         }
 
         return count($changes) . ' package(s) will change';
+    }
+
+    /**
+     * Did the command achieve what it was asked to, whatever it says?
+     *
+     * 🚨 Only consulted when the exit code is non-zero, and only for a removal.
+     * `composer remove --no-install` updates composer.json and the lock exactly
+     * as wanted, and THEN checks whether the package has gone from vendor —
+     * which it has not, because --no-install is us telling Composer not to touch
+     * vendor. It reports "Removal failed, X is still present" and exits 1,
+     * having done the job perfectly.
+     *
+     * Reading the outcome rather than the exit code is the honest way out. The
+     * lock is the thing that matters, we already have it before and after, and
+     * a removal that did not happen fails this check and reports Composer's own
+     * words as before.
+     *
+     * @param array<string,mixed> $before
+     * @param array<string,mixed> $after
+     */
+    private function didWhatWasAsked(array $before, array $after): bool
+    {
+        if ($this->mode !== 'remove' || $this->requested === []) {
+            return false;
+        }
+
+        $names = fn (array $lock) => array_column((array) ($lock['packages'] ?? []), 'name');
+
+        $was = $names($before);
+        $now = $names($after);
+
+        foreach ($this->requested as $package) {
+            if (! in_array($package, $was, true) || in_array($package, $now, true)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function fetchOne(string $package): string

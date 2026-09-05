@@ -206,12 +206,23 @@ export default class MillwrightPage extends ExtensionPage {
   }
 
   /**
+   * 🚨 Confirmed, because it is the one action here that takes something away.
+   * Everything else can be undone by rolling back and is described as such; a
+   * removal can too, but somebody should still mean it.
+   */
+  confirmRemove(e: Installed) {
+    if (!confirm(t('remove_confirm', { name: e.name }) as unknown as string)) return;
+
+    this.start([e.package], 'remove');
+  }
+
+  /**
    * @param mode 'install' adds a package that is not here yet. 🚨 It is not
    *        cosmetic: `composer update` on an uninstalled package does nothing
    *        and exits 0, so a run in the wrong mode would pass every phase,
    *        change nothing, and report success.
    */
-  start(packages: string[], mode: 'update' | 'install' = 'update') {
+  start(packages: string[], mode: 'update' | 'install' | 'remove' = 'update') {
     this.starting = true;
     this.notice = null;
     this.rollbackNote = null;
@@ -351,11 +362,30 @@ export default class MillwrightPage extends ExtensionPage {
                 <span className="Millwright-tag Millwright-tag--muted" title={t('path_install_why') as unknown as string}>
                   {t('path_install')}
                 </span>
-              ) : e.update ? (
-                <button className="Button Button--primary Button--sm" disabled={this.starting} onclick={() => this.start([e.package])}>
-                  {t('update')}
-                </button>
-              ) : null}
+              ) : (
+                <span className="Millwright-actions">
+                  {e.update ? (
+                    <button className="Button Button--primary Button--sm" disabled={this.starting} onclick={() => this.start([e.package])}>
+                      {t('update')}
+                    </button>
+                  ) : null}
+                  {/*
+                    * 🚨 Offered only once the extension is switched off. Taking
+                    * the files away from an extension that is still enabled
+                    * leaves Flarum with something it cannot load, and disabling
+                    * first is one click on a page they already know.
+                    */}
+                  {e.enabled ? null : (
+                    <button
+                      className="Button Button--sm"
+                      disabled={this.starting}
+                      onclick={() => this.confirmRemove(e)}
+                    >
+                      {t('remove')}
+                    </button>
+                  )}
+                </span>
+              )}
             </div>
           </div>
         ))}

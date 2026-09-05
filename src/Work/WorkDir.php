@@ -63,14 +63,15 @@ class WorkDir
 
     /**
      * @param list<string> $packages
-     * @param string $mode 'update' for packages already installed, 'install' for
-     *        ones being added. The difference decides which Composer command the
-     *        plan phase runs, and it has to survive the request that chose it.
+     * @param string $mode 'update' for packages already installed, 'install'
+     *        for ones being added, 'remove' to take one out. The difference
+     *        decides which Composer command the plan phase runs, and it has to
+     *        survive the request that chose it.
      */
     public function remember(array $packages, string $mode = 'update'): void
     {
         file_put_contents($this->root() . '/requested.json', json_encode([
-            'mode'     => $mode === 'install' ? 'install' : 'update',
+            'mode'     => in_array($mode, ['install', 'remove'], true) ? $mode : 'update',
             'packages' => array_values($packages),
         ]));
     }
@@ -101,7 +102,9 @@ class WorkDir
      */
     public function mode(): string
     {
-        return ($this->manifest()['mode'] ?? 'update') === 'install' ? 'install' : 'update';
+        $mode = (string) ($this->manifest()['mode'] ?? 'update');
+
+        return in_array($mode, ['install', 'remove'], true) ? $mode : 'update';
     }
 
     /** @return array<string,mixed> */
