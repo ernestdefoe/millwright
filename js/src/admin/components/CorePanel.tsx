@@ -84,7 +84,16 @@ export default class CorePanel extends Component<CoreAttrs> {
         {!this.newest ? (
           <div className="Millwright-coreNote">{t('core_current')}</div>
         ) : (
-          [this.summary(), this.rows()]
+          /*
+           * 🚨 .filter(Boolean), because Mithril requires every vnode in a
+           * fragment to be keyed or none to be, and a `null` counts as one
+           * without a key. Both of these return null in ordinary situations —
+           * summary() before the pre-flight arrives, rows() when nothing is
+           * blocked — so the unfiltered array threw a TypeError during view
+           * exactly when a newer Flarum existed, which is the only time anyone
+           * looks at this panel.
+           */
+          [this.summary(), this.rows()].filter(Boolean)
         )}
       </div>
     );

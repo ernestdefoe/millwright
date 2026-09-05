@@ -189,19 +189,7 @@ export default class MillwrightPage extends ExtensionPage {
               ? <HostPanel host={this.host} />
               : this.tab === 'discover'
                 ? <DiscoverTab starting={this.starting} oninstall={(name: string) => this.start([name], 'install')} />
-                : [
-                  /*
-                   * 🚨 Above the extensions, because it is the thing whose blast
-                   * radius is the whole forum. It is also the one panel that
-                   * disables its own button — a core update with blocked
-                   * extensions would be refused by Composer at the end of a long
-                   * wait, and knowing that in advance is the point.
-                   */
-                  <CorePanel key="core" starting={this.starting} onbegin={(pkgs: string[]) => this.start(pkgs)} />,
-                  this.updateAll(),
-                  this.checkLine(),
-                  this.grid(),
-                ]}
+                : this.installedTab()}
         </div>
       </div>
     );
@@ -322,6 +310,35 @@ export default class MillwrightPage extends ExtensionPage {
         }
         m.redraw();
       });
+  }
+
+  /**
+   * The installed tab: Flarum itself, then anything to update, then the cards.
+   *
+   * 🚨 Every entry is keyed AND the falsy ones are removed, because Mithril
+   * requires that in a fragment either every vnode has a key or none does — and
+   * a `null` counts as one without. `updateAll()` returns null when nothing has
+   * a newer version, so this array was legal on a forum with updates waiting and
+   * a TypeError on one that was up to date. It rendered nothing at all: the
+   * component threw during view, which on a Mithril page means the spinner that
+   * was already on screen simply stayed there.
+   *
+   * Which is to say the page was broken in its most ordinary state, and one
+   * load of it in a browser would have shown that immediately.
+   */
+  installedTab() {
+    return [
+      /*
+       * 🚨 Above the extensions, because it is the thing whose blast radius is
+       * the whole forum. It is also the one panel that disables its own button —
+       * a core update with blocked extensions would be refused by Composer at
+       * the end of a long wait, and knowing that in advance is the point.
+       */
+      <CorePanel key="core" starting={this.starting} onbegin={(pkgs: string[]) => this.start(pkgs)} />,
+      this.updateAll(),
+      this.checkLine(),
+      this.grid(),
+    ].filter(Boolean);
   }
 
   updateCount(): number {
