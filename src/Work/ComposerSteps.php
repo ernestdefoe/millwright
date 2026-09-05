@@ -223,7 +223,7 @@ class ComposerSteps implements Steps
             'register'   => $this->composerCommand(['install', '--no-scripts'], 'Composer now knows about the change'),
             'migrations' => $this->flarum('migrate', 'migrations run'),
             'assets'     => $this->flarum('assets:publish', 'assets published'),
-            'caches'     => $this->flarum('cache:clear', 'caches cleared'),
+            'caches'     => $this->clearCaches(),
             /*
              * 🚨 Last, and it is the step that decides whether any of the others
              * were visible. On a host with opcache.validate_timestamps off, every
@@ -257,6 +257,47 @@ class ComposerSteps implements Steps
      * reversible, and this runs afterwards, against a tree that is already
      * consistent, where being killed costs a rerun rather than a broken site.
      */
+    /**
+     * Clear Flarum's caches, and leave the formatter in a state that works.
+     *
+     * 🚨 `cache:clear` alone can take a site down, and did take one down.
+     *
+     * Flarum caches a SERIALIZED s9e renderer in the cache store, and that
+     * object references a generated PHP class written under storage/formatter.
+     * cache:clear empties the store first and that directory second, so a page
+     * view landing between the two steps regenerates the class, caches the
+     * object — and then has the class deleted out from under it. What is left is
+     * a cached renderer whose class file no longer exists, and every post render
+     * dies with "__PHP_Incomplete_Class returned".
+     *
+     * The symptom is nasty: the front page and the discussion list still return
+     * 200, because they render no post content. Only opening a discussion fails.
+     * A site can sit like that unnoticed.
+     *
+     * Clearing, then removing the generated class, then clearing again means the
+     * FINAL state is always both-empty, which is consistent — whatever a request
+     * does in between is regenerated correctly afterwards. Ordering cannot fix
+     * this on its own; only the end state can.
+     */
+    private function clearCaches(): string
+    {
+        $this->flarum('cache:clear', 'cleared');
+
+        $formatter = $this->installPath . '/storage/formatter';
+
+        if (is_dir($formatter)) {
+            foreach (glob($formatter . '/*') ?: [] as $file) {
+                if (is_file($file) && basename($file) !== '.gitignore') {
+                    @unlink($file);
+                }
+            }
+        }
+
+        $this->flarum('cache:clear', 'cleared');
+
+        return 'caches cleared';
+    }
+
     /**
      * 🚨 Never fails the run.
      *
