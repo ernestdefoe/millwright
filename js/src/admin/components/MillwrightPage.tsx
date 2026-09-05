@@ -24,7 +24,16 @@ interface Installed {
 const t = (k: string, p?: any) => app.translator.trans('ernestdefoe-millwright.admin.' + k, p);
 
 export default class MillwrightPage extends ExtensionPage {
-  loading = true;
+  /*
+   * 🚨 NOT `loading`. AdminPage — which this inherits from through
+   * ExtensionPage — already declares `loading`, and uses it for the Save
+   * button's spinner. Shadowing it means two unrelated pieces of state share
+   * one flag, and whichever writes last wins.
+   */
+  firstLoad = true;
+
+  /** Set when the first load fails or never arrives, so the page can say so. */
+  loadError: string | null = null;
   host: any = null;
   installed: Installed[] = [];
   updates: any = { available: {}, checkedAt: null, stale: true, uncheckable: [] };
@@ -42,9 +51,25 @@ export default class MillwrightPage extends ExtensionPage {
   oninit(vnode: any) {
     super.oninit(vnode);
     this.load();
+
+    /*
+     * 🚨 A spinner with no end is the exact failure this extension exists to
+     * replace, so it is not allowed to happen here either. If the first load
+     * has not come back in ten seconds, the page says so and offers to try
+     * again instead of spinning forever with nothing to act on.
+     */
+    setTimeout(() => {
+      if (this.firstLoad) {
+        this.loadError = t('load_timeout') as unknown as string;
+        this.firstLoad = false;
+        m.redraw();
+      }
+    }, 10000);
   }
 
   load() {
+    this.loadError = null;
+
     app
       .request({ method: 'GET', url: app.forum.attribute('apiUrl') + '/millwright/state' })
       .then((data: any) => {
@@ -59,21 +84,47 @@ export default class MillwrightPage extends ExtensionPage {
          */
         this.run = data.run || null;
         this.stale = !!data.runIsStale;
-        this.loading = false;
+        this.firstLoad = false;
         m.redraw();
       })
-      .catch(() => {
-        this.loading = false;
+      .catch((e: any) => {
+        /*
+         * 🚨 The reason, on screen. Swallowing it and rendering an empty page
+         * is how somebody ends up staring at a screen that looks broken with
+         * nowhere to look next.
+         */
+        this.loadError = e?.response?.error || e?.message || (t('load_failed') as unknown as string);
+        this.firstLoad = false;
         m.redraw();
       });
   }
 
   content() {
-    if (this.loading) {
+    if (this.firstLoad) {
       return (
         <div className="ExtensionPage-settings">
           <div className="container">
             <LoadingIndicator />
+          </div>
+        </div>
+      );
+    }
+
+    if (this.loadError && !this.host) {
+      // Nothing loaded at all. Say what happened and offer the one useful action.
+      return (
+        <div className="ExtensionPage-settings">
+          <div className="container">
+            <div className="Millwright-notice">{this.loadError}</div>
+            <button
+              className="Button"
+              onclick={() => {
+                this.firstLoad = true;
+                this.load();
+              }}
+            >
+              {t('try_again')}
+            </button>
           </div>
         </div>
       );

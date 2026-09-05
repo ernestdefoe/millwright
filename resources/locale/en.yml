@@ -140,3 +140,14 @@ ernestdefoe-millwright:
       Remove {name} from this site? Its files are kept, so this can be undone —
       but its settings and any data it stores are left alone either way.
 
+    # 🚨 A spinner with no end is the failure this extension replaces. If the
+    # page cannot load, it says so and offers the one useful action.
+    load_failed: >-
+      Millwright could not load. Its API did not answer — check the browser
+      console and your forum's error log for what went wrong.
+    load_timeout: >-
+      Millwright's own page did not finish loading. Nothing is wrong with your
+      site or your extensions; something is stopping this page talking to the
+      forum. The browser console will say what.
+    try_again: Try again
+
