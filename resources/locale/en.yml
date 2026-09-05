@@ -136,9 +136,15 @@ ernestdefoe-millwright:
     core_row_unknown: could not be checked
 
     remove: Remove
+    # 🚨 Says how this differs from the Purge button sitting next to it. Flarum's
+    # Purge removes the extension's DATA and says plainly that it does not
+    # uninstall the extension; this removes the CODE. Together they are a full
+    # uninstall, and neither one alone should imply it is.
     remove_confirm: >-
-      Remove {name} from this site? Its files are kept, so this can be undone —
-      but its settings and any data it stores are left alone either way.
+      Remove {name}'s files from this server? This is the part Composer would do.
+      The old files are kept, so it can be undone. Its database tables and
+      settings are left alone — Flarum's own Purge button is what removes those,
+      and doing that first is worth considering if you are not coming back.
 
     # 🚨 A spinner with no end is the failure this extension replaces. If the
     # page cannot load, it says so and offers the one useful action.
@@ -154,4 +160,8 @@ ernestdefoe-millwright:
       Packagist returned nothing. That is unusual — it may be having a moment.
     show_more: Show more
     loading_more: Loading…
+    # 🚨 "Remove files", not "Uninstall". Flarum already has an Uninstall button
+    # on this page that purges the extension's DATA; this one takes the code off
+    # the server. Two buttons a few pixels apart must not claim the same thing.
+    remove_files: Remove files
 
