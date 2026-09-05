@@ -21,31 +21,49 @@ use PHPUnit\Framework\TestCase;
  */
 class OpcacheTest extends TestCase
 {
-    public function test_a_host_that_checks_timestamps_needs_nothing_doing(): void
+    public function test_a_revalidate_window_is_treated_as_stale_risk_not_as_fine(): void
     {
+        /*
+         * 🚨 The bug this test exists for, found by installing this extension on
+         * a production forum. It has validate_timestamps ON — which looks fine —
+         * and revalidate_freq 60, the default in Flarum's own Docker image. PHP
+         * therefore does not re-read a changed file for up to a MINUTE, and
+         * every page returned 500 with "class not found" for a class that was
+         * sitting right there on disk.
+         *
+         * Reading only validate_timestamps called that "fine" and did nothing.
+         */
+        $s = (new Opcache())->situationFrom(['opcache.enable' => true, 'opcache.validate_timestamps' => true, 'opcache.revalidate_freq' => 60]);
+
+        $this->assertSame(Opcache::STALE_RISK, $s['state']);
+        $this->assertTrue($s['validates']);
+        $this->assertSame(60, $s['freq']);
+    }
+
+    public function test_no_opcache_at_all_is_the_only_state_needing_nothing(): void
+    {
+        $s = (new Opcache())->situationFrom(['opcache.enable' => false]);
+
+        $this->assertSame(Opcache::FINE, $s['state']);
+    }
+
+    public function test_a_worker_that_cannot_clear_says_what_will_happen_anyway(): void
+    {
+        // Where timestamps ARE checked, a worker that cannot reset is not a
+        // problem to escalate — the change becomes live on its own shortly, and
+        // saying so is more useful than a warning about restarting PHP-FPM.
         $o = new class extends Opcache {
             public function situation(): array
             {
-                return ['state' => Opcache::FINE, 'enabled' => true, 'validates' => true, 'freq' => 2, 'canReset' => true];
+                return ['state' => Opcache::STALE_RISK, 'enabled' => true, 'validates' => true, 'freq' => 60, 'canReset' => true];
             }
         };
 
         $result = $o->clear();
 
-        $this->assertTrue($result['done']);
-        $this->assertStringContainsString('timestamps', $result['why']);
-    }
-
-    public function test_a_host_with_no_opcache_at_all_needs_nothing_doing(): void
-    {
-        $o = new class extends Opcache {
-            public function situation(): array
-            {
-                return ['state' => Opcache::FINE, 'enabled' => false, 'validates' => true, 'freq' => 0, 'canReset' => false];
-            }
-        };
-
-        $this->assertTrue($o->clear()['done']);
+        $this->assertFalse($result['done']);
+        $this->assertStringContainsString('60 second', $result['why']);
+        $this->assertStringNotContainsString('restart PHP-FPM', $result['why']);
     }
 
     public function test_a_worker_says_plainly_that_it_cannot_fix_this(): void

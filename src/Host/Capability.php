@@ -159,21 +159,38 @@ class Capability
     private function opcacheCheck(): array
     {
         $o = (new Opcache())->situation();
-        $risk = $o['state'] === Opcache::STALE_RISK;
+
+        if (! $o['enabled']) {
+            return [
+                'id' => 'opcache', 'ok' => true, 'warn' => false,
+                'what' => 'No compiled-code cache',
+                'why'  => 'Nothing stands between the files an update writes and the code that runs.',
+            ];
+        }
+
+        /*
+         * 🚨 Not a warning when Millwright can handle it, and it usually can:
+         * the finalise step clears the cache from the web request that runs it.
+         * The row exists so somebody debugging "the update did not take" has
+         * somewhere to look, not to alarm them about a normal setup.
+         */
+        $handled = $o['canReset'];
 
         return [
             'id'   => 'opcache',
-            'ok'   => ! $risk,
-            'warn' => $risk,
-            'what' => $risk
-                ? 'PHP caches compiled code and never re-reads files'
-                : ($o['enabled'] ? 'PHP notices changed files' : 'No compiled-code cache'),
-            'why'  => $risk
-                ? 'opcache.validate_timestamps is off here, so updated files are not read until PHP is restarted. '
-                    . 'Millwright clears the cache itself after an update where it can, and tells you when it cannot.'
-                : ($o['enabled']
-                    ? 'opcache re-checks files every ' . max(1, $o['freq']) . ' second(s), so an update is live almost immediately.'
-                    : 'Nothing stands between the files an update writes and the code that runs.'),
+            'ok'   => $handled,
+            'warn' => ! $handled,
+            'what' => $o['validates']
+                ? 'PHP re-reads changed files every ' . max(1, $o['freq']) . ' second(s)'
+                : 'PHP caches compiled code and never re-reads files',
+            'why'  => $handled
+                ? 'Millwright clears the compiled-code cache when an update finishes, so the new files are used '
+                    . 'straight away rather than after a delay.'
+                : ($o['validates']
+                    ? 'The cache cannot be cleared from here, so an update becomes live within '
+                        . max(1, $o['freq']) . ' second(s) rather than immediately.'
+                    : 'This host never re-reads changed files and the cache cannot be cleared from here, so PHP-FPM '
+                        . 'has to be restarted for an update to take effect.'),
         ];
     }
 
