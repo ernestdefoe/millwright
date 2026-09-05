@@ -1,4 +1,5 @@
 import app from 'flarum/admin/app';
+import apiUrl from '../apiUrl';
 import Component from 'flarum/common/Component';
 
 declare const m: any;
@@ -167,7 +168,7 @@ export default class RunPanel extends Component<RunPanelAttrs> {
     if (!this.polling) return;
 
     app
-      .request({ method: 'POST', url: app.forum.attribute('apiUrl') + '/millwright/step' })
+      .request({ method: 'POST', url: apiUrl() + '/millwright/step' })
       .then((data: any) => {
         this.misses = 0;
         this.attrs.onprogress(data);
@@ -201,7 +202,7 @@ export default class RunPanel extends Component<RunPanelAttrs> {
     m.redraw();
 
     app
-      .request({ method: 'POST', url: app.forum.attribute('apiUrl') + '/millwright/rollback' })
+      .request({ method: 'POST', url: apiUrl() + '/millwright/rollback' })
       .then((data: any) => {
         this.rollingBack = false;
         this.attrs.onrollback(data);

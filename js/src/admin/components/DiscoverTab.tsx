@@ -1,4 +1,5 @@
 import app from 'flarum/admin/app';
+import apiUrl from '../apiUrl';
 import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 
@@ -219,7 +220,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
     m.redraw();
 
     app
-      .request({ method: 'GET', url: app.forum.attribute('apiUrl') + '/millwright/discover?q=' + encodeURIComponent(q) })
+      .request({ method: 'GET', url: apiUrl() + '/millwright/discover?q=' + encodeURIComponent(q) })
       .then((data: any) => {
         if (mine !== this.seq) return;
 
@@ -245,7 +246,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
     app
       .request({
         method: 'POST',
-        url: app.forum.attribute('apiUrl') + '/millwright/discover/compat',
+        url: apiUrl() + '/millwright/discover/compat',
         body: { packages: names },
       })
       .then((data: any) => {

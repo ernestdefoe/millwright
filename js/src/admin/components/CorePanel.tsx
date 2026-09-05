@@ -1,4 +1,5 @@
 import app from 'flarum/admin/app';
+import apiUrl from '../apiUrl';
 import Component from 'flarum/common/Component';
 
 declare const m: any;
@@ -162,7 +163,7 @@ export default class CorePanel extends Component<CoreAttrs> {
 
   load() {
     app
-      .request({ method: 'GET', url: app.forum.attribute('apiUrl') + '/millwright/core' })
+      .request({ method: 'GET', url: apiUrl() + '/millwright/core' })
       .then((data: any) => {
         this.current = data.current;
         this.newest = data.newest || null;
@@ -181,7 +182,7 @@ export default class CorePanel extends Component<CoreAttrs> {
 
   runPreflight(target: string) {
     app
-      .request({ method: 'GET', url: app.forum.attribute('apiUrl') + '/millwright/core?target=' + encodeURIComponent(target) })
+      .request({ method: 'GET', url: apiUrl() + '/millwright/core?target=' + encodeURIComponent(target) })
       .then((data: any) => {
         this.preflight = data.preflight;
         m.redraw();
@@ -210,7 +211,7 @@ export default class CorePanel extends Component<CoreAttrs> {
     app
       .request({
         method: 'POST',
-        url: app.forum.attribute('apiUrl') + '/millwright/discover/compat',
+        url: apiUrl() + '/millwright/discover/compat',
         body: { packages: batch, core: target },
       })
       .then((data: any) => {

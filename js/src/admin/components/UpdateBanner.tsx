@@ -1,4 +1,5 @@
 import app from 'flarum/admin/app';
+import apiUrl from '../apiUrl';
 import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import LinkButton from 'flarum/common/components/LinkButton';
@@ -32,7 +33,7 @@ export default class UpdateBanner extends Component {
     super.oninit(vnode);
 
     app
-      .request({ method: 'GET', url: app.forum.attribute('apiUrl') + '/millwright/state' })
+      .request({ method: 'GET', url: apiUrl() + '/millwright/state' })
       .then((data: any) => {
         const updates = data.updates || {};
         this.count = Object.keys(updates.available || {}).length;
@@ -96,7 +97,7 @@ export default class UpdateBanner extends Component {
     this.dismissed = true;
 
     app
-      .request({ method: 'GET', url: app.forum.attribute('apiUrl') + '/millwright/state' })
+      .request({ method: 'GET', url: apiUrl() + '/millwright/state' })
       .then((data: any) => {
         try {
           localStorage.setItem(this.key(Object.keys(data.updates?.available || {})), '1');

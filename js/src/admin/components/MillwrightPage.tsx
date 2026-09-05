@@ -1,4 +1,5 @@
 import app from 'flarum/admin/app';
+import apiUrl from '../apiUrl';
 import ExtensionPage from 'flarum/admin/components/ExtensionPage';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import HostPanel from './HostPanel';
@@ -50,13 +51,13 @@ export default class MillwrightPage extends ExtensionPage {
 
   oninit(vnode: any) {
     super.oninit(vnode);
-    this.load();
 
     /*
-     * 🚨 A spinner with no end is the exact failure this extension exists to
-     * replace, so it is not allowed to happen here either. If the first load
-     * has not come back in ten seconds, the page says so and offers to try
-     * again instead of spinning forever with nothing to act on.
+     * 🚨 The safety net is armed BEFORE the thing it protects against, and the
+     * first version of it was not. It sat after `this.load()`, so a load that
+     * threw SYNCHRONOUSLY — which is what a bad `app.forum.attribute()` does —
+     * skipped past it, escaped oninit, and left the spinner on screen forever.
+     * A guard that runs only when the guarded code succeeds is not a guard.
      */
     setTimeout(() => {
       if (this.firstLoad) {
@@ -65,13 +66,26 @@ export default class MillwrightPage extends ExtensionPage {
         m.redraw();
       }
     }, 10000);
+
+    /*
+     * 🚨 And the call itself cannot be allowed to escape. An exception inside a
+     * Mithril lifecycle hook aborts the component's initialisation; nothing in
+     * the UI changes, so the failure is invisible in exactly the place this
+     * extension promises never to be.
+     */
+    try {
+      this.load();
+    } catch (e: any) {
+      this.loadError = e?.message ? String(e.message) : (t('load_failed') as unknown as string);
+      this.firstLoad = false;
+    }
   }
 
   load() {
     this.loadError = null;
 
     app
-      .request({ method: 'GET', url: app.forum.attribute('apiUrl') + '/millwright/state' })
+      .request({ method: 'GET', url: apiUrl() + '/millwright/state' })
       .then((data: any) => {
         this.host = data.host;
         this.installed = data.installed || [];
@@ -283,7 +297,7 @@ export default class MillwrightPage extends ExtensionPage {
     app
       .request({
         method: 'POST',
-        url: app.forum.attribute('apiUrl') + '/millwright/update',
+        url: apiUrl() + '/millwright/update',
         body: { packages, mode },
       })
       .then((data: any) => {
@@ -343,7 +357,7 @@ export default class MillwrightPage extends ExtensionPage {
     m.redraw();
 
     app
-      .request({ method: 'POST', url: app.forum.attribute('apiUrl') + '/millwright/check' })
+      .request({ method: 'POST', url: apiUrl() + '/millwright/check' })
       .then((data: any) => {
         this.updates = data.updates || this.updates;
         this.installed = data.installed || this.installed;
