@@ -85,7 +85,7 @@ ernestdefoe-millwright:
     searching: Searching…
     discover_placeholder: Search Packagist for a Flarum extension
     discover_hint: >-
-      Searches every Flarum extension published on Packagist.
+      Every Flarum extension published on Packagist, most widely used first.
     # 🚨 Against the version this forum RUNS, not against "Flarum 2". A forum on
     # 2.0.0 and one on 2.1.0 get different answers, and saying which version was
     # used is what makes the badge checkable.
@@ -150,4 +150,8 @@ ernestdefoe-millwright:
       site or your extensions; something is stopping this page talking to the
       forum. The browser console will say what.
     try_again: Try again
+    discover_empty: >-
+      Packagist returned nothing. That is unusual — it may be having a moment.
+    show_more: Show more
+    loading_more: Loading…
 

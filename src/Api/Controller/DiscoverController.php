@@ -35,13 +35,21 @@ class DiscoverController implements RequestHandlerInterface
     {
         RequestUtil::getActor($request)->assertAdmin();
 
-        $query = trim((string) ($request->getQueryParams()['q'] ?? ''));
+        $params = $request->getQueryParams();
+        $query  = trim((string) ($params['q'] ?? ''));
+        $page   = max(1, min(20, (int) ($params['page'] ?? 1)));
 
-        if ($query === '') {
-            return new JsonResponse(['results' => [], 'total' => 0, 'error' => null]);
-        }
-
-        $found = (new Packagist($this->cache()))->search($query);
+        /*
+         * 🚨 No query means BROWSE, not "return nothing". The first version
+         * refused an empty query and left the tab blank until somebody guessed a
+         * search term — a catalogue behaving like a command line. Packagist
+         * answers this by popularity, which is the right default ordering for
+         * somebody who does not yet know what they are looking for.
+         *
+         * The page number is clamped: it reaches an outbound URL, and twenty
+         * pages is more than anybody browses before searching instead.
+         */
+        $found = (new Packagist($this->cache()))->search($query, 12, $page);
 
         /*
          * 🚨 Marked rather than filtered out. Somebody searching for an

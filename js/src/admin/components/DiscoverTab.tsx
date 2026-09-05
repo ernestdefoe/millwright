@@ -43,9 +43,27 @@ interface DiscoverAttrs {
  * be the slower, worse version of the same screen.
  */
 export default class DiscoverTab extends Component<DiscoverAttrs> {
+  /*
+   * 🚨 The list loads on open, with no query. Extension Manager shows everything
+   * installable straight away, and that is the right behaviour: somebody opening
+   * a tab called "Find extensions" is asking what exists, not to guess a search
+   * term first. The first version required typing before anything appeared,
+   * which made a catalogue behave like a command line.
+   *
+   * Packagist orders an untyped `type=flarum-extension` query by popularity, so
+   * the default view is the extensions most forums actually run.
+   */
+  oninit(vnode: any) {
+    super.oninit(vnode);
+    this.search();
+  }
+
   private query = '';
   private searching = false;
   private searched = false;
+  private page = 1;
+  private more = false;
+  private loadingMore = false;
   private results: Found[] = [];
   private verdicts: Record<string, Verdict> = {};
   private checking = false;
@@ -84,10 +102,20 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
         {this.searching ? <LoadingIndicator /> : null}
 
         {!this.searching && this.searched && this.results.length === 0 && !this.error ? (
-          <div className="Millwright-empty">{t('discover_none', { query: this.query })}</div>
+          <div className="Millwright-empty">
+            {this.query ? t('discover_none', { query: this.query }) : t('discover_empty')}
+          </div>
         ) : null}
 
         <div className="Millwright-grid">{this.results.map((r) => this.card(r))}</div>
+
+        {this.more && !this.searching ? (
+          <div className="Millwright-more">
+            <button className="Button" disabled={this.loadingMore} onclick={() => this.showMore()}>
+              {this.loadingMore ? t('loading_more') : t('show_more')}
+            </button>
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -204,7 +232,6 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
 
   search() {
     const q = this.query.trim();
-    if (!q) return;
 
     /*
      * 🚨 Every search carries a number, and a reply is dropped unless it is the
@@ -214,6 +241,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
      */
     const mine = ++this.seq;
 
+    this.page = 1;
     this.searching = true;
     this.searched = true;
     this.error = null;
@@ -226,6 +254,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
 
         this.searching = false;
         this.results = data.results || [];
+        this.more = !!data.more;
         this.error = data.error || null;
         m.redraw();
 
@@ -235,6 +264,45 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
         if (mine !== this.seq) return;
         this.searching = false;
         this.error = t('discover_failed') as unknown as string;
+        m.redraw();
+      });
+  }
+
+  /**
+   * The next page, appended.
+   *
+   * 🚨 Appended rather than replacing, because browsing is a scroll and losing
+   * what you already looked at to see more of it is the wrong trade. Each page
+   * costs its own compatibility pass, which is why they are fetched a page at a
+   * time rather than all 2306 at once.
+   */
+  showMore() {
+    const mine = this.seq;
+    this.loadingMore = true;
+    m.redraw();
+
+    app
+      .request({
+        method: 'GET',
+        url: apiUrl() + '/millwright/discover?page=' + (this.page + 1) + '&q=' + encodeURIComponent(this.query.trim()),
+      })
+      .then((data: any) => {
+        if (mine !== this.seq) return;
+
+        this.page += 1;
+        this.loadingMore = false;
+        this.more = !!data.more;
+
+        const fresh: Found[] = data.results || [];
+        this.results = this.results.concat(fresh);
+        m.redraw();
+
+        if (fresh.length) this.checkCompat(fresh.map((r) => r.name), mine);
+      })
+      .catch(() => {
+        if (mine !== this.seq) return;
+        this.loadingMore = false;
+        this.more = false;
         m.redraw();
       });
   }

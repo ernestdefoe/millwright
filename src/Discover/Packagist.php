@@ -26,12 +26,22 @@ class Packagist
     }
 
     /**
-     * @return array{results:list<array<string,mixed>>, total:int, error:?string}
+     * Search, or — with no query — browse.
+     *
+     * 🚨 An empty query is a valid request, not an error. Packagist answers
+     * `type=flarum-extension` with no `q` by returning every Flarum extension
+     * published, most popular first: 2306 of them. That is what somebody opening
+     * a tab called "Find extensions" is asking for, and requiring them to guess
+     * a search term before anything appears makes a browsable catalogue behave
+     * like a command line.
+     *
+     * @return array{results:list<array<string,mixed>>, total:int, error:?string, more:bool}
      */
-    public function search(string $query, int $perPage = 12): array
+    public function search(string $query, int $perPage = 12, int $page = 1): array
     {
         $url = 'https://packagist.org/search.json?type=flarum-extension&per_page=' . $perPage
-            . '&q=' . rawurlencode($query);
+            . '&page=' . max(1, $page)
+            . ($query === '' ? '' : '&q=' . rawurlencode($query));
 
         $body = ($this->get)($url);
 
@@ -42,13 +52,13 @@ class Packagist
              * opposite things — the first ends a search, the second means try
              * again in a minute.
              */
-            return ['results' => [], 'total' => 0, 'error' => 'Packagist could not be reached.'];
+            return ['results' => [], 'total' => 0, 'error' => 'Packagist could not be reached.', 'more' => false];
         }
 
         $data = json_decode($body, true);
 
         if (! is_array($data) || ! isset($data['results'])) {
-            return ['results' => [], 'total' => 0, 'error' => 'Packagist returned something unexpected.'];
+            return ['results' => [], 'total' => 0, 'error' => 'Packagist returned something unexpected.', 'more' => false];
         }
 
         $results = [];
@@ -76,7 +86,13 @@ class Packagist
             ];
         }
 
-        return ['results' => $results, 'total' => (int) ($data['total'] ?? count($results)), 'error' => null];
+        return [
+            'results' => $results,
+            'total'   => (int) ($data['total'] ?? count($results)),
+            'error'   => null,
+            // Packagist hands back the URL of the next page when there is one.
+            'more'    => ! empty($data['next']),
+        ];
     }
 
     /**
