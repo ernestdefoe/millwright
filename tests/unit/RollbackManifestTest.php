@@ -109,6 +109,30 @@ class RollbackManifestTest extends TestCase
         $this->assertNotContains('restored composer.json', $undone);
     }
 
+    public function test_an_undone_install_leaves_no_empty_vendor_directory(): void
+    {
+        // "Put everything back the way it was" should not leave an empty
+        // vendor/acme/ behind as evidence that it did not quite.
+        mkdir($this->dir . '/staging/newco/thing', 0775, true);
+        file_put_contents($this->dir . '/staging/newco/thing/it.php', 'new');
+        file_put_contents($this->dir . '/work/composer.lock.before', '{"packages":[]}');
+
+        (new Applier(
+            $this->dir . '/install/vendor',
+            $this->dir . '/staging',
+            $this->dir . '/trash',
+            new Journal($this->dir . '/work/journal.jsonl')
+        ))->applyOne(new Change(Change::ADD, 'newco/thing', null, '1.0.0'));
+
+        $this->assertDirectoryExists($this->dir . '/install/vendor/newco/thing');
+
+        $this->rollback()->run();
+
+        $this->assertDirectoryDoesNotExist($this->dir . '/install/vendor/newco/thing');
+        $this->assertDirectoryDoesNotExist($this->dir . '/install/vendor/newco');
+        $this->assertDirectoryExists($this->dir . '/install/vendor', 'and never above it');
+    }
+
     public function test_restoring_twice_is_harmless(): void
     {
         // The journal makes every step repeatable, and this one is no exception:

@@ -48,7 +48,7 @@ class ComposerSteps implements Steps
             'plan'     => ['work out what changes'],
             'fetch'    => array_map(fn (Change $c) => $c->package, $this->downloadable()),
             'apply'    => array_map(fn (Change $c) => $c->package, $this->plan()),
-            'finalise' => ['autoloader', 'migrations', 'assets', 'caches'],
+            'finalise' => ['register', 'migrations', 'assets', 'caches'],
             default    => [],
         };
     }
@@ -170,7 +170,7 @@ class ComposerSteps implements Steps
     private function finalise(string $item): string
     {
         return match ($item) {
-            'autoloader' => $this->composerCommand(['dump-autoload', '--optimize'], 'autoloader rebuilt'),
+            'register'   => $this->composerCommand(['install', '--no-scripts'], 'Composer now knows about the change'),
             'migrations' => $this->flarum('migrate', 'migrations run'),
             'assets'     => $this->flarum('assets:publish', 'assets published'),
             'caches'     => $this->flarum('cache:clear', 'caches cleared'),
@@ -178,6 +178,27 @@ class ComposerSteps implements Steps
         };
     }
 
+    /**
+     * 🚨 `install`, not `dump-autoload`, and the difference is whether the
+     * update exists at all.
+     *
+     * Composer's record of what is installed is vendor/composer/installed.json,
+     * not composer.lock — and `dump-autoload` regenerates the autoloader FROM
+     * that record. So a package this pipeline placed by hand was autoloaded by
+     * nothing and invisible to Flarum: the files were right, the lock was right,
+     * every phase reported success, and the extension simply did not appear.
+     * Found by installing one on a real forum and looking for it afterwards.
+     *
+     * `install` reconciles the record with the lock. It is cheap because the
+     * tree already agrees — measured at 2.2s for a one-package change on a
+     * 226-package forum, touching only what moved.
+     *
+     * 🚨 It does re-extract the packages this run changed, because Composer
+     * trusts its own record rather than the disk. That is a known cost and it
+     * is worth it: the staged apply is what makes the RISKY window atomic and
+     * reversible, and this runs afterwards, against a tree that is already
+     * consistent, where being killed costs a rerun rather than a broken site.
+     */
     private function composerCommand(array $args, string $note): string
     {
         $result = $this->composer->run($args);

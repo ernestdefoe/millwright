@@ -171,6 +171,30 @@ class Rollback
         if (! @rename($live, $aside)) {
             throw new RuntimeException("Could not remove $live during rollback");
         }
+
+        $this->tidyVendorDir(dirname($live));
+    }
+
+    /**
+     * Remove the vendor namespace directory if this was the last package in it.
+     *
+     * 🚨 Only when empty, and never above the vendor directory itself. rmdir
+     * refuses a non-empty directory, so the check and the act cannot disagree
+     * even if something is written between them.
+     *
+     * Cosmetic, and worth doing anyway: a rollback that promises to put
+     * everything back the way it was should not leave an empty vendor/acme/
+     * behind as evidence that it did not quite.
+     */
+    private function tidyVendorDir(string $dir): void
+    {
+        $vendor = rtrim($this->vendorDir, DIRECTORY_SEPARATOR);
+
+        if ($dir === $vendor || ! str_starts_with($dir, $vendor . DIRECTORY_SEPARATOR)) {
+            return;
+        }
+
+        @rmdir($dir);
     }
 
     private function path(string $base, string $relative): string
