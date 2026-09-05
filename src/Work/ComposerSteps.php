@@ -7,6 +7,7 @@ use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Plan\Change;
 use ErnestDefoe\Millwright\Plan\LockDiff;
 use ErnestDefoe\Millwright\Run\Run;
+use ErnestDefoe\Millwright\Host\Opcache;
 use ErnestDefoe\Millwright\Host\PhpBinary;
 use ErnestDefoe\Millwright\Run\Steps;
 use RuntimeException;
@@ -48,7 +49,7 @@ class ComposerSteps implements Steps
             'plan'     => ['work out what changes'],
             'fetch'    => array_map(fn (Change $c) => $c->package, $this->downloadable()),
             'apply'    => array_map(fn (Change $c) => $c->package, $this->plan()),
-            'finalise' => ['register', 'migrations', 'assets', 'caches'],
+            'finalise' => ['register', 'migrations', 'assets', 'caches', 'code cache'],
             default    => [],
         };
     }
@@ -174,6 +175,14 @@ class ComposerSteps implements Steps
             'migrations' => $this->flarum('migrate', 'migrations run'),
             'assets'     => $this->flarum('assets:publish', 'assets published'),
             'caches'     => $this->flarum('cache:clear', 'caches cleared'),
+            /*
+             * 🚨 Last, and it is the step that decides whether any of the others
+             * were visible. On a host with opcache.validate_timestamps off, every
+             * phase above can succeed and the site carries on serving the old
+             * compiled code until PHP is restarted — an update that reports
+             * success and changed nothing anybody can see.
+             */
+            'code cache' => $this->codeCache(),
             default      => 'nothing to do',
         };
     }
@@ -199,6 +208,21 @@ class ComposerSteps implements Steps
      * reversible, and this runs afterwards, against a tree that is already
      * consistent, where being killed costs a rerun rather than a broken site.
      */
+    /**
+     * 🚨 Never fails the run.
+     *
+     * By this point the files are updated, the lock is updated, and Composer's
+     * record agrees with both. A compiled-code cache that could not be cleared
+     * is a thing to TELL somebody about, not a reason to mark a completed update
+     * as failed and offer to roll back work that was correct.
+     */
+    private function codeCache(): string
+    {
+        $result = (new Opcache())->clear();
+
+        return $result['why'];
+    }
+
     private function composerCommand(array $args, string $note): string
     {
         $result = $this->composer->run($args);

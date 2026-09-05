@@ -38,7 +38,7 @@ class Capability
             $this->memoryCheck($memory),
             $this->timeCheck(),
             $this->subprocessCheck(),
-            $this->symlinkCheck(),
+            $this->opcacheCheck(),
             $this->diskCheck(),
         ];
 
@@ -69,16 +69,27 @@ class Capability
     }
 
     /**
-     * Which apply strategy this host supports.
+     * How updates are applied here.
      *
-     * Symlinks allow a whole prepared tree to be swapped with one rename, so
-     * nothing is ever missing. Without them packages are replaced one at a time
-     * — still safe, still journalled, just a microsecond each where a package is
-     * absent. Both are fine; the admin deserves to know which they have.
+     * 🚨 One strategy, on every host, and that is a decision rather than a
+     * missing feature. This used to advertise a second "slots" tier where a
+     * symlink is flipped between prepared directories so nothing is ever
+     * missing — the panel said so, and no such code existed.
+     *
+     * It was not built because it is wrong. A symlink flip is atomic on disk
+     * and invisible to PHP: with `opcache.revalidate_path=0` — the default,
+     * measured as false on the machine this was written on — opcache resolves a
+     * symlink once and caches the result, and realpath_cache_ttl holds the old
+     * target for a further two minutes. Slots would trade a microsecond where a
+     * package is missing for minutes of quietly serving the old code, which is
+     * far worse: nothing looks wrong.
+     *
+     * Replacing a directory keeps the path constant, so the ordinary timestamp
+     * check picks it up. See Opcache for the case where that check is off.
      */
     public function applyTier(): string
     {
-        return $this->canSymlink() ? 'slots' : 'journal';
+        return 'journal';
     }
 
     private function memoryCheck(int $bytes): array
@@ -118,29 +129,51 @@ class Capability
     {
         $ok = $this->canSpawn();
 
+        /*
+         * 🚨 A blocker, not a warning, and it used to say otherwise: "Composer
+         * runs in-process, that still works". It does not — there is no
+         * in-process path, because running Composer inside the web request is
+         * the fault this extension exists to avoid. The panel now says what the
+         * code actually does.
+         */
         return [
             'id'   => 'subprocess',
-            'ok'   => true,
-            'warn' => ! $ok,
+            'ok'   => $ok,
+            'warn' => false,
             'what' => $ok ? 'Can run Composer as a separate process' : 'Cannot start a separate process',
             'why'  => $ok
                 ? 'Composer runs outside the web request, so its memory use is its own and cannot take the site down with it.'
-                : 'proc_open is disabled here, so Composer runs in-process. That still works; it just shares this request\'s memory.',
+                : 'proc_open is disabled here, so Composer cannot be run at all. Millwright can inspect this host but not update it. '
+                    . 'Ask your host to remove proc_open from disable_functions.',
         ];
     }
 
-    private function symlinkCheck(): array
+    /**
+     * 🚨 The check that decides whether an update is VISIBLE.
+     *
+     * Everything else here is about whether an update can run. This is about
+     * whether anybody will be able to tell that it did — on a host tuned with
+     * validate_timestamps off, new files land, every phase reports success, and
+     * the site serves the old code until PHP is restarted.
+     */
+    private function opcacheCheck(): array
     {
-        $ok = $this->canSymlink();
+        $o = (new Opcache())->situation();
+        $risk = $o['state'] === Opcache::STALE_RISK;
 
         return [
-            'id'   => 'symlink',
-            'ok'   => true,
-            'warn' => ! $ok,
-            'what' => $ok ? 'Symlinks available' : 'Symlinks not available',
-            'why'  => $ok
-                ? 'Updates can swap a whole prepared tree with one atomic rename, so no package is ever missing, even for an instant.'
-                : 'Packages are replaced one at a time instead. Still safe and still reversible — just a microsecond each where that package is absent.',
+            'id'   => 'opcache',
+            'ok'   => ! $risk,
+            'warn' => $risk,
+            'what' => $risk
+                ? 'PHP caches compiled code and never re-reads files'
+                : ($o['enabled'] ? 'PHP notices changed files' : 'No compiled-code cache'),
+            'why'  => $risk
+                ? 'opcache.validate_timestamps is off here, so updated files are not read until PHP is restarted. '
+                    . 'Millwright clears the cache itself after an update where it can, and tells you when it cannot.'
+                : ($o['enabled']
+                    ? 'opcache re-checks files every ' . max(1, $o['freq']) . ' second(s), so an update is live almost immediately.'
+                    : 'Nothing stands between the files an update writes and the code that runs.'),
         ];
     }
 
@@ -160,10 +193,13 @@ class Capability
 
     private function summary(int $bytes): string
     {
+        if (! $this->canSpawn()) {
+            return 'Composer cannot be run on this host, because PHP is not allowed to start other programs. '
+                . 'Millwright can tell you what is installed, but it cannot update anything here.';
+        }
+
         return match ($this->resolveTier($bytes)) {
-            self::FULL => $this->canSymlink()
-                ? 'Everything works on this host, and updates are applied with no window at all where a package is missing.'
-                : 'Everything works on this host. Updates replace one package at a time, which is safe and reversible.',
+            self::FULL => 'Everything works on this host. Updates replace one package at a time, which is safe and reversible.',
             self::TARGETED => 'You can update extensions one at a time here. Updating Flarum itself needs a little more memory than this host allows.',
             self::NONE => 'This host does not have enough memory for Composer to work out what an update involves. Everything else is ready — ask your host to raise memory_limit to 256 MB.',
         };
@@ -199,16 +235,4 @@ class Capability
         return ! in_array('proc_open', $disabled, true);
     }
 
-    private function canSymlink(): bool
-    {
-        // Tested for real rather than assumed from the platform: open_basedir and
-        // some shared hosts refuse it even where the function exists.
-        $link = $this->installPath . '/.millwright-symlink-test';
-        @unlink($link);
-
-        $ok = @symlink($this->installPath, $link);
-        @unlink($link);
-
-        return (bool) $ok;
-    }
 }
