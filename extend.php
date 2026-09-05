@@ -49,6 +49,7 @@ return [
          * doing both in one request would mean a dozen round trips before
          * anything appeared on a screen somebody is typing into.
          */
+        ->get('/millwright/core', 'millwright.core', Controller\CoreController::class)
         ->get('/millwright/discover', 'millwright.discover', Controller\DiscoverController::class)
         ->post('/millwright/discover/compat', 'millwright.compat', Controller\CompatController::class),
 ];

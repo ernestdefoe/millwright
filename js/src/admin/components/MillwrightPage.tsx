@@ -4,6 +4,7 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import HostPanel from './HostPanel';
 import RunPanel from './RunPanel';
 import DiscoverTab from './DiscoverTab';
+import CorePanel from './CorePanel';
 
 declare const m: any;
 
@@ -123,7 +124,19 @@ export default class MillwrightPage extends ExtensionPage {
               ? <HostPanel host={this.host} />
               : this.tab === 'discover'
                 ? <DiscoverTab starting={this.starting} oninstall={(name: string) => this.start([name], 'install')} />
-                : [this.updateAll(), this.checkLine(), this.grid()]}
+                : [
+                  /*
+                   * 🚨 Above the extensions, because it is the thing whose blast
+                   * radius is the whole forum. It is also the one panel that
+                   * disables its own button — a core update with blocked
+                   * extensions would be refused by Composer at the end of a long
+                   * wait, and knowing that in advance is the point.
+                   */
+                  <CorePanel key="core" starting={this.starting} onbegin={(pkgs: string[]) => this.start(pkgs)} />,
+                  this.updateAll(),
+                  this.checkLine(),
+                  this.grid(),
+                ]}
         </div>
       </div>
     );

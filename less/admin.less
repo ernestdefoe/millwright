@@ -280,3 +280,59 @@
 
 // Two facts can be true of one package at once — abandoned, and works here.
 .Millwright-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+// ── Flarum itself ────────────────────────────────────────────────────────────
+
+.Millwright-core {
+  border: 1px solid var(--control-bg);
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin-bottom: 22px;
+  background: var(--body-bg);
+}
+
+.Millwright-coreHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.Millwright-coreTitle { font-weight: 700; }
+.Millwright-corenow,
+.Millwright-coreNote { color: var(--muted-color); font-size: 13px; }
+
+.Millwright-coreSummary {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--muted-color);
+  max-width: 78ch;
+
+  > div + div { margin-top: 5px; }
+}
+
+.Millwright-coreBlocked { color: var(--text-color); font-weight: 600; }
+
+.Millwright-coreRows {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--control-bg);
+  font-size: 13px;
+}
+
+.Millwright-coreRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  justify-content: space-between;
+  padding: 5px 0;
+
+  // A blocker is the only thing here in full-strength text. Everything else in
+  // this list is context for it.
+  &.is-blocked .Millwright-coreState { color: var(--text-color); font-weight: 600; }
+}
+
+.Millwright-corePkg { font-family: monospace; }
+.Millwright-coreState { color: var(--muted-color); }

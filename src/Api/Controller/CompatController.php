@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use Composer\Semver\VersionParser;
 use ErnestDefoe\Millwright\Discover\Cache;
 use ErnestDefoe\Millwright\Discover\Compatibility;
 use ErnestDefoe\Millwright\Discover\Packagist;
@@ -54,13 +55,36 @@ class CompatController implements RequestHandlerInterface
          */
         $names = array_slice($names, 0, self::MOST);
 
+        /*
+         * 🚨 An optional target, so the core pre-flight can ask "would this
+         * extension work on the Flarum I am considering" through the same
+         * endpoint. Validated with Composer's parser rather than trusted:
+         * it reaches a cache key and a constraint check, and junk would fill
+         * the cache directory with entries nothing ever reads again.
+         */
+        $core = $this->targetOr($this->coreVersion(), Arr::get((array) $request->getParsedBody(), 'core'));
+
         $packagist = new Packagist(new Cache($this->paths->storage . '/millwright/packagist'));
-        $compat    = new Compatibility($this->coreVersion());
 
         return new JsonResponse([
-            'verdicts' => $packagist->verdicts($names, $compat),
-            'core'     => $this->coreVersion(),
+            'verdicts' => $packagist->verdicts($names, new Compatibility($core)),
+            'core'     => $core,
         ]);
+    }
+
+    private function targetOr(string $fallback, mixed $given): string
+    {
+        if (! is_string($given) || $given === '') {
+            return $fallback;
+        }
+
+        try {
+            (new VersionParser())->normalize($given);
+        } catch (\UnexpectedValueException) {
+            return $fallback;
+        }
+
+        return $given;
     }
 
     private function coreVersion(): string

@@ -91,6 +91,18 @@ class Compatibility
     }
 
     /**
+     * Does this constraint admit the core version being asked about?
+     *
+     * Public because the core pre-flight answers most of its question straight
+     * from composer.lock — the constraint of the release ALREADY installed —
+     * without any Packagist metadata to feed through verdict().
+     */
+    public function admitsCore(string $constraint): bool
+    {
+        return $this->admits($constraint);
+    }
+
+    /**
      * Does this constraint admit the Flarum that is installed?
      *
      * 🚨 Catches UnexpectedValueException ONLY, and this narrowness is the whole

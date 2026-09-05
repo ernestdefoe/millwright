@@ -110,3 +110,28 @@ ernestdefoe-millwright:
       Its author has marked it as no longer maintained. It may still work.
     abandoned_for: "Its author says to use {replacement} instead."
 
+    core_title: Flarum itself
+    core_loading: Checking Flarum…
+    core_running: "This forum runs Flarum {version}."
+    core_current: No newer Flarum has been published since the last check.
+    core_update_to: "Update Flarum to {version}"
+    core_failed: >-
+      Millwright could not work out what upgrading Flarum would involve. Nothing
+      has changed.
+
+    # 🚨 Stated as a consequence, never as a bare count. "3 extensions" is a
+    # number; "the upgrade would be refused" is the thing somebody needs to know,
+    # and it is why the button is disabled.
+    core_blocked: >-
+      {count} extension(s) have no release that works with Flarum {version}, so
+      the upgrade would be refused. They are listed below.
+    core_clear: "Every installed extension has a release that works with Flarum {version}."
+    core_updating_too: >-
+      {count} extension(s) will be updated at the same time, because their current
+      version does not support the new Flarum.
+    core_checking: "Checking {count} more extension(s)…"
+
+    core_row_blocked: "no release for this Flarum — asks for {requires}"
+    core_row_updating: "will update to {version}"
+    core_row_unknown: could not be checked
+
