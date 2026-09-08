@@ -65,7 +65,7 @@ export default class SourcesTab extends Component {
     const repos = this.data.repositories || [];
 
     return (
-      <section className="Millwright-section" key="repos">
+      <section className="Millwright-section">
         <h3>{t('repos_title')}</h3>
         <p className="Millwright-sectionNote">{t('repos_help')}</p>
 
@@ -127,7 +127,7 @@ export default class SourcesTab extends Component {
     const s = this.data.stability || {};
 
     return (
-      <section className="Millwright-section" key="stability">
+      <section className="Millwright-section">
         <h3>{t('stability_title')}</h3>
         <p className="Millwright-sectionNote">{t('stability_help')}</p>
 
@@ -175,7 +175,7 @@ export default class SourcesTab extends Component {
     const stored = a.stored || [];
 
     return (
-      <section className="Millwright-section" key="auth">
+      <section className="Millwright-section">
         <h3>{t('auth_title')}</h3>
         <p className="Millwright-sectionNote">{t('auth_help')}</p>
 

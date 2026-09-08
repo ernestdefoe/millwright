@@ -85,13 +85,14 @@ export default class CorePanel extends Component<CoreAttrs> {
           <div className="Millwright-coreNote">{t('core_current')}</div>
         ) : (
           /*
-           * 🚨 .filter(Boolean), because Mithril requires every vnode in a
-           * fragment to be keyed or none to be, and a `null` counts as one
-           * without a key. Both of these return null in ordinary situations —
+           * 🚨 .filter(Boolean), because a `null` child counts as an unkeyed
+           * vnode and Mithril refuses a children list that mixes keyed and
+           * unkeyed. Both of these return null in ordinary situations —
            * summary() before the pre-flight arrives, rows() when nothing is
-           * blocked — so the unfiltered array threw a TypeError during view
-           * exactly when a newer Flarum existed, which is the only time anyone
-           * looks at this panel.
+           * blocked — so the unfiltered array threw during view exactly when a
+           * newer Flarum existed, which is the only time anyone opens this
+           * panel. Nothing here is keyed now, which is the durable half of the
+           * fix.
            */
           [this.summary(), this.rows()].filter(Boolean)
         )}
@@ -108,7 +109,7 @@ export default class CorePanel extends Component<CoreAttrs> {
     const pending = (p.pending || []).length;
 
     return (
-      <div className="Millwright-coreSummary" key="summary">
+      <div className="Millwright-coreSummary">
         {/*
           * 🚨 The blocking case is stated as a consequence, not as a count. "3
           * extensions" is a number; "these three have no release that works with
@@ -137,7 +138,7 @@ export default class CorePanel extends Component<CoreAttrs> {
     if (interesting.length === 0) return null;
 
     return (
-      <ul className="Millwright-coreRows" key="rows">
+      <ul className="Millwright-coreRows">
         {interesting.map((r) => (
           <li key={r.package} className={'Millwright-coreRow is-' + r.state}>
             <span className="Millwright-corePkg">{r.package}</span>

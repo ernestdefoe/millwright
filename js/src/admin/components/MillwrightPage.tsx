@@ -259,7 +259,7 @@ export default class MillwrightPage extends ExtensionPage {
     if (names.length === 0) return null;
 
     return (
-      <div className="Millwright-updateAll" key="updateall">
+      <div className="Millwright-updateAll">
         <button className="Button Button--primary" disabled={this.starting} onclick={() => this.start(names)}>
           {this.starting ? t('starting') : t('update_all', { count: names.length })}
         </button>
@@ -343,7 +343,7 @@ export default class MillwrightPage extends ExtensionPage {
        * a core update with blocked extensions would be refused by Composer at
        * the end of a long wait, and knowing that in advance is the point.
        */
-      <CorePanel key="core" starting={this.starting} onbegin={(pkgs: string[]) => this.start(pkgs)} />,
+      <CorePanel starting={this.starting} onbegin={(pkgs: string[]) => this.start(pkgs)} />,
       this.updateAll(),
       this.checkLine(),
       this.grid(),
@@ -365,7 +365,7 @@ export default class MillwrightPage extends ExtensionPage {
     const uncheckable = (this.updates?.uncheckable || []).length;
 
     return (
-      <div className="Millwright-checkline" key="checkline">
+      <div className="Millwright-checkline">
         <span>
           <b>{n === 0 ? t('none_newer') : t('some_newer', { count: n })}</b>{' '}
           {this.updates?.checkedAt ? t('checked_ago', { when: this.ago(this.updates.checkedAt) }) : t('never_checked')}
@@ -412,7 +412,7 @@ export default class MillwrightPage extends ExtensionPage {
 
   grid() {
     return (
-      <div className="Millwright-grid" key="grid">
+      <div className="Millwright-grid">
         {this.sorted().map((e) => (
           <div className="Millwright-card" key={e.id}>
             <div className="Millwright-cardTop">
