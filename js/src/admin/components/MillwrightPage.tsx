@@ -159,34 +159,24 @@ export default class MillwrightPage extends ExtensionPage {
           {this.showingRun() ? this.runPanel() : null}
 
           {this.showingRun() ? null : (
-          <div className="ButtonGroup" style={{ marginBottom: '20px' }}>
-            <button
-              className={'Button' + (this.tab === 'installed' ? ' Button--primary' : '')}
-              onclick={() => (this.tab = 'installed')}
-            >
-              {t('tab_installed', { count: this.installed.length })}
-              {this.updateCount() > 0 ? (
-                <span className="Millwright-count">{this.updateCount()}</span>
-              ) : null}
-            </button>
-            <button
-              className={'Button' + (this.tab === 'discover' ? ' Button--primary' : '')}
-              onclick={() => (this.tab = 'discover')}
-            >
-              {t('tab_discover')}
-            </button>
-            <button
-              className={'Button' + (this.tab === 'sources' ? ' Button--primary' : '')}
-              onclick={() => (this.tab = 'sources')}
-            >
-              {t('tab_sources')}
-            </button>
-            <button
-              className={'Button' + (this.tab === 'host' ? ' Button--primary' : '')}
-              onclick={() => (this.tab = 'host')}
-            >
-              {t('tab_host')}
-            </button>
+          <div className="Millwright-tabs" role="tablist">
+            {[
+              { id: 'installed', label: t('tab_installed', { count: this.installed.length }), badge: this.updateCount() },
+              { id: 'discover', label: t('tab_discover'), badge: 0 },
+              { id: 'sources', label: t('tab_sources'), badge: 0 },
+              { id: 'host', label: t('tab_host'), badge: 0 },
+            ].map((tab: any) => (
+              <button
+                key={tab.id}
+                role="tab"
+                aria-selected={this.tab === tab.id}
+                className={'Millwright-tab' + (this.tab === tab.id ? ' is-active' : '')}
+                onclick={() => (this.tab = tab.id)}
+              >
+                {tab.label}
+                {tab.badge > 0 ? <span className="Millwright-count">{tab.badge}</span> : null}
+              </button>
+            ))}
           </div>
           )}
 
@@ -433,50 +423,42 @@ export default class MillwrightPage extends ExtensionPage {
             </div>
 
             <div className="Millwright-foot">
-              {e.update ? (
-                <span className="Millwright-tag Millwright-tag--warn">
-                  {e.update.from} → {e.update.to}
-                </span>
-              ) : (
-                <span className={'Millwright-tag' + (e.enabled ? ' Millwright-tag--ok' : '')}>
-                  {e.enabled ? t('enabled') : t('disabled')}
-                </span>
-              )}
-
               {/*
-                * 🚨 A path install is explained here rather than refused later.
-                * The extension is a symlink into a checkout on this machine, so
-                * replacing it would leave the forum running a downloaded copy
-                * while its owner carries on editing a directory nothing reads.
+                * 🚨 Always two groups: what is TRUE about this extension on the
+                * left, what you can DO with it on the right. The foot is
+                * space-between, so loose chips get pushed to opposite ends of
+                * the card and read as unrelated — which is what "enabled" and
+                * "local checkout" did.
                 */}
-              {e.pathInstall ? (
-                <span className="Millwright-tag Millwright-tag--muted" title={t('path_install_why') as unknown as string}>
-                  {t('path_install')}
-                </span>
-              ) : (
-                <span className="Millwright-actions">
-                  {e.update ? (
-                    <button className="Button Button--primary Button--sm" disabled={this.starting} onclick={() => this.start([e.package])}>
-                      {t('update')}
-                    </button>
-                  ) : null}
-                  {/*
-                    * 🚨 Offered only once the extension is switched off. Taking
-                    * the files away from an extension that is still enabled
-                    * leaves Flarum with something it cannot load, and disabling
-                    * first is one click on a page they already know.
-                    */}
-                  {e.enabled ? null : (
-                    <button
-                      className="Button Button--sm"
-                      disabled={this.starting}
-                      onclick={() => this.confirmRemove(e)}
-                    >
-                      {t('remove')}
-                    </button>
-                  )}
-                </span>
-              )}
+              <span className="Millwright-tags">
+                {e.update ? (
+                  <span className="Millwright-tag Millwright-tag--warn">
+                    {e.update.from} → {e.update.to}
+                  </span>
+                ) : (
+                  <span className={'Millwright-tag' + (e.enabled ? ' Millwright-tag--ok' : '')}>
+                    {e.enabled ? t('enabled') : t('disabled')}
+                  </span>
+                )}
+                {e.pathInstall ? (
+                  <span className="Millwright-tag Millwright-tag--muted" title={t('path_install_why') as unknown as string}>
+                    {t('path_install')}
+                  </span>
+                ) : null}
+              </span>
+
+              <span className="Millwright-actions">
+                {e.pathInstall ? null : e.update ? (
+                  <button className="Button Button--primary Button--sm" disabled={this.starting} onclick={() => this.start([e.package])}>
+                    {t('update')}
+                  </button>
+                ) : null}
+                {e.pathInstall || e.enabled ? null : (
+                  <button className="Button Button--sm" disabled={this.starting} onclick={() => this.confirmRemove(e)}>
+                    {t('remove')}
+                  </button>
+                )}
+              </span>
             </div>
           </div>
         ))}

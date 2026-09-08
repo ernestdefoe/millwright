@@ -65,21 +65,25 @@ export default class SourcesTab extends Component {
     const repos = this.data.repositories || [];
 
     return (
-      <section className="Millwright-section">
-        <h3>{t('repos_title')}</h3>
-        <p className="Millwright-sectionNote">{t('repos_help')}</p>
+      <section className="Millwright-card">
+        <header className="Millwright-cardHead">
+          <h3>{t('repos_title')}</h3>
+          <p>{t('repos_help')}</p>
+        </header>
 
         {repos.length === 0 ? (
-          <div className="Millwright-empty">{t('repos_none')}</div>
+          <div className="Millwright-cardEmpty">{t('repos_none')}</div>
         ) : (
-          <ul className="Millwright-list">
+          <ul className="Millwright-rows">
             {repos.map((r: any) => (
-              <li key={r.url}>
-                <span className="Millwright-tag">{r.type}</span>
-                <span className="Millwright-listUrl">{r.url}</span>
+              <li className="Millwright-row" key={r.url}>
+                <span className="Millwright-kind">{r.type}</span>
+                <span className="Millwright-rowMain" title={r.url}>{r.url}</span>
+                <span />
                 <button
-                  className="Button Button--link"
+                  className="Millwright-rowAction"
                   disabled={this.saving}
+                  title={t('remove') as unknown as string}
                   onclick={() => this.removeRepo(r)}
                 >
                   {t('remove')}
@@ -90,13 +94,13 @@ export default class SourcesTab extends Component {
         )}
 
         <form
-          className="Millwright-inlineForm"
+          className="Millwright-cardFoot"
           onsubmit={(e: Event) => {
             e.preventDefault();
             this.send({ action: 'add-repository', type: this.repoType, url: this.repoUrl }, () => (this.repoUrl = ''));
           }}
         >
-          <select className="FormControl" value={this.repoType} onchange={(e: any) => (this.repoType = e.target.value)}>
+          <select className="FormControl Millwright-kindSelect" value={this.repoType} onchange={(e: any) => (this.repoType = e.target.value)}>
             {(this.data.types || []).map((ty: string) => (
               <option key={ty} value={ty}>{ty}</option>
             ))}
@@ -107,7 +111,7 @@ export default class SourcesTab extends Component {
             value={this.repoUrl}
             oninput={(e: any) => (this.repoUrl = e.target.value)}
           />
-          <button className="Button" type="submit" disabled={this.saving || !this.repoUrl.trim()}>
+          <button className="Button Button--primary" type="submit" disabled={this.saving || !this.repoUrl.trim()}>
             {t('add')}
           </button>
         </form>
@@ -127,11 +131,13 @@ export default class SourcesTab extends Component {
     const s = this.data.stability || {};
 
     return (
-      <section className="Millwright-section">
-        <h3>{t('stability_title')}</h3>
-        <p className="Millwright-sectionNote">{t('stability_help')}</p>
+      <section className="Millwright-card">
+        <header className="Millwright-cardHead">
+          <h3>{t('stability_title')}</h3>
+          <p>{t('stability_help')}</p>
+        </header>
 
-        <div className="Millwright-inlineForm">
+        <div className="Millwright-cardControls">
           <select
             className="FormControl"
             value={s.minimumStability}
@@ -163,7 +169,7 @@ export default class SourcesTab extends Component {
           * value; "most Flarum 2 extensions are published as betas, so this is
           * the usual choice" is the thing somebody is actually deciding about.
           */}
-        <div className="Millwright-consequence">{s.consequence}</div>
+        <div className="Millwright-callout">{s.consequence}</div>
       </section>
     );
   }
@@ -175,20 +181,26 @@ export default class SourcesTab extends Component {
     const stored = a.stored || [];
 
     return (
-      <section className="Millwright-section">
-        <h3>{t('auth_title')}</h3>
-        <p className="Millwright-sectionNote">{t('auth_help')}</p>
+      <section className="Millwright-card">
+        <header className="Millwright-cardHead">
+          <h3>{t('auth_title')}</h3>
+          <p>{t('auth_help')}</p>
+        </header>
 
         {stored.length === 0 ? (
-          <div className="Millwright-empty">{t('auth_none')}</div>
+          <div className="Millwright-cardEmpty">{t('auth_none')}</div>
         ) : (
-          <ul className="Millwright-list">
+          <ul className="Millwright-rows">
             {stored.map((c: any) => (
-              <li key={c.kind + c.host}>
-                <span className="Millwright-tag">{c.kind}</span>
-                <span className="Millwright-listUrl">{c.host}</span>
-                <span className="Millwright-tag Millwright-tag--ok">{c.detail}</span>
-                <button className="Button Button--link" disabled={this.saving} onclick={() => this.removeAuth(c)}>
+              <li className="Millwright-row" key={c.kind + c.host}>
+                <span className="Millwright-kind">{c.kind}</span>
+                <span className="Millwright-rowMain">{c.host}</span>
+                <span className="Millwright-held">{c.detail}</span>
+                <button
+                  className="Millwright-rowAction"
+                  disabled={this.saving}
+                  onclick={() => this.removeAuth(c)}
+                >
                   {t('remove')}
                 </button>
               </li>
@@ -197,7 +209,7 @@ export default class SourcesTab extends Component {
         )}
 
         <form
-          className="Millwright-inlineForm Millwright-inlineForm--wrap"
+          className="Millwright-cardFoot Millwright-cardFoot--wrap"
           onsubmit={(e: Event) => {
             e.preventDefault();
             this.send(
@@ -217,7 +229,7 @@ export default class SourcesTab extends Component {
             );
           }}
         >
-          <select className="FormControl" value={this.authKind} onchange={(e: any) => (this.authKind = e.target.value)}>
+          <select className="FormControl Millwright-kindSelect" value={this.authKind} onchange={(e: any) => (this.authKind = e.target.value)}>
             {(a.kinds || []).map((k: string) => (
               <option key={k} value={k}>{k}</option>
             ))}
@@ -244,12 +256,12 @@ export default class SourcesTab extends Component {
             value={this.authSecret}
             oninput={(e: any) => (this.authSecret = e.target.value)}
           />
-          <button className="Button" type="submit" disabled={this.saving || !this.authHost.trim() || !this.authSecret}>
+          <button className="Button Button--primary" type="submit" disabled={this.saving || !this.authHost.trim() || !this.authSecret}>
             {t('save')}
           </button>
         </form>
 
-        <div className="Millwright-consequence">{t('auth_writeonly')}</div>
+        <div className="Millwright-callout Millwright-callout--lock">{t('auth_writeonly')}</div>
       </section>
     );
   }
