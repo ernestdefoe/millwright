@@ -165,3 +165,46 @@ ernestdefoe-millwright:
     # the server. Two buttons a few pixels apart must not claim the same thing.
     remove_files: Remove files
 
+    tab_sources: Sources
+    add: Add
+    save: Save
+    config_failed: >-
+      Millwright could not read composer.json. Nothing has been changed.
+
+    repos_title: Where Composer looks
+    repos_help: >-
+      Extensions that are not on Packagist — your own private repositories, or a
+      paid marketplace — have to be listed here before Composer can find them.
+    repos_none: Only Packagist. Nothing private or paid can be installed.
+    repos_placeholder: "https://github.com/you/your-extension"
+    repos_confirm: >-
+      Stop looking in {url}? Anything installed from it stays where it is, but it
+      cannot be updated or reinstalled until the repository is added again.
+
+    stability_title: How finished a release has to be
+    stability_help: >-
+      Composer refuses anything less finished than this. The error it gives when
+      the setting is too strict says the package "could not be found in any
+      version", which sounds like the package is missing rather than like a
+      setting is wrong.
+    prefer_stable: Still prefer a stable release when one exists
+
+    auth_title: Credentials
+    auth_help: >-
+      For private repositories and paid marketplaces. Stored in auth.json, which
+      Composer reads and which sits outside the web root.
+    auth_none: None stored. Private and paid repositories will fail to download.
+    auth_host_placeholder: "github.com"
+    auth_user_placeholder: username
+    auth_secret_placeholder: token or password
+    auth_confirm: >-
+      Remove the credential for {host}? Anything that needs it will stop
+      downloading until it is set again.
+    # 🚨 Said on screen, not just in the code. Somebody who expects to be able to
+    # read a token back needs to know why they cannot, or they will assume it did
+    # not save and enter it repeatedly.
+    auth_writeonly: >-
+      Millwright never shows a stored credential — not even to you. It shows
+      which hosts have one. To change a credential, enter the new value; it
+      replaces the old one.
+

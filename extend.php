@@ -58,6 +58,14 @@ return [
          * anything appeared on a screen somebody is typing into.
          */
         ->get('/millwright/core', 'millwright.core', Controller\CoreController::class)
+        /*
+         * 🚨 One route, both verbs. GET reports where Composer looks, what it
+         * accepts and which hosts have a credential — never the credentials
+         * themselves. POST carries an action. Keeping them together means there
+         * is one place that asserts admin for all of it.
+         */
+        ->get('/millwright/config', 'millwright.config', Controller\ConfigController::class)
+        ->post('/millwright/config', 'millwright.config.set', Controller\ConfigController::class)
         ->get('/millwright/discover', 'millwright.discover', Controller\DiscoverController::class)
         ->post('/millwright/discover/compat', 'millwright.compat', Controller\CompatController::class),
 ];

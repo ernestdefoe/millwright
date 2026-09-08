@@ -6,6 +6,7 @@ import HostPanel from './HostPanel';
 import RunPanel from './RunPanel';
 import DiscoverTab from './DiscoverTab';
 import CorePanel from './CorePanel';
+import SourcesTab from './SourcesTab';
 
 declare const m: any;
 
@@ -39,7 +40,7 @@ export default class MillwrightPage extends ExtensionPage {
   installed: Installed[] = [];
   updates: any = { available: {}, checkedAt: null, stale: true, uncheckable: [] };
   checking = false;
-  tab: 'installed' | 'discover' | 'host' = 'installed';
+  tab: 'installed' | 'discover' | 'sources' | 'host' = 'installed';
   run: any = null;
   driver: string | null = null;
   busy = false;
@@ -175,6 +176,12 @@ export default class MillwrightPage extends ExtensionPage {
               {t('tab_discover')}
             </button>
             <button
+              className={'Button' + (this.tab === 'sources' ? ' Button--primary' : '')}
+              onclick={() => (this.tab = 'sources')}
+            >
+              {t('tab_sources')}
+            </button>
+            <button
               className={'Button' + (this.tab === 'host' ? ' Button--primary' : '')}
               onclick={() => (this.tab = 'host')}
             >
@@ -187,7 +194,9 @@ export default class MillwrightPage extends ExtensionPage {
             ? null
             : this.tab === 'host'
               ? <HostPanel host={this.host} />
-              : this.tab === 'discover'
+              : this.tab === 'sources'
+                ? <SourcesTab />
+                : this.tab === 'discover'
                 ? <DiscoverTab starting={this.starting} oninstall={(name: string) => this.start([name], 'install')} />
                 : this.installedTab()}
         </div>

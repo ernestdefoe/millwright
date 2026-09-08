@@ -338,3 +338,72 @@
 .Millwright-coreState { color: var(--muted-color); }
 .Millwright-actions { display: flex; gap: 6px; align-items: center; }
 .Millwright-more { margin-top: 20px; text-align: center; }
+
+// ── Sources: repositories, stability, credentials ────────────────────────────
+
+.Millwright-sourcesNote { color: var(--muted-color); font-size: 13px; margin-bottom: 22px; }
+
+.Millwright-section {
+  padding-bottom: 24px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--control-bg);
+
+  &:last-child { border-bottom: 0; }
+
+  h3 { margin: 0 0 6px; font-size: 15px; }
+}
+
+.Millwright-sectionNote {
+  color: var(--muted-color);
+  font-size: 13px;
+  max-width: 74ch;
+  margin: 0 0 14px;
+}
+
+.Millwright-list {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--control-bg);
+    font-size: 13px;
+
+    &:last-child { border-bottom: 0; }
+  }
+}
+
+// The URL is the identifying part of a row, so it takes the space and truncates
+// from the end rather than wrapping and pushing the remove button around.
+.Millwright-listUrl {
+  flex: 1;
+  min-width: 0;
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.Millwright-inlineForm {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+
+  .FormControl { width: auto; }
+  input.FormControl { flex: 1; min-width: 0; }
+
+  &--wrap { flex-wrap: wrap; }
+}
+
+.Millwright-check { display: flex; align-items: center; gap: 6px; font-size: 13px; white-space: nowrap; }
+
+.Millwright-consequence {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--muted-color);
+  max-width: 74ch;
+}
