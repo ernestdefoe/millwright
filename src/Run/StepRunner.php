@@ -37,6 +37,13 @@ class StepRunner
     private bool $busy = false;
 
     /**
+     * True when the last call to step() left the run on the same item on
+     * purpose — the work is done but its effect is not live yet. The caller
+     * should keep polling, and should not treat the pause as progress.
+     */
+    private bool $waiting = false;
+
+    /**
      * 🚨 A factory is preferred over a fixed Steps, so the run id is an argument
      * rather than something the container decided once and remembered. Inside a
      * queue worker — a long-lived process — a remembered one carries the
@@ -66,6 +73,11 @@ class StepRunner
         return $this->busy;
     }
 
+    public function wasWaiting(): bool
+    {
+        return $this->waiting;
+    }
+
     public function begin(string $id): Run
     {
         $run = Run::start($id, $this->now());
@@ -80,6 +92,7 @@ class StepRunner
     public function step(string $id): Run
     {
         $this->busy = false;
+        $this->waiting = false;
 
         $run = $this->store->load($id);
 
@@ -193,7 +206,25 @@ class StepRunner
                 return $this->leavePhase($run);
             }
 
-            $note = $steps->doItem($phase, $item, $run);
+            try {
+                $note = $steps->doItem($phase, $item, $run);
+            } catch (NotYet $waiting) {
+                /*
+                 * 🚨 Not done, not failed — and the index does NOT move.
+                 *
+                 * A step that has done everything it can but whose effect is
+                 * not live yet used to have no way to say so, so it said "done"
+                 * and put the caveat in the log. The run then went green while
+                 * the site was still serving code that did not match its own
+                 * database. Every driver calls step() again on its own, so
+                 * staying on the item costs nothing.
+                 */
+                $this->waiting = true;
+                $run = $run->waiting($this->now(), $waiting->getMessage());
+                $this->store->save($run);
+
+                return $run;
+            }
 
             /*
              * 🚨 Saved AFTER the work, which means a process killed in between

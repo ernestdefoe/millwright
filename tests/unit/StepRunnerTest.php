@@ -189,6 +189,62 @@ class StepRunnerTest extends TestCase
         return [$this->newRunner($steps), $steps];
     }
 
+    /**
+     * The guarantee this buys: a finished run means the change is in effect.
+     * Before it existed, a step whose work was done but not yet LIVE had to
+     * report success, and the run went green while the site was still serving
+     * code that did not match its own database.
+     */
+    public function test_a_step_that_is_not_live_yet_holds_the_run_rather_than_finishing_it(): void
+    {
+        [$runner, $steps] = $this->make(['finalise' => ['register', 'code cache']]);
+        $steps->waitOn = 'code cache';
+        $steps->waitFor = 2;
+        $runner->begin('r1');
+
+        $guard = 0;
+        do {
+            $run = $runner->step('r1');
+        } while (! $runner->wasWaiting() && ! $run->isFinished() && ++$guard < 50);
+
+        $this->assertTrue($runner->wasWaiting(), 'the runner reports the pause');
+        $this->assertFalse($run->isFinished(), 'a waiting run must not report itself finished');
+        $this->assertSame(['finalise:register'], $steps->done, 'the waiting item is not marked done');
+
+        $before = $run->index;
+        $run = $runner->step('r1');
+        $this->assertSame($before, $run->index, 'a second poll does not advance past it either');
+
+        $guard = 0;
+        do {
+            $run = $runner->step('r1');
+        } while (! $run->isFinished() && ++$guard < 50);
+
+        $this->assertTrue($run->isFinished(), 'once it is live the run completes');
+        $this->assertContains('finalise:code cache', $steps->done);
+    }
+
+    /**
+     * 🚨 The log is what the admin screen shows, and a waiting step is polled
+     * every couple of seconds by three drivers at once. Appending each time
+     * would bury the run's real history under a wall of the same sentence.
+     */
+    public function test_waiting_does_not_fill_the_log_with_the_same_line(): void
+    {
+        [$runner, $steps] = $this->make(['finalise' => ['code cache']]);
+        $steps->waitOn = 'code cache';
+        $steps->waitFor = 20;
+        $runner->begin('r1');
+
+        $run = null;
+
+        for ($i = 0; $i < 8; $i++) {
+            $run = $runner->step('r1');
+        }
+
+        $this->assertSame(1, count(array_filter($run->log, fn ($l) => $l === 'not live yet')));
+    }
+
     private function newRunner(object $steps): StepRunner
     {
         return new StepRunner(new RunStore($this->dir), $steps, fn () => $this->clock);
@@ -199,6 +255,10 @@ class StepRunnerTest extends TestCase
         return new class($plan) implements Steps {
             public array $done = [];
             public ?string $explodeOn = null;
+
+            /** Item that is not finished yet, and how many more calls it needs. */
+            public ?string $waitOn = null;
+            public int $waitFor = 0;
 
             public function __construct(private array $plan)
             {
@@ -213,6 +273,12 @@ class StepRunnerTest extends TestCase
             {
                 if ($item === $this->explodeOn) {
                     throw new \RuntimeException("could not fetch $item");
+                }
+
+                if ($item === $this->waitOn && $this->waitFor > 0) {
+                    $this->waitFor--;
+
+                    throw new \ErnestDefoe\Millwright\Run\NotYet('not live yet');
                 }
 
                 $this->done[] = "$phase:$item";

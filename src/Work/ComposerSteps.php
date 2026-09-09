@@ -8,6 +8,7 @@ use ErnestDefoe\Millwright\Plan\Change;
 use ErnestDefoe\Millwright\Plan\LockDiff;
 use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Host\Opcache;
+use ErnestDefoe\Millwright\Run\NotYet;
 use ErnestDefoe\Millwright\Host\PhpBinary;
 use ErnestDefoe\Millwright\Run\Steps;
 use RuntimeException;
@@ -217,6 +218,9 @@ class ComposerSteps implements Steps
         throw new RuntimeException("$package is not in the plan.");
     }
 
+    /** Longer than this and telling the truth beats parking the admin screen. */
+    private const WAIT_CAP = 180;
+
     private function finalise(string $item): string
     {
         return match ($item) {
@@ -297,11 +301,86 @@ class ComposerSteps implements Steps
      * is a thing to TELL somebody about, not a reason to mark a completed update
      * as failed and offer to roll back work that was correct.
      */
+    /**
+     * 🚨 This step WAITS, and that is the whole point of it.
+     *
+     * It used to clear what it could, return a sentence, and let the run finish.
+     * On a queue worker it cannot reach the web server's compiled-code cache at
+     * all, so the sentence it returned was "PHP will pick them up within 60
+     * seconds on its own" — and the run went green anyway.
+     *
+     * That is a completed update that is not in effect. An admin reads
+     * "Finished", enables the extension it just installed, and for the rest of
+     * that minute every request boots a database that says the extension is on
+     * against an autoloader that has never heard of it. Which is not a theory:
+     * it took a live forum down, and the log line explaining it was sitting
+     * right there in the run the whole time.
+     *
+     * So the run stays in progress until the web tier can actually see the new
+     * files. Finished now means in effect.
+     */
     private function codeCache(): string
     {
-        $result = (new Opcache())->clear();
+        $opcache = new Opcache();
+        $situation = $opcache->situation();
+        $result = $opcache->clear();
 
-        return $result['why'];
+        if ($result['done']) {
+            return $result['why'];
+        }
+
+        /*
+         * Nothing to wait FOR: this host is set never to re-read files, so the
+         * change becomes live when somebody restarts PHP and not a moment
+         * before. Waiting would hang the run forever to no purpose — the honest
+         * answer is the one the clear() call already wrote.
+         */
+        if (! $situation['validates']) {
+            return $result['why'];
+        }
+
+        $live = $this->codeLiveAt(max(1, (int) $situation['freq']));
+        $left = $live - time();
+
+        if ($left > 0) {
+            /*
+             * Bounded. A host with a very long revalidate_freq would otherwise
+             * park the admin screen for as long as that window, which is worse
+             * than telling the truth and letting them restart PHP.
+             */
+            if ($left > self::WAIT_CAP) {
+                return 'The files are updated. This host re-reads them only every '
+                    . $situation['freq'] . ' second(s), which is too long to wait here — '
+                    . 'restart PHP-FPM to make the update take effect now.';
+            }
+
+            throw new NotYet(
+                'Waiting ' . $left . ' more second(s) for the web server to re-read the new files.'
+            );
+        }
+
+        return 'The web server has re-read the new files.';
+    }
+
+    /**
+     * When the web tier is guaranteed to have re-read the autoloader.
+     *
+     * 🚨 Measured from the AUTOLOADER, not from now. It is the file whose
+     * staleness actually breaks a site — a class that exists on disk and is
+     * unknown to the running process — and it stops changing at the register
+     * step, so the phases in between count towards the wait instead of being
+     * added to it.
+     *
+     * The margin is because revalidate_freq counts from when a process last
+     * checked a file, not from when the file changed, so the worst case is one
+     * full window after the write.
+     */
+    private function codeLiveAt(int $freq): int
+    {
+        $autoloader = $this->installPath . '/vendor/composer/autoload_static.php';
+        $changed = @filemtime($autoloader);
+
+        return ($changed ?: time()) + $freq + 2;
     }
 
     private function composerCommand(array $args, string $note): string

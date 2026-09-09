@@ -103,6 +103,26 @@ final class Run
         ]);
     }
 
+    /**
+     * Still on the same item, with something to say about why.
+     *
+     * 🚨 The note replaces the last line rather than appending, and only when
+     * it is new. A waiting step is polled every couple of seconds by three
+     * different drivers, so appending would bury the run's actual history under
+     * a hundred copies of "waiting" — and the log is what the admin screen
+     * shows.
+     */
+    public function waiting(int $now, string $note): self
+    {
+        $log = $this->log;
+
+        if (($log[count($log) - 1] ?? null) === $note) {
+            return $this->copy(['movedAt' => $now]);
+        }
+
+        return $this->copy(['movedAt' => $now, 'log' => [...$log, $note]]);
+    }
+
     public function enteredPhase(string $phase, int $now, ?string $note = null): self
     {
         return $this->copy([

@@ -82,6 +82,16 @@ class StepJob extends AbstractJob
             if ($runner->wasBusy()) {
                 return;
             }
+
+            /*
+             * 🚨 A waiting step is waiting on the CLOCK, not on us. Calling it
+             * again immediately would spin the loop as fast as the filesystem
+             * answers for the whole budget, on a host that has just been made
+             * to run a Composer install.
+             */
+            if ($runner->wasWaiting()) {
+                sleep(2);
+            }
         } while (time() < $until);
 
         // Out of budget with work left. Hand on to a fresh job rather than
