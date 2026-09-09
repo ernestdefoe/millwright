@@ -92,7 +92,13 @@ class SiteHealth
         $body = curl_exec($ch);
         $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
         $error = curl_error($ch);
-        curl_close($ch);
+
+        /*
+         * 🚨 No curl_close(). It has done nothing since PHP 8.0 and is
+         * deprecated in 8.5 — and this runs on every update, so keeping it
+         * would write a deprecation notice into the very log the next failure
+         * is read from.
+         */
 
         if ($body === false || $status === 0) {
             return ['ok' => false, 'status' => null, 'why' => 'The site did not answer at all (' . ($error ?: 'no response') . ').'];
