@@ -23,8 +23,11 @@ use Illuminate\Contracts\Bus\Dispatcher;
 class StepJob extends AbstractJob
 {
     /**
-     * Comfortably inside any sane worker timeout — Horizon's default is 60
-     * seconds and Laravel's is 60 too. Nothing here needs to be near it.
+     * How long one job keeps taking turns before handing on to a fresh one.
+     *
+     * 🚨 This is a budget, not a limit: it is checked BETWEEN turns, so a
+     * single long turn overruns it by however long that turn takes. Planning is
+     * the one that does — see $timeout below.
      */
     private const BUDGET_SECONDS = 20;
 
@@ -37,6 +40,23 @@ class StepJob extends AbstractJob
      * again — which the admin page does every couple of seconds regardless.
      */
     public $tries = 1;
+
+    /**
+     * 🚨 Long enough for the one step that genuinely takes minutes.
+     *
+     * The budget above keeps each TURN of the loop short, and the comment
+     * beside it says nothing here needs to be near a worker timeout. That was
+     * wrong about exactly one thing: planning. Working out what changes runs a
+     * composer resolution, StepRunner deliberately gives it a whole turn of its
+     * own, and on a small host that single call can run for minutes. The budget
+     * is only checked BETWEEN turns, so the worker's own 60-second alarm fired
+     * in the middle of it and killed the run before it had touched anything.
+     *
+     * A job-level timeout beats the worker's default, so this raises the alarm
+     * for this job alone rather than making every other queue on the forum wait
+     * fifteen minutes to notice a wedged job.
+     */
+    public $timeout = 900;
 
     public function __construct(private string $runId)
     {
