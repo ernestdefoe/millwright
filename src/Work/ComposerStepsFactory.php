@@ -6,6 +6,7 @@ use ErnestDefoe\Millwright\Apply\Applier;
 use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Run\Steps;
 use ErnestDefoe\Millwright\Run\StepsFactory;
+use Flarum\Foundation\Config;
 use Flarum\Foundation\Paths;
 
 /**
@@ -19,8 +20,29 @@ use Flarum\Foundation\Paths;
  */
 class ComposerStepsFactory implements StepsFactory
 {
-    public function __construct(private Paths $paths)
+    public function __construct(private Paths $paths, private ?Config $config = null)
     {
+    }
+
+    /**
+     * 🚨 The site's OWN configured address, and an empty string when there
+     * isn't one.
+     *
+     * Not a guess from the request, because the process that runs a step is
+     * usually a queue worker with no request to guess from. And empty rather
+     * than a fallback like localhost: a health check pointed at the wrong place
+     * is worse than none, since it would either pass while the real site is
+     * down or fail while it is fine — and the second one now undoes updates.
+     */
+    private function siteUrl(): string
+    {
+        try {
+            $url = (string) ($this->config?->url() ?? '');
+        } catch (\Throwable $e) {
+            return '';
+        }
+
+        return str_starts_with($url, 'http') ? rtrim($url, '/') . '/' : '';
     }
 
     public function for(string $runId): Steps
@@ -36,7 +58,10 @@ class ComposerStepsFactory implements StepsFactory
             new Applier($this->paths->vendor, $workDir->staging(), $workDir->trash(), $journal),
             $journal,
             $workDir->requested(),
-            $workDir->mode()
+            $workDir->mode(),
+            $this->paths->vendor,
+            $this->paths->storage,
+            $this->siteUrl()
         );
     }
 }

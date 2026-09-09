@@ -168,6 +168,31 @@ final class Run
         ]);
     }
 
+    /**
+     * Failed, and already put back.
+     *
+     * 🚨 One transition, not `failed()` then `rolledBack()`. Two would be two
+     * saves, and a reader that loaded the run between them would see a failed
+     * update sitting there with its changes apparently still in place — which
+     * is the exact ambiguity this class exists to prevent.
+     *
+     * @param list<string> $undone
+     */
+    public function revertedAfter(string $why, string $step, array $undone, int $now): self
+    {
+        return $this->copy([
+            'state'     => self::ROLLBACK,
+            'error'     => $why,
+            'errorStep' => $step,
+            'movedAt'   => $now,
+            'log'       => [
+                ...$this->log,
+                "Failed during $step: $why",
+                'Put back automatically: ' . (implode(', ', $undone) ?: 'nothing to undo'),
+            ],
+        ]);
+    }
+
     /** @return array<string,mixed> */
     public function toArray(): array
     {

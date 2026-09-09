@@ -208,6 +208,22 @@ class StepRunner
 
             try {
                 $note = $steps->doItem($phase, $item, $run);
+            } catch (Reverted $reverted) {
+                /*
+                 * The step has already put the tree back; all that is left is
+                 * to record it as such. Deliberately NOT the ordinary failure
+                 * path, which would leave the screen offering a rollback of a
+                 * tree that is already correct.
+                 */
+                $run = $run->revertedAfter(
+                    $reverted->getMessage(),
+                    "$phase → $item",
+                    $reverted->undone,
+                    $this->now()
+                );
+                $this->store->save($run);
+
+                return $run;
             } catch (NotYet $waiting) {
                 /*
                  * 🚨 Not done, not failed — and the index does NOT move.

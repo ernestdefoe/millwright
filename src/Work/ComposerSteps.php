@@ -4,11 +4,16 @@ namespace ErnestDefoe\Millwright\Work;
 
 use ErnestDefoe\Millwright\Apply\Applier;
 use ErnestDefoe\Millwright\Apply\Journal;
+use ErnestDefoe\Millwright\Apply\Restore;
 use ErnestDefoe\Millwright\Plan\Change;
 use ErnestDefoe\Millwright\Plan\LockDiff;
 use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Host\Opcache;
+use ErnestDefoe\Millwright\Host\SiteHealth;
+use ErnestDefoe\Millwright\Host\Verdict;
+use ErnestDefoe\Millwright\Host\ErrorLog;
 use ErnestDefoe\Millwright\Run\NotYet;
+use ErnestDefoe\Millwright\Run\Reverted;
 use ErnestDefoe\Millwright\Host\PhpBinary;
 use ErnestDefoe\Millwright\Run\Steps;
 use RuntimeException;
@@ -41,16 +46,24 @@ class ComposerSteps implements Steps
         private array $requested = [],
         /** 'update', 'install' for something new, or 'remove' to take one out */
         private string $mode = 'update',
+        /*
+         * 🚨 Optional, and every one of them degrades to "cannot check" rather
+         * than to "fine". A host that cannot be asked whether its site is up
+         * must not have that read as a yes — see verify().
+         */
+        private string $vendorPath = '',
+        private string $storagePath = '',
+        private string $siteUrl = '',
     ) {
     }
 
     public function itemsFor(string $phase, Run $run): array
     {
         return match ($phase) {
-            'plan'     => ['work out what changes'],
+            'plan'     => ['check the site', 'work out what changes'],
             'fetch'    => array_map(fn (Change $c) => $c->package, $this->downloadable()),
             'apply'    => array_map(fn (Change $c) => $c->package, $this->plan()),
-            'finalise' => ['register', 'migrations', 'assets', 'caches', 'code cache'],
+            'finalise' => ['register', 'migrations', 'assets', 'caches', 'code cache', 'check the site again'],
             default    => [],
         };
     }
@@ -58,10 +71,10 @@ class ComposerSteps implements Steps
     public function doItem(string $phase, string $item, Run $run): ?string
     {
         return match ($phase) {
-            'plan'     => $this->resolve(),
+            'plan'     => $item === 'check the site' ? $this->baseline() : $this->resolve(),
             'fetch'    => $this->fetchOne($item),
             'apply'    => $this->applyOne($item),
-            'finalise' => $this->finalise($item),
+            'finalise' => $this->finalise($item, $run),
             default    => null,
         };
     }
@@ -221,13 +234,14 @@ class ComposerSteps implements Steps
     /** Longer than this and telling the truth beats parking the admin screen. */
     private const WAIT_CAP = 180;
 
-    private function finalise(string $item): string
+    private function finalise(string $item, Run $run): string
     {
         return match ($item) {
             'register'   => $this->composerCommand(['install', '--no-scripts'], 'Composer now knows about the change'),
             'migrations' => $this->flarum('migrate', 'migrations run'),
             'assets'     => $this->flarum('assets:publish', 'assets published'),
             'caches'     => $this->clearCaches(),
+            'check the site again' => $this->verify($run),
             /*
              * 🚨 Last, and it is the step that decides whether any of the others
              * were visible. On a host with opcache.validate_timestamps off, every
@@ -301,6 +315,139 @@ class ComposerSteps implements Steps
      * is a thing to TELL somebody about, not a reason to mark a completed update
      * as failed and offer to roll back work that was correct.
      */
+    /**
+     * What the site was doing BEFORE we touched anything.
+     *
+     * 🚨 Without this, an automatic rollback is a liability rather than a
+     * safety net. A site that was already down for its own reasons — a bad
+     * config, a full disk, a database that went away — would fail the check
+     * afterwards too, and the update would be blamed and undone for a fault it
+     * had nothing to do with. Worse, so would a host where the check itself
+     * cannot run: no curl, no outbound DNS, a URL that resolves to somewhere
+     * else. On any of those the honest answer is "this update will not be
+     * judged by whether the site answers", and the only way to know is to have
+     * asked before.
+     */
+    private function baseline(): string
+    {
+        $health = $this->health();
+
+        if ($health === null) {
+            $this->rememberHealth('unchecked');
+
+            return 'No site address is configured, so this update will not be judged by whether the site answers.';
+        }
+
+        $result = $health->check(2);
+        $this->rememberHealth($result['ok'] ? 'ok' : 'down');
+
+        return $result['ok']
+            ? 'The site is answering before we start.'
+            : 'The site was already not answering before this update started (' . $result['why']
+                . '), so this update will not be judged by whether it answers afterwards.';
+    }
+
+    /**
+     * Did this update break the site? If so, put it back and say why.
+     *
+     * 🚨 This is the last item on purpose. It runs after the code cache step
+     * has waited for the web tier to be serving the new files, so what it asks
+     * is a real question: a check that ran before then would be asking whether
+     * the OLD code still works, and would pass every time.
+     */
+    private function verify(Run $run): string
+    {
+        $health = $this->health();
+        $before = $this->rememberedHealth();
+
+        if ($health === null || $before === 'unchecked') {
+            return 'The site was not checked, because there is no way to reach it from here.';
+        }
+
+        $result = $health->check(3);
+
+        switch (Verdict::from($before, $result['ok'])) {
+            case Verdict::HEALTHY:
+                return 'The site is answering normally after the update.';
+
+            case Verdict::ALREADY_BROKEN:
+                return 'The site is still not answering, but it was not answering before this update either — '
+                    . 'so this has been left in place rather than blamed for it.';
+
+            case Verdict::NOT_JUDGED:
+                return 'The site was not checked, because there is no way to reach it from here.';
+        }
+
+        /*
+         * It worked before and it does not now. The update is the difference.
+         */
+        $why = $this->storagePath === ''
+            ? null
+            : (new ErrorLog($this->storagePath))->latest(max(1, $run->startedAt));
+
+        $said = $why === null
+            ? $result['why']
+            : $result['why'] . ' The error was: ' . $why;
+
+        $restore = $this->restore();
+
+        if ($restore === null || ! $restore->possible()) {
+            throw new RuntimeException(
+                'This update stopped the site from answering, and there is nothing saved to put back. ' . $said
+            );
+        }
+
+        $done = $restore->run();
+
+        $message = 'This update stopped the site from answering, so it has been put back. ' . $said;
+
+        if ($done['note'] !== null) {
+            $message .= ' ' . $done['note'];
+        }
+
+        throw new Reverted($message, $done['undone']);
+    }
+
+    private function health(): ?SiteHealth
+    {
+        return $this->siteUrl === '' ? null : new SiteHealth($this->siteUrl);
+    }
+
+    private function restore(): ?Restore
+    {
+        if ($this->vendorPath === '' || $this->storagePath === '') {
+            return null;
+        }
+
+        return new Restore(
+            $this->vendorPath,
+            $this->installPath,
+            $this->workDir,
+            $this->storagePath . '/millwright/trash',
+            $this->journal,
+            $this->composer
+        );
+    }
+
+    /**
+     * 🚨 On disk, in the run's own scratch space, because the process that
+     * takes the baseline is very often not the process that checks it again —
+     * a queue worker starts the run and an admin page polling finishes it. In
+     * memory it would simply be absent by then, which reads as "never checked"
+     * and quietly disables the whole safety net.
+     */
+    private function rememberHealth(string $state): void
+    {
+        @file_put_contents($this->workDir . '/health.before', $state);
+    }
+
+    private function rememberedHealth(): string
+    {
+        $saved = @file_get_contents($this->workDir . '/health.before');
+
+        return is_string($saved) && $saved !== '' ? trim($saved) : 'unchecked';
+    }
+
     /**
      * 🚨 This step WAITS, and that is the whole point of it.
      *

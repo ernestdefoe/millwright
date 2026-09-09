@@ -85,6 +85,26 @@ export default class RunPanel extends Component<RunPanelAttrs> {
           </div>
         ) : null}
 
+        {/*
+          * 🚨 A rolled-back run shows its reason too, and this used to be the
+          * one state that did not.
+          *
+          * When the admin pressed the button they knew why. Now a run can undo
+          * ITSELF — the site stopped answering and it put everything back — and
+          * "Rolled back" on its own leaves them with a forum that works, an
+          * update that vanished, and no idea which of the two is the problem.
+          * The sentence names the extension and the line.
+          *
+          * No Roll back button here: the tree is already correct, and offering
+          * to undo it again is the first thing a worried admin would press.
+          */}
+        {rolled && run.error ? (
+          <div className="Millwright-error">
+            <div className="Millwright-errorWhere">{t('failed_at', { step: run.errorStep })}</div>
+            <pre className="Millwright-errorText">{run.error}</pre>
+          </div>
+        ) : null}
+
         {this.attrs.rollbackNote ? <div className="Millwright-next">{this.attrs.rollbackNote}</div> : null}
 
         {this.misses > 2 && !done && !failed && !rolled ? (
