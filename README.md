@@ -58,6 +58,35 @@ The wording is deliberate: it says a newer version *exists*, never that an updat
 *is available*. Only a real resolve knows the second, and a badge that overstates
 itself is one people learn to ignore.
 
+**Finishes the job.** Moving the files is the easy half. After a change lands,
+Millwright registers it with Composer, runs any migrations it brought, publishes
+its assets, clears the caches and rebuilds the post formatter, waits for PHP to
+re-read the new files, and then asks the site whether it is still answering. Only
+then does it say the update is done.
+
+That last pair matters more than it sounds. A tool that reports success the
+moment Composer exits is reporting on a site that may still be executing the
+previous version of the files for up to a minute — and if the update broke
+something, nobody finds out from the tool.
+
+## Compared with Extension Manager
+
+Flarum's Extension Manager does run migrations, publish assets and clear caches
+— but that work is wired to a **core** update. Installing or updating an
+*extension* runs the Composer command and stops there.
+
+| after the files land | Extension Manager | Millwright |
+|---|---|---|
+| install an extension | core migrates and publishes assets when you *enable* it | same, plus everything below |
+| **update an extension** | **nothing** | migrations, assets, caches, formatter, code cache, health check |
+| update Flarum itself | migrate, assets, cache clear | all of the above |
+| PHP's compiled-code cache | never touched | waited for, then cleared |
+| is the site still up afterwards | not checked | checked, and rolled back if not |
+
+So the gap is on **updates**, not installs. Update an already-enabled extension
+that ships a new migration or new JS, and the schema is left behind the code and
+the browser keeps serving the old assets, with nothing saying so.
+
 ## How it works
 
 ### Applying a change is two renames, never a delete
