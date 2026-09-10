@@ -180,7 +180,11 @@ class UpdateCheck
     }
 
     /** @return list<string>|null */
-    private function fromPackagist(string $name): ?array
+    /**
+     * Public so a caller can compose it — Packagist first, then whatever
+     * private repositories the site has — without reimplementing it.
+     */
+    public function fromPackagist(string $name): ?array
     {
         $url = 'https://repo.packagist.org/p2/' . $name . '.json';
 

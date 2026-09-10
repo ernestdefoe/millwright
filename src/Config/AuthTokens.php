@@ -69,6 +69,48 @@ class AuthTokens
         return $out;
     }
 
+    /**
+     * The Authorization header for a host, or null if there is no credential.
+     *
+     * 🚨 THE ONE PLACE A STORED SECRET IS READ, and it is deliberately shaped so
+     * it cannot become an answer to anybody.
+     *
+     * It returns a finished header line, not the credential — nothing that calls
+     * this can accidentally put the token in a response, a log line or an
+     * exception message, because it never holds the token. `all()` remains the
+     * only method any controller uses, and it still reports hosts and kinds and
+     * nothing else.
+     *
+     * 🚨 Never log the return value of this method.
+     *
+     * Composer matches a credential to a request by HOSTNAME, so that is what
+     * this takes. Passing a URL here finds nothing, which is the same mistake
+     * that makes a hand-configured private repository 401 for no visible reason.
+     */
+    public function headerFor(string $host): ?string
+    {
+        $host = strtolower(trim($host));
+        $auth = $this->file->read();
+
+        $basic = $auth['http-basic'][$host] ?? null;
+
+        if (is_array($basic) && isset($basic['username'], $basic['password'])) {
+            return 'Authorization: Basic ' . base64_encode(
+                (string) $basic['username'] . ':' . (string) $basic['password']
+            );
+        }
+
+        foreach (['bearer', 'github-oauth', 'gitlab-token'] as $kind) {
+            $token = $auth[$kind][$host] ?? null;
+
+            if (is_string($token) && $token !== '') {
+                return 'Authorization: Bearer ' . $token;
+            }
+        }
+
+        return null;
+    }
+
     public function set(string $kind, string $host, string $secret, ?string $username = null): void
     {
         if (! in_array($kind, self::KINDS, true)) {

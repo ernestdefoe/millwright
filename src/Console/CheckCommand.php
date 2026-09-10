@@ -2,6 +2,10 @@
 
 namespace ErnestDefoe\Millwright\Console;
 
+use ErnestDefoe\Millwright\Config\AuthTokens;
+use ErnestDefoe\Millwright\Config\JsonFile;
+use ErnestDefoe\Millwright\Config\Repositories;
+use ErnestDefoe\Millwright\Work\PrivateIndex;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 use Flarum\Console\AbstractCommand;
 use Flarum\Foundation\Paths;
@@ -53,7 +57,28 @@ class CheckCommand extends AbstractCommand
         // 🚨 Extensions and Flarum only — see UpdateCheck::interesting().
         $installed = $check->interesting($packages);
 
-        $result = $check->refresh($installed);
+        /*
+         * 🚨 Packagist first, then the site's own private repositories.
+         *
+         * A premium extension is not on Packagist, so it used to come back
+         * "uncheckable" and its owner was never told a new version existed —
+         * the check was silently useless for precisely the extensions somebody
+         * paid for. Anything Packagist cannot answer is now asked of whatever
+         * `composer` repositories the forum has configured, with the
+         * credentials it already holds for them.
+         *
+         * Packagist stays FIRST so the common case is unchanged and a private
+         * repository can never shadow a public package.
+         */
+        $private = new PrivateIndex(
+            new Repositories(new JsonFile($this->paths->base . '/composer.json')),
+            new AuthTokens(new JsonFile($this->paths->base . '/auth.json')),
+        );
+
+        $result = $check->refresh(
+            $installed,
+            fn (string $name) => $check->fromPackagist($name) ?? $private->versionsFor($name)
+        );
         $count  = count($result['updates']);
 
         $this->info($count === 0
