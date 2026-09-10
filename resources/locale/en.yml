@@ -76,6 +76,11 @@ ernestdefoe-millwright:
       Nothing has moved for a couple of minutes. That is normal while Composer is
       working something out; if it stays like this, the log below is the place to
       look.
+    poll_unauthorised: >-
+      This screen cannot reach the server to drive the update — usually a
+      session that has expired while the page sat open. The update itself is
+      unaffected and is being carried on in the background. Reload the page.
+    watching_only: Showing progress read-only.
     poll_failing: >-
       This page has failed to reach the forum {count} times in a row. The update
       itself is unaffected — it keeps its place on disk — and this will keep

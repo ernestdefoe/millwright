@@ -40,6 +40,10 @@ export default class RunPanel extends Component<RunPanelAttrs> {
   private misses = 0;
   private polling = false;
   private rollingBack = false;
+  /** True once we have fallen back to reading progress instead of driving it. */
+  private watching = false;
+  /** The HTTP status of the last failed drive, so the panel can be specific. */
+  private lastStatus: number | null = null;
 
   oncreate(vnode: any) {
     super.oncreate(vnode);
@@ -108,7 +112,18 @@ export default class RunPanel extends Component<RunPanelAttrs> {
         {this.attrs.rollbackNote ? <div className="Millwright-next">{this.attrs.rollbackNote}</div> : null}
 
         {this.misses > 2 && !done && !failed && !rolled ? (
-          <div className="Millwright-stall">{t('poll_failing', { count: this.misses })}</div>
+          <div className="Millwright-stall">
+            {/*
+              * 🚨 Says WHICH problem. A 400 or 401 here is an expired session —
+              * the update is fine and a reload fixes the screen — and telling
+              * somebody "nothing has moved" instead sends them looking at the
+              * update.
+              */}
+            {this.lastStatus && this.lastStatus >= 400 && this.lastStatus < 500
+              ? t('poll_unauthorised')
+              : t('poll_failing', { count: this.misses })}
+            {this.watching ? ' ' + t('watching_only') : ''}
+          </div>
         ) : null}
 
         {this.attrs.busy && !done && !failed && !rolled ? (
@@ -202,7 +217,7 @@ export default class RunPanel extends Component<RunPanelAttrs> {
         m.redraw();
         setTimeout(() => this.tick(), 1500);
       })
-      .catch(() => {
+      .catch((e: any) => {
         /*
          * 🚨 A failed poll is never a failed update, and this is the difference
          * between the two designs. The run's state is on disk; a 502 from a
@@ -211,6 +226,57 @@ export default class RunPanel extends Component<RunPanelAttrs> {
          * struggling host from being hammered while it recovers.
          */
         this.misses++;
+        this.lastStatus = e?.status ?? null;
+
+        /*
+         * 🚨 Driving the run and WATCHING it are two different jobs, and only
+         * one of them is this panel's reason to exist.
+         *
+         * /millwright/step is a POST: it takes the lock and does an item. When
+         * it fails — an expired session, a proxy that strips the write, a host
+         * that 502s under a Composer install — the panel used to show nothing
+         * at all, frozen on whatever it had when it mounted, while the queue
+         * worker carried the update to completion behind it. Ernest watched
+         * exactly that happen twice: "it stayed on the first step the whole
+         * time", on a run that had in fact finished.
+         *
+         * /millwright/state is a GET and is documented as never advancing
+         * anything. So when we cannot drive, we watch. The run still moves —
+         * the worker is doing it — and the screen finally says so.
+         */
+        this.watch();
+      });
+  }
+
+  /**
+   * Read-only progress, for when we cannot drive.
+   *
+   * Keeps polling on the same backoff so a transient failure recovers into
+   * driving again by itself.
+   */
+  private watch() {
+    app
+      .request({ method: 'GET', url: apiUrl() + '/millwright/state' })
+      .then((data: any) => {
+        this.watching = true;
+
+        if (data.run) {
+          this.attrs.onprogress({ run: data.run, busy: true, stale: data.runIsStale });
+
+          if (data.run.state && ['done', 'failed', 'rolled-back'].includes(data.run.state)) {
+            this.polling = false;
+            this.attrs.ondone(data.run);
+            m.redraw();
+
+            return;
+          }
+        }
+
+        m.redraw();
+        setTimeout(() => this.tick(), Math.min(1500 * this.misses, 15000));
+      })
+      .catch(() => {
+        // Both endpoints unreachable. Now it really is a connectivity problem.
         m.redraw();
         setTimeout(() => this.tick(), Math.min(1500 * this.misses, 15000));
       });
