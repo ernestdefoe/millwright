@@ -50,6 +50,39 @@ export default class MillwrightPage extends ExtensionPage {
   rollbackNote: string | null = null;
   dismissed = false;
 
+  /**
+   * 🚨 Dismissal is remembered against WHICH run, and it has to be remembered
+   * at all.
+   *
+   * `dismissed` is component state, so it was gone on the next page load and a
+   * finished run's panel came back every single time. Combined with the panel
+   * hiding the tabs, that meant one update run ever — even a successful one —
+   * left the page showing nothing but a week-old log, with no extension grid,
+   * no Update buttons and no way to reach them. Keyed by id so a NEW run is
+   * never silently pre-dismissed.
+   */
+  private static DISMISS_KEY = 'millwright.dismissedRun';
+
+  private wasDismissed(id: string | null): boolean {
+    if (!id) return false;
+
+    try {
+      return localStorage.getItem(MillwrightPage.DISMISS_KEY) === id;
+    } catch {
+      return false;
+    }
+  }
+
+  private rememberDismissed(id: string | null) {
+    if (!id) return;
+
+    try {
+      localStorage.setItem(MillwrightPage.DISMISS_KEY, id);
+    } catch {
+      // Private browsing: it reappears next load, which is the safe way round.
+    }
+  }
+
   oninit(vnode: any) {
     super.oninit(vnode);
 
@@ -99,6 +132,14 @@ export default class MillwrightPage extends ExtensionPage {
          */
         this.run = data.run || null;
         this.stale = !!data.runIsStale;
+
+        /*
+         * 🚨 Restore the dismissal, but never for a run that is still going.
+         * A live run's panel is the page; dismissing one must not be a way to
+         * hide an update that is halfway through applying itself.
+         */
+        this.dismissed = !this.runIsLive() && this.wasDismissed(this.run?.id ?? null);
+
         this.firstLoad = false;
         m.redraw();
       })
@@ -158,7 +199,7 @@ export default class MillwrightPage extends ExtensionPage {
             */}
           {this.showingRun() ? this.runPanel() : null}
 
-          {this.showingRun() ? null : (
+          {this.hidesPage() ? null : (
           <div className="Millwright-tabs" role="tablist">
             {[
               { id: 'installed', label: t('tab_installed', { count: this.installed.length }), badge: this.updateCount() },
@@ -180,7 +221,7 @@ export default class MillwrightPage extends ExtensionPage {
           </div>
           )}
 
-          {this.showingRun()
+          {this.hidesPage()
             ? null
             : this.tab === 'host'
               ? <HostPanel host={this.host} />
@@ -203,6 +244,26 @@ export default class MillwrightPage extends ExtensionPage {
     return !!this.run && !this.dismissed;
   }
 
+  /**
+   * Whether a run is still going.
+   *
+   * 🚨 Only a LIVE run may take the page over. Hiding the grid while an update
+   * is applying is right — a row of Update buttons beside a running update
+   * invites a second one, and the honest answer to that is a refusal. Hiding it
+   * because a run finished yesterday is not: the log is worth keeping on screen,
+   * the rest of the page is worth having as well.
+   */
+  runIsLive(): boolean {
+    const state = this.run?.state;
+
+    return state === 'pending' || state === 'running';
+  }
+
+  /** The page's own content is suppressed only while something is happening. */
+  private hidesPage(): boolean {
+    return this.showingRun() && this.runIsLive();
+  }
+
   runPanel() {
     return (
       <RunPanel
@@ -213,6 +274,7 @@ export default class MillwrightPage extends ExtensionPage {
         rollbackNote={this.rollbackNote}
         ondismiss={() => {
           this.dismissed = true;
+          this.rememberDismissed(this.run?.id ?? null);
           this.rollbackNote = null;
         }}
         onprogress={(data: any) => {
@@ -404,7 +466,7 @@ export default class MillwrightPage extends ExtensionPage {
     return (
       <div className="Millwright-grid">
         {this.sorted().map((e) => (
-          <div className="Millwright-card" key={e.id}>
+          <div className={'Millwright-card' + (e.update ? ' Millwright-card--update' : '')} key={e.id}>
             <div className="Millwright-cardTop">
               <div
                 className="Millwright-icon"
@@ -412,10 +474,25 @@ export default class MillwrightPage extends ExtensionPage {
               >
                 {e.icon?.name ? <i className={e.icon.name} /> : e.name.charAt(0)}
               </div>
-              <div>
+              <div className="Millwright-cardId">
                 <div className="Millwright-name">{e.name}</div>
                 <div className="Millwright-pkg">{e.package}</div>
               </div>
+
+              {/*
+                * 🚨 The words, at the top, where the eye lands — not only the
+                * version pair in the foot.
+                *
+                * "1.1.0 → 1.1.1" is precise and it is not a signal: it reads as
+                * metadata like every other version string on the page, so a
+                * grid of thirty cards gave no way to find the one card that
+                * needed attention without reading all of them.
+                */}
+              {e.update ? (
+                <span className="Millwright-badge" title={e.update.from + ' → ' + e.update.to}>
+                  {t('update_available')}
+                </span>
+              ) : null}
             </div>
 
             <div className="Millwright-meta">

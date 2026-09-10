@@ -23,6 +23,7 @@ ernestdefoe-millwright:
       whether anything blocks it, is worked out when you ask.
     banner_checked: "Last checked {when}."
     banner_uncheckable: "{count} package(s) could not be checked at all."
+    banner_more: "and {count} more"
     banner_open: Take a look
     banner_dismiss: Not now
     ago_minutes: "{count} minutes ago"
@@ -32,6 +33,7 @@ ernestdefoe-millwright:
     # 🚨 "Update", never "Upgrade". An upgrade sounds like a decision; an update
     # sounds like maintenance, and this is maintenance.
     update: Update
+    update_available: Update available
     update_all: "Update all {count}"
     starting: Starting…
     start_failed: >-

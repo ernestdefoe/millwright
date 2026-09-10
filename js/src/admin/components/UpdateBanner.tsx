@@ -8,6 +8,13 @@ declare const m: any;
 
 const t = (k: string, p?: any) => app.translator.trans('ernestdefoe-millwright.admin.' + k, p);
 
+interface Pending {
+  package: string;
+  name: string;
+  from: string | null;
+  to: string | null;
+}
+
 /**
  * Tells an admin, on the page they already land on, that something is out of
  * date — without overstating what that means.
@@ -24,6 +31,15 @@ const t = (k: string, p?: any) => app.translator.trans('ernestdefoe-millwright.a
 export default class UpdateBanner extends Component {
   loading = true;
   count = 0;
+  /**
+   * 🚨 WHICH packages, not just how many.
+   *
+   * The banner used to say "1 package has a newer version" and stop there, so
+   * the only way to find out which one was to open the page and read a grid of
+   * every extension on the forum looking for a tag. A notification that does
+   * not name its subject makes the reader do the work it exists to save.
+   */
+  pending: Pending[] = [];
   checkedAt: number | null = null;
   stale = false;
   uncheckable = 0;
@@ -36,7 +52,25 @@ export default class UpdateBanner extends Component {
       .request({ method: 'GET', url: apiUrl() + '/millwright/state' })
       .then((data: any) => {
         const updates = data.updates || {};
-        this.count = Object.keys(updates.available || {}).length;
+        const available = updates.available || {};
+
+        /*
+         * The display name lives on `installed`, which this response already
+         * carries — the update map is keyed by composer package, and
+         * "huseyinfiliz/discussion-ban" is not what the extension is called on
+         * the Extensions page. Fall back to the package when the two cannot be
+         * matched, which is better than saying nothing.
+         */
+        const installed: any[] = data.installed || [];
+
+        this.pending = Object.keys(available).map((pkg) => ({
+          package: pkg,
+          name: installed.find((i) => i.package === pkg)?.name || pkg,
+          from: available[pkg]?.from ?? null,
+          to: available[pkg]?.to ?? null,
+        }));
+
+        this.count = this.pending.length;
         this.checkedAt = updates.checkedAt ?? null;
         this.stale = !!updates.stale;
         this.uncheckable = (updates.uncheckable || []).length;
@@ -59,6 +93,9 @@ export default class UpdateBanner extends Component {
       <div className="Millwright-banner">
         <div>
           <div className="Millwright-banner-title">{t('banner_title', { count: this.count })}</div>
+
+          {this.names()}
+
           <div className="Millwright-banner-body">
             {t('banner_body')}
             {this.checkedAt ? ' ' + t('banner_checked', { when: this.ago(this.checkedAt) }) : ''}
@@ -73,6 +110,36 @@ export default class UpdateBanner extends Component {
           {Button.component({ className: 'Button Button--link', onclick: () => this.dismiss() }, t('banner_dismiss'))}
         </div>
       </div>
+    );
+  }
+
+  /**
+   * The extensions themselves, with the versions involved.
+   *
+   * 🚨 Capped, and honest about the cap. A forum with thirty out-of-date
+   * packages would otherwise turn a banner into a wall, and the reader who has
+   * thirty does not need them enumerated — they need to open the page.
+   */
+  names() {
+    const shown = this.pending.slice(0, 4);
+    const rest = this.pending.length - shown.length;
+
+    return (
+      <ul className="Millwright-banner-list">
+        {shown.map((p) => (
+          <li key={p.package}>
+            <span className="Millwright-banner-name">{p.name}</span>
+            {p.from && p.to ? (
+              <span className="Millwright-banner-vers">
+                {p.from} → {p.to}
+              </span>
+            ) : null}
+          </li>
+        ))}
+        {rest > 0 ? (
+          <li className="Millwright-banner-more">{t('banner_more', { count: rest })}</li>
+        ) : null}
+      </ul>
     );
   }
 

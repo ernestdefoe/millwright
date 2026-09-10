@@ -320,6 +320,79 @@
   &--muted { background: color-mix(in srgb, var(--text-color) 6%, transparent); }
 }
 
+// ── "update available" ───────────────────────────────────────────────────────
+//
+// 🚨 A word, not a colour. The badge names what it means, so it still reads on
+// a monochrome screen, to a colourblind admin, and in a screenshot pasted into
+// a support thread. The amber only reinforces it.
+
+.Millwright-cardId {
+  // Lets the badge sit hard right without the name column pushing it off.
+  flex: 1;
+  min-width: 0;
+}
+
+.Millwright-name,
+.Millwright-pkg {
+  overflow-wrap: anywhere;
+}
+
+.Millwright-badge {
+  flex-shrink: 0;
+  align-self: flex-start;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding: 4px 9px;
+  border-radius: 20px;
+  background: color-mix(in srgb, #c77700 16%, transparent);
+  color: color-mix(in srgb, #8a5200 80%, var(--text-color));
+  border: 1px solid color-mix(in srgb, #c77700 34%, transparent);
+}
+
+// The card itself carries the state too, so a card needing attention is
+// findable by shape at a glance down a long grid — not only by reading badges.
+.Millwright-card--update {
+  border-color: color-mix(in srgb, #c77700 45%, transparent);
+  box-shadow: inset 3px 0 0 0 color-mix(in srgb, #c77700 70%, transparent);
+}
+
+// ── the banner's list of what is actually out of date ────────────────────────
+
+.Millwright-banner-list {
+  list-style: none;
+  margin: 6px 0 8px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+}
+
+.Millwright-banner-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--text-color) 7%, transparent);
+  font-size: 12px;
+}
+
+.Millwright-banner-name { font-weight: 700; }
+
+.Millwright-banner-vers {
+  color: var(--muted-color);
+  font-variant-numeric: tabular-nums;
+}
+
+.Millwright-banner-more {
+  color: var(--muted-color);
+  background: none !important;
+  padding-inline: 2px !important;
+}
+
 // ── search ───────────────────────────────────────────────────────────────────
 
 .Millwright-search {
