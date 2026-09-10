@@ -1,5 +1,6 @@
 import app from 'flarum/admin/app';
 import apiUrl from '../apiUrl';
+import { liveSearchPlan, submittedSearchPlan } from '../searchPolicy';
 import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 
@@ -70,6 +71,10 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
   private error: string | null = null;
   private core: string | null = null;
   private seq = 0;
+  /** The query whose results are on screen, so a keystroke can tell if anything changed. */
+  private lastSearched: string | null = null;
+  /** The pending debounce, so a new keystroke replaces it rather than adding to it. */
+  private typing: ReturnType<typeof setTimeout> | null = null;
 
   view() {
     return (
@@ -78,7 +83,15 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
           className="Millwright-search"
           onsubmit={(e: Event) => {
             e.preventDefault();
-            this.search();
+
+            /*
+             * 🚨 Cancel the pending keystroke search first, or Return fires one
+             * search immediately and a second one 350ms later for the same
+             * query — two round trips and a list that redraws under the reader.
+             */
+            this.stopTyping();
+
+            if (submittedSearchPlan().search) this.search();
           }}
         >
           <input
@@ -86,8 +99,16 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
             type="search"
             placeholder={t('discover_placeholder') as unknown as string}
             value={this.query}
-            oninput={(e: any) => (this.query = e.target.value)}
+            oninput={(e: any) => {
+              this.query = e.target.value;
+              this.queueSearch();
+            }}
           />
+          {/*
+            * Kept, and not decorative: it forces a search the typing rule
+            * declines — a one-character vendor prefix, or the same query again
+            * after an error.
+            */}
           <button className="Button Button--primary" type="submit" disabled={this.searching}>
             {this.searching ? t('searching') : t('search')}
           </button>
@@ -118,6 +139,40 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
         ) : null}
       </div>
     );
+  }
+
+  /**
+   * A keystroke, considered.
+   *
+   * The rule lives in searchPolicy so it can be tested; this is only the timer.
+   */
+  queueSearch() {
+    const plan = liveSearchPlan(this.query, this.lastSearched);
+
+    this.stopTyping();
+
+    if (! plan.search) return;
+
+    this.typing = setTimeout(() => {
+      this.typing = null;
+      this.search();
+    }, plan.delayMs);
+  }
+
+  stopTyping() {
+    if (this.typing !== null) {
+      clearTimeout(this.typing);
+      this.typing = null;
+    }
+  }
+
+  /*
+   * 🚨 A timer that outlives its component fires into a dead tab: it redraws a
+   * page that has moved on, and on a slow search it can overwrite the results
+   * of whatever the reader opened next.
+   */
+  onremove() {
+    this.stopTyping();
   }
 
   card(r: Found) {
@@ -241,6 +296,14 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
      */
     const mine = ++this.seq;
 
+    /*
+     * Recorded when the search STARTS, not when it returns: it is what the
+     * typing rule compares against, and between here and the reply every
+     * keystroke that types the same string back would otherwise queue another
+     * identical request.
+     */
+    this.lastSearched = q;
+
     this.page = 1;
     this.searching = true;
     this.searched = true;
@@ -263,6 +326,13 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
       .catch(() => {
         if (mine !== this.seq) return;
         this.searching = false;
+        /*
+         * 🚨 Forget the query on failure, so the same one can be tried again.
+         * Otherwise a network blip leaves the box holding a query the typing
+         * rule now considers already-shown, and nothing the reader types —
+         * short of changing it — will retry.
+         */
+        this.lastSearched = null;
         this.error = t('discover_failed') as unknown as string;
         m.redraw();
       });
