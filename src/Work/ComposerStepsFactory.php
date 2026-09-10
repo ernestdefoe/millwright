@@ -20,7 +20,16 @@ use Flarum\Foundation\Paths;
  */
 class ComposerStepsFactory implements StepsFactory
 {
-    public function __construct(private Paths $paths, private ?Config $config = null)
+    /**
+     * 🚨 `$config` is not optional, and must not be made optional again.
+     *
+     * It was `?Config $config = null`, and the one place that constructs this
+     * did not pass it. The result was silent: no error, no warning, just an
+     * empty site address, and with it a health check and an automatic rollback
+     * that never ran anywhere. A required parameter turns that into a failure
+     * at construction, where somebody would see it.
+     */
+    public function __construct(private Paths $paths, private Config $config)
     {
     }
 
@@ -37,7 +46,7 @@ class ComposerStepsFactory implements StepsFactory
     private function siteUrl(): string
     {
         try {
-            $url = (string) ($this->config?->url() ?? '');
+            $url = (string) $this->config->url();
         } catch (\Throwable $e) {
             return '';
         }

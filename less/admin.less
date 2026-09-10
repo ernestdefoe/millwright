@@ -214,8 +214,30 @@
 
 .Millwright-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  /* 🚨 The `min()` is ESCAPED. less.php has a min() of its own and refuses to
+     compare a pixel length with a percentage — unescaped, this file stops
+     compiling and takes the whole admin stylesheet bundle with it.
+     Without the min(), a container narrower than the track gets a column wider
+     than itself, and .Millwright-card's overflow:hidden then CLIPS the badge
+     and the Update button rather than wrapping them.
+
+     🚨 `minmax(0, ...)` on the capped grid below for the same reason: a track
+     sized to min-content is a track that can be wider than the container. */
+  grid-template-columns: repeat(auto-fill, minmax(~"min(300px, 100%)", 1fr));
   gap: 14px;
+}
+
+/*
+ * Three across, never four.
+ *
+ * A card carries a name, a package, a version, up to two tags and two buttons.
+ * At four columns on a wide admin the package name is the width of the card and
+ * the "Update available" badge has nowhere to go; three gives every one of them
+ * room on one line. Below this the auto-fill above takes over and steps down to
+ * two and then one on its own.
+ */
+@media (min-width: 1000px) {
+  .Millwright-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 .Millwright-grid .Millwright-card {
@@ -224,10 +246,30 @@
   transition: border-color .15s ease;
 
   &:hover { border-color: color-mix(in srgb, var(--text-color) 22%, transparent); }
+
+  /*
+   * 🚨 This one line is why the badge and the Update button were cut off.
+   *
+   * A grid ITEM defaults to `min-width: auto`, which means it refuses to be
+   * narrower than its own content. So the card's rows sized themselves to the
+   * longest package name — measured at 438px inside a 330px card — and the
+   * card's `overflow: hidden` quietly sliced off everything past its edge:
+   * half the badge, and the Update button entirely.
+   *
+   * Nothing about it looks like an error. The row simply is that wide, and the
+   * flex-wrap inside it never triggers because from its own point of view it
+   * has all the room it asked for.
+   */
+  > * { min-width: 0; }
 }
 
 .Millwright-cardTop {
   display: flex;
+  /* 🚨 Wraps. The badge is nowrap and unshrinkable by design — a half-rendered
+     "UPDATE AV" is worse than none — so when the name, the package and the
+     badge cannot share a line, the badge takes its own instead of being cut
+     off by the card's overflow:hidden. */
+  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
   padding: 14px @mw-pad 0;
@@ -327,8 +369,11 @@
 // a support thread. The amber only reinforces it.
 
 .Millwright-cardId {
-  // Lets the badge sit hard right without the name column pushing it off.
-  flex: 1;
+  // 🚨 `flex: 1 1 0` with min-width:0, so a long package name can be narrower
+  // than its own content. The default `min-width: auto` on a flex item is what
+  // lets "huseyinfiliz/discussion-ban" in a monospace face push the row wider
+  // than the card and get clipped.
+  flex: 1 1 0;
   min-width: 0;
 }
 
@@ -339,6 +384,8 @@
 
 .Millwright-badge {
   flex-shrink: 0;
+  /* Holds the right edge on one line, and the left edge once it wraps. */
+  margin-inline-start: auto;
   align-self: flex-start;
   font-size: 10px;
   font-weight: 700;

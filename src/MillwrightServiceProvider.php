@@ -8,6 +8,7 @@ use ErnestDefoe\Millwright\Run\StepRunner;
 use ErnestDefoe\Millwright\Run\StepsFactory;
 use ErnestDefoe\Millwright\Work\ComposerStepsFactory;
 use Flarum\Foundation\AbstractServiceProvider;
+use Flarum\Foundation\Config;
 use Flarum\Foundation\Paths;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
@@ -45,7 +46,21 @@ class MillwrightServiceProvider extends AbstractServiceProvider
          * Handing the id in at step() time removes the question entirely.
          */
         $this->container->singleton(StepsFactory::class, function ($container) {
-            return new ComposerStepsFactory($container->make(Paths::class));
+            /*
+             * 🚨 Config is REQUIRED here, and this line is why.
+             *
+             * It used to be optional with a null default and this binding did
+             * not pass it — so `siteUrl()` returned '' on every install, and
+             * every run reported "No site address is configured, so this update
+             * will not be judged by whether the site answers." The health check
+             * and the automatic rollback-when-the-site-breaks were therefore
+             * never once exercised, on any forum, since the day they were
+             * written. Nothing errored; the feature simply was not there.
+             */
+            return new ComposerStepsFactory(
+                $container->make(Paths::class),
+                $container->make(Config::class)
+            );
         });
 
         /*
