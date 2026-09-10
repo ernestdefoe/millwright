@@ -125,7 +125,25 @@ class ComposerSteps implements Steps
              * uninstall is as reversible as an update.
              */
             'remove'  => array_merge(['remove'], $this->requested, ['--no-install', '--no-scripts']),
-            default   => array_merge(['update'], $this->requested, ['--with-all-dependencies', '--no-install']),
+            /*
+             * 🚨 `-w`, NOT `-W`.
+             *
+             * `--with-all-dependencies` also updates packages that are ROOT
+             * requirements — so asking to update one extension moved twenty-five
+             * unrelated packages on a live forum: the whole illuminate stack,
+             * commonmark, monolog. Nobody chose that, the extension being
+             * updated did not need it, and on a site that had just been
+             * carefully pinned it was precisely the thing the pinning existed
+             * to prevent.
+             *
+             * `--with-dependencies` still lets a package's own dependencies move
+             * when the new version needs them, which is the case that made -W
+             * look necessary. What it will not do is quietly re-resolve things
+             * the admin has deliberately fixed. If an update genuinely requires
+             * a root requirement to move, Composer now says so and the admin
+             * decides — which is the whole posture of this extension.
+             */
+            default   => array_merge(['update'], $this->requested, ['--with-dependencies', '--no-install']),
         };
 
         $result = $this->composer->run($args);
@@ -159,11 +177,56 @@ class ComposerSteps implements Steps
             return match ($this->mode) {
                 'install' => 'Nothing changed — that package is already installed at this version.',
                 'remove'  => 'Nothing changed — that package was not a direct requirement of this site.',
-                default   => 'Nothing to update — everything is already at the newest version it can be.',
+                default   => $this->whyNothingMoved(),
             };
         }
 
         return count($changes) . ' package(s) will change';
+    }
+
+    /**
+     * Why an update changed nothing.
+     *
+     * 🚨 "Everything is already at the newest version it can be" is true and
+     * useless, and on a pinned forum it is actively misleading.
+     *
+     * A site that pins `ernestdefoe/page-builder` to `3.5.1` will be told by the
+     * update check that 3.6.0 exists — correctly, it does — and pressing Update
+     * then runs a resolve that cannot move it, because the constraint forbids
+     * it. The run reported Finished, the card still said an update was
+     * available, and nothing anywhere said why. Somebody would press it again.
+     *
+     * So when a requested package did not move, name its constraint. The admin
+     * can then do the one thing that would help.
+     */
+    private function whyNothingMoved(): string
+    {
+        $json = $this->readJson($this->installPath . '/composer.json');
+        $pinned = [];
+
+        foreach ($this->requested as $package) {
+            $constraint = $json['require'][$package] ?? null;
+
+            if (! is_string($constraint)) {
+                continue;
+            }
+
+            /*
+             * A constraint with no wildcard, caret or tilde admits exactly one
+             * version, so a newer one can never satisfy it. Ranges are left out:
+             * those genuinely can be "already newest".
+             */
+            if (preg_match('/^v?\d+\.\d+\.\d+/', $constraint) && ! preg_match('/[\^~*|]|\s-\s/', $constraint)) {
+                $pinned[] = $package . ' is pinned to ' . $constraint;
+            }
+        }
+
+        if ($pinned === []) {
+            return 'Nothing to update — everything is already at the newest version it can be.';
+        }
+
+        return 'Nothing moved, because ' . implode('; ', $pinned)
+            . '. A newer version cannot be installed until that requirement is changed.';
     }
 
     /**
