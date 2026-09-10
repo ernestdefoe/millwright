@@ -304,17 +304,51 @@ export default class MillwrightPage extends ExtensionPage {
    * out before anything moves, rather than halfway through the second one.
    */
   updateAll() {
-    const names = this.installed.filter((e) => e.update && !e.pathInstall).map((e) => e.package);
+    const updatable = this.installed.filter((e) => cardOffers(e).update);
+    const names = updatable.map((e) => e.package);
 
     if (names.length === 0) return null;
 
+    /*
+     * 🚨 If any of them is pinned, "update everything" has to ask about the
+     * requirements too — otherwise it quietly skips exactly the packages the
+     * admin was most deliberate about, and reports success.
+     */
+    const pinned = updatable.filter((e) => cardOffers(e).repin);
+
     return (
       <div className="Millwright-updateAll">
-        <button className="Button Button--primary" disabled={this.starting} onclick={() => this.start(names)}>
+        <button
+          className="Button Button--primary"
+          disabled={this.starting}
+          onclick={() => (pinned.length ? this.confirmRepin(pinned, names) : this.start(names))}
+        >
           {this.starting ? t('starting') : t('update_all', { count: names.length })}
         </button>
       </div>
     );
+  }
+
+  /**
+   * Raising a pin edits composer.json, so it is asked for in those words.
+   *
+   * 🚨 The new version is NOT sent to the server. The request carries a yes,
+   * and the server takes the target from its own update check — so the only
+   * version a requirement can move to is the one on the card the admin just
+   * read. A version travelling from the browser into composer.json would be an
+   * arbitrary string from a client.
+   */
+  confirmRepin(entry: any, packages?: string[]) {
+    const list = Array.isArray(entry) ? entry : [entry];
+    const names = packages ?? list.map((e: any) => e.package);
+
+    const lines = list
+      .map((e: any) => `  ${e.package}: ${e.constraint} → ${e.update?.to ?? '?'}`)
+      .join('\n');
+
+    if (!confirm(String(t('repin_confirm', { count: list.length })) + '\n\n' + lines)) return;
+
+    this.start(names, 'update', true);
   }
 
   /**
@@ -334,7 +368,7 @@ export default class MillwrightPage extends ExtensionPage {
    *        and exits 0, so a run in the wrong mode would pass every phase,
    *        change nothing, and report success.
    */
-  start(packages: string[], mode: 'update' | 'install' | 'remove' = 'update') {
+  start(packages: string[], mode: 'update' | 'install' | 'remove' = 'update', repin = false) {
     this.starting = true;
     this.notice = null;
     this.rollbackNote = null;
@@ -345,7 +379,7 @@ export default class MillwrightPage extends ExtensionPage {
       .request({
         method: 'POST',
         url: apiUrl() + '/millwright/update',
-        body: { packages, mode },
+        body: { packages, mode, repin },
       })
       .then((data: any) => {
         this.starting = false;
@@ -526,7 +560,11 @@ export default class MillwrightPage extends ExtensionPage {
 
               <span className="Millwright-actions">
                 {cardOffers(e).update ? (
-                  <button className="Button Button--primary Button--sm" disabled={this.starting} onclick={() => this.start([e.package])}>
+                  <button
+                    className="Button Button--primary Button--sm"
+                    disabled={this.starting}
+                    onclick={() => (cardOffers(e).repin ? this.confirmRepin(e) : this.start([e.package]))}
+                  >
                     {t('update')}
                   </button>
                 ) : null}

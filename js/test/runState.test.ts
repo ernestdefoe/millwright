@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   cardOffers,
+  isExactPin,
   dismissalApplies,
   hidesPage,
   pollOutcome,
@@ -161,5 +162,57 @@ describe('grid ordering', () => {
     sortForGrid(input);
 
     expect(input.map((e: any) => e.id)).toEqual(['a', 'b']);
+  });
+});
+
+describe('a requirement that admits exactly one version', () => {
+  it('recognises an exact pin', () => {
+    for (const c of ['3.5.1', 'v0.3.1', '1.0.0', '2.14.3']) {
+      expect(isExactPin(c)).toBe(true);
+    }
+  });
+
+  /* A range genuinely can be already-newest; rewriting it changes a decision. */
+  it('leaves a range alone', () => {
+    for (const c of ['^3.5', '~3.5.1', '*', '>=3.0 <4.0', '^2.0.0-beta.4', 'dev-main']) {
+      expect(isExactPin(c)).toBe(false);
+    }
+  });
+
+  it('copes with no constraint at all', () => {
+    expect(isExactPin(null)).toBe(false);
+    expect(isExactPin(undefined)).toBe(false);
+    expect(isExactPin('')).toBe(false);
+  });
+
+  /*
+   * 🚨 THE BUG. A forum pinned to 3.5.1 was told 3.6.0 existed, pressed Update,
+   * and nothing happened — the resolve cannot cross the constraint. The card
+   * has to offer to raise the requirement instead of pretending otherwise.
+   */
+  it('asks to raise the requirement when one is pinned', () => {
+    const offers = cardOffers({ update: { from: '3.5.1', to: '3.6.0' }, enabled: true, constraint: '3.5.1' });
+
+    expect(offers.update).toBe(true);
+    expect(offers.repin).toBe(true);
+  });
+
+  it('does not ask when a range already allows the newer version', () => {
+    const offers = cardOffers({ update: { from: '3.5.1', to: '3.6.0' }, enabled: true, constraint: '^3.5' });
+
+    expect(offers.update).toBe(true);
+    expect(offers.repin).toBe(false);
+  });
+
+  /* A local checkout is never touched, pinned or not. */
+  it('never offers to raise a pin on a path install', () => {
+    const offers = cardOffers({ update: { from: '1.0.0', to: '1.1.0' }, pathInstall: true, constraint: '1.0.0' });
+
+    expect(offers.update).toBe(false);
+    expect(offers.repin).toBe(false);
+  });
+
+  it('offers nothing to raise when there is no newer version', () => {
+    expect(cardOffers({ update: null, constraint: '3.5.1' }).repin).toBe(false);
   });
 });

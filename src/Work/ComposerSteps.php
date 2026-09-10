@@ -54,6 +54,18 @@ class ComposerSteps implements Steps
         private string $vendorPath = '',
         private string $storagePath = '',
         private string $siteUrl = '',
+        /**
+         * 🚨 Requirements this run is authorised to RAISE, package => version.
+         *
+         * A forum that pins `page-builder` to `3.5.1` cannot be moved to 3.6.0
+         * by a resolve, however many times somebody presses Update — the
+         * constraint forbids it. Raising the pin is the only thing that helps,
+         * and it edits composer.json, so it is never inferred: the admin is
+         * shown the exact requirement change and it is recorded with the run.
+         *
+         * @var array<string,string>
+         */
+        private array $repin = [],
     ) {
     }
 
@@ -146,6 +158,8 @@ class ComposerSteps implements Steps
             default   => array_merge(['update'], $this->requested, ['--with-dependencies', '--no-install']),
         };
 
+        $raised = $this->raisePins();
+
         $result = $this->composer->run($args);
         $after  = $this->readJson($lockPath);
 
@@ -181,7 +195,60 @@ class ComposerSteps implements Steps
             };
         }
 
-        return count($changes) . ' package(s) will change';
+        $note = count($changes) . ' package(s) will change';
+
+        return $raised === [] ? $note : implode('; ', $raised) . '. ' . $note;
+    }
+
+    /**
+     * Raise the requirements this run was authorised to raise.
+     *
+     * 🚨 composer.json is edited BEFORE the resolve, and only for packages the
+     * admin was shown. `composer.json.before` is already saved a few lines
+     * above, and Rollback restores it — so an update that raises a pin and then
+     * fails puts the requirement back with everything else.
+     *
+     * 🚨 It raises to an EXACT version, never to a range. A site that pinned
+     * `3.5.1` deliberately stays pinned at `3.6.0`; quietly converting it to
+     * `^3.6` would hand back the drift the pin was there to stop, as a side
+     * effect of an unrelated click.
+     *
+     * @return list<string> what changed, for the log
+     */
+    private function raisePins(): array
+    {
+        if ($this->repin === [] || $this->mode !== 'update') {
+            return [];
+        }
+
+        $path = $this->installPath . '/composer.json';
+        $json = $this->readJson($path);
+        $raised = [];
+
+        foreach ($this->repin as $package => $version) {
+            $current = $json['require'][$package] ?? null;
+
+            // Only ever touch a package this run was actually asked about, and
+            // only one the site really does require.
+            if (! is_string($current) || ! in_array($package, $this->requested, true)) {
+                continue;
+            }
+
+            if ($current === $version) {
+                continue;
+            }
+
+            $json['require'][$package] = $version;
+            $raised[] = sprintf('%s required at %s instead of %s', $package, $version, $current);
+        }
+
+        if ($raised === []) {
+            return [];
+        }
+
+        file_put_contents($path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
+
+        return $raised;
     }
 
     /**
@@ -595,6 +662,8 @@ class ComposerSteps implements Steps
 
     private function composerCommand(array $args, string $note): string
     {
+        $raised = $this->raisePins();
+
         $result = $this->composer->run($args);
 
         if ($result['code'] !== 0) {

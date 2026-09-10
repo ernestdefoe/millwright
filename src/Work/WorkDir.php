@@ -68,11 +68,23 @@ class WorkDir
      *        decides which Composer command the plan phase runs, and it has to
      *        survive the request that chose it.
      */
-    public function remember(array $packages, string $mode = 'update'): void
+    /**
+     * @param array<string,string> $repin package => the exact version its
+     *        requirement should be raised to, for packages the site has pinned
+     */
+    public function remember(array $packages, string $mode = 'update', array $repin = []): void
     {
         file_put_contents($this->root() . '/requested.json', json_encode([
             'mode'     => in_array($mode, ['install', 'remove'], true) ? $mode : 'update',
             'packages' => array_values($packages),
+            /*
+             * 🚨 Written down with everything else, for the same reason the
+             * package list is: a run outlives the request that started it. A
+             * worker picking this up later must raise the same requirement the
+             * admin was shown, not recompute it from a check that may have been
+             * refreshed since.
+             */
+            'repin'    => $repin,
         ]));
     }
 
@@ -105,6 +117,24 @@ class WorkDir
         $mode = (string) ($this->manifest()['mode'] ?? 'update');
 
         return in_array($mode, ['install', 'remove'], true) ? $mode : 'update';
+    }
+
+    /**
+     * Which requirements this run was authorised to raise, and to what.
+     *
+     * @return array<string,string>
+     */
+    public function repin(): array
+    {
+        $out = [];
+
+        foreach ((array) ($this->manifest()['repin'] ?? []) as $package => $version) {
+            if (is_string($package) && is_string($version) && $version !== '') {
+                $out[$package] = $version;
+            }
+        }
+
+        return $out;
     }
 
     /** @return array<string,mixed> */

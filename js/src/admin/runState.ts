@@ -127,6 +127,26 @@ export interface CardLike {
   update?: { from: string; to: string } | null;
   enabled?: boolean;
   pathInstall?: boolean;
+  /** What composer.json requires, e.g. "3.5.1", "^3.5", "dev-main". */
+  constraint?: string | null;
+}
+
+/**
+ * Whether a requirement admits exactly one version.
+ *
+ * 🚨 This is the difference between "press Update and it updates" and "press
+ * Update and nothing happens, forever". A forum that requires `3.5.1` cannot be
+ * moved to 3.6.0 by any resolve — the constraint forbids it — so the card must
+ * offer to raise the requirement rather than pretending a resolve will do it.
+ *
+ * A range is left alone: `^3.5` genuinely can be already-newest, and rewriting
+ * it would change a decision nobody asked to change.
+ */
+export function isExactPin(constraint: string | null | undefined): boolean {
+  if (!constraint) return false;
+  if (/[\^~*|]|\s-\s/.test(constraint)) return false;
+
+  return /^v?\d+\.\d+\.\d+/.test(constraint);
 }
 
 /**
@@ -140,9 +160,17 @@ export interface CardLike {
 export function cardOffers(card: CardLike) {
   const hasUpdate = !!card.update;
 
+  const canAct = hasUpdate && !card.pathInstall;
+
   return {
     badge: hasUpdate,
-    update: hasUpdate && !card.pathInstall,
+    update: canAct,
+    /*
+     * 🚨 Pressing Update on a pinned package must say what it will really do.
+     * The requirement changes first; the resolve follows. Anything less makes
+     * the button a no-op that reports success.
+     */
+    repin: canAct && isExactPin(card.constraint),
     remove: !card.enabled && !card.pathInstall,
   };
 }

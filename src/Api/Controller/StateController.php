@@ -69,6 +69,7 @@ class StateController implements RequestHandlerInterface
     /** @return list<array<string,mixed>> */
     private function installed(array $updates): array
     {
+        $require = (array) ($this->readJson($this->paths->base . '/composer.json')['require'] ?? []);
         $out = [];
 
         foreach ($this->extensions->getExtensions() as $extension) {
@@ -87,6 +88,14 @@ class StateController implements RequestHandlerInterface
                  */
                 'update'  => $updates[$extension->name] ?? null,
                 /*
+                 * 🚨 The screen has to know a requirement is an exact pin,
+                 * because that changes what pressing Update means: not "fetch
+                 * the newer version" but "change what this forum requires, then
+                 * fetch it". Two different acts, and the second one edits
+                 * composer.json.
+                 */
+                'constraint' => $require[$extension->name] ?? null,
+                /*
                  * 🚨 Reported so the SCREEN can explain, rather than the apply
                  * refusing later. Composer installs a path repository as a
                  * symlink into a checkout on this machine — the way every
@@ -102,5 +111,13 @@ class StateController implements RequestHandlerInterface
         usort($out, fn ($a, $b) => strcasecmp($a['name'], $b['name']));
 
         return $out;
+    }
+
+    /** @return array<string,mixed> */
+    private function readJson(string $path): array
+    {
+        $data = is_file($path) ? json_decode((string) file_get_contents($path), true) : null;
+
+        return is_array($data) ? $data : [];
     }
 }

@@ -35,6 +35,11 @@ ernestdefoe-millwright:
     # sounds like maintenance, and this is maintenance.
     update: Update
     update_available: Update available
+    repin_confirm: >-
+      This forum requires an exact version of {count} extension(s), so a newer
+      one cannot be installed until that requirement is changed. Continue, and
+      composer.json will be updated to require the new version before anything
+      is downloaded. A rollback puts the requirement back too.
     update_all: "Update all {count}"
     starting: Starting…
     start_failed: >-
