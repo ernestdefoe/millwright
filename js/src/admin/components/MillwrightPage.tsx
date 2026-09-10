@@ -1,5 +1,6 @@
 import app from 'flarum/admin/app';
 import apiUrl from '../apiUrl';
+import { cardOffers, dismissalApplies, hidesPage, runIsLive, showingRun, sortForGrid } from '../runState';
 import ExtensionPage from 'flarum/admin/components/ExtensionPage';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import HostPanel from './HostPanel';
@@ -63,13 +64,12 @@ export default class MillwrightPage extends ExtensionPage {
    */
   private static DISMISS_KEY = 'millwright.dismissedRun';
 
-  private wasDismissed(id: string | null): boolean {
-    if (!id) return false;
-
+  private storedDismissal(): string | null {
     try {
-      return localStorage.getItem(MillwrightPage.DISMISS_KEY) === id;
+      return localStorage.getItem(MillwrightPage.DISMISS_KEY);
     } catch {
-      return false;
+      // Private browsing. The panel reappears, which is the safe way round.
+      return null;
     }
   }
 
@@ -138,7 +138,7 @@ export default class MillwrightPage extends ExtensionPage {
          * A live run's panel is the page; dismissing one must not be a way to
          * hide an update that is halfway through applying itself.
          */
-        this.dismissed = !this.runIsLive() && this.wasDismissed(this.run?.id ?? null);
+        this.dismissed = dismissalApplies(this.run, this.storedDismissal());
 
         this.firstLoad = false;
         m.redraw();
@@ -241,7 +241,7 @@ export default class MillwrightPage extends ExtensionPage {
    * it becomes useful — what changed, in what order, and what to check.
    */
   showingRun(): boolean {
-    return !!this.run && !this.dismissed;
+    return showingRun(this.run, this.dismissed);
   }
 
   /**
@@ -254,14 +254,12 @@ export default class MillwrightPage extends ExtensionPage {
    * the rest of the page is worth having as well.
    */
   runIsLive(): boolean {
-    const state = this.run?.state;
-
-    return state === 'pending' || state === 'running';
+    return runIsLive(this.run);
   }
 
   /** The page's own content is suppressed only while something is happening. */
   private hidesPage(): boolean {
-    return this.showingRun() && this.runIsLive();
+    return hidesPage(this.run, this.dismissed);
   }
 
   runPanel() {
@@ -459,14 +457,14 @@ export default class MillwrightPage extends ExtensionPage {
 
   /** Anything with a newer version first — that is what somebody came to see. */
   sorted(): Installed[] {
-    return [...this.installed].sort((a, b) => Number(!!b.update) - Number(!!a.update));
+    return sortForGrid(this.installed);
   }
 
   grid() {
     return (
       <div className="Millwright-grid">
         {this.sorted().map((e) => (
-          <div className={'Millwright-card' + (e.update ? ' Millwright-card--update' : '')} key={e.id}>
+          <div className={'Millwright-card' + (cardOffers(e).badge ? ' Millwright-card--update' : '')} key={e.id}>
             <div className="Millwright-cardTop">
               <div
                 className="Millwright-icon"
@@ -488,7 +486,7 @@ export default class MillwrightPage extends ExtensionPage {
                 * grid of thirty cards gave no way to find the one card that
                 * needed attention without reading all of them.
                 */}
-              {e.update ? (
+              {cardOffers(e).badge && e.update ? (
                 <span className="Millwright-badge" title={e.update.from + ' → ' + e.update.to}>
                   {t('update_available')}
                 </span>
@@ -525,16 +523,16 @@ export default class MillwrightPage extends ExtensionPage {
               </span>
 
               <span className="Millwright-actions">
-                {e.pathInstall ? null : e.update ? (
+                {cardOffers(e).update ? (
                   <button className="Button Button--primary Button--sm" disabled={this.starting} onclick={() => this.start([e.package])}>
                     {t('update')}
                   </button>
                 ) : null}
-                {e.pathInstall || e.enabled ? null : (
+                {cardOffers(e).remove ? (
                   <button className="Button Button--sm" disabled={this.starting} onclick={() => this.confirmRemove(e)}>
                     {t('remove')}
                   </button>
-                )}
+                ) : null}
               </span>
             </div>
           </div>

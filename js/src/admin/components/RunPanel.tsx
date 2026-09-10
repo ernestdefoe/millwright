@@ -1,5 +1,6 @@
 import app from 'flarum/admin/app';
 import apiUrl from '../apiUrl';
+import { pollOutcome, runIsOver } from '../runState';
 import Component from 'flarum/common/Component';
 
 declare const m: any;
@@ -44,6 +45,8 @@ export default class RunPanel extends Component<RunPanelAttrs> {
   private watching = false;
   /** The HTTP status of the last failed drive, so the panel can be specific. */
   private lastStatus: number | null = null;
+  /** What the last failure means and what to do next — see runState.pollOutcome. */
+  private outcome = pollOutcome(null, 0);
 
   oncreate(vnode: any) {
     super.oncreate(vnode);
@@ -119,7 +122,7 @@ export default class RunPanel extends Component<RunPanelAttrs> {
               * somebody "nothing has moved" instead sends them looking at the
               * update.
               */}
-            {this.lastStatus && this.lastStatus >= 400 && this.lastStatus < 500
+            {this.outcome.message === 'unauthorised'
               ? t('poll_unauthorised')
               : t('poll_failing', { count: this.misses })}
             {this.watching ? ' ' + t('watching_only') : ''}
@@ -227,6 +230,7 @@ export default class RunPanel extends Component<RunPanelAttrs> {
          */
         this.misses++;
         this.lastStatus = e?.status ?? null;
+        this.outcome = pollOutcome(this.lastStatus, this.misses);
 
         /*
          * 🚨 Driving the run and WATCHING it are two different jobs, and only
@@ -263,7 +267,7 @@ export default class RunPanel extends Component<RunPanelAttrs> {
         if (data.run) {
           this.attrs.onprogress({ run: data.run, busy: true, stale: data.runIsStale });
 
-          if (data.run.state && ['done', 'failed', 'rolled-back'].includes(data.run.state)) {
+          if (runIsOver(data.run)) {
             this.polling = false;
             this.attrs.ondone(data.run);
             m.redraw();
@@ -273,12 +277,12 @@ export default class RunPanel extends Component<RunPanelAttrs> {
         }
 
         m.redraw();
-        setTimeout(() => this.tick(), Math.min(1500 * this.misses, 15000));
+        setTimeout(() => this.tick(), this.outcome.delayMs);
       })
       .catch(() => {
         // Both endpoints unreachable. Now it really is a connectivity problem.
         m.redraw();
-        setTimeout(() => this.tick(), Math.min(1500 * this.misses, 15000));
+        setTimeout(() => this.tick(), this.outcome.delayMs);
       });
   }
 
