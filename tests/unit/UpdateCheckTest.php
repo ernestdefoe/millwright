@@ -148,4 +148,51 @@ class UpdateCheckTest extends TestCase
         $this->assertNull($cached['checkedAt']);
         $this->assertSame([], $cached['updates']);
     }
+
+    /**
+     * 🚨 A branch install is not a failed check.
+     *
+     * `dev-main` has no version to be newer than, and whether the branch has
+     * moved is something only a resolve can answer. Counting these as
+     * "could not be checked" told an admin that four extensions were a problem
+     * when they were reachable and fine — two wrong things in one sentence.
+     */
+    public function test_a_branch_install_is_reported_as_tracking_not_as_uncheckable(): void
+    {
+        $check = new UpdateCheck($this->cache);
+
+        $result = $check->refresh(
+            ['vendor/branchy' => 'dev-main', 'vendor/tagged' => '1.0.0'],
+            fn (string $name) => $name === 'vendor/tagged' ? ['1.0.0', '1.1.0'] : null
+        );
+
+        $this->assertSame(['vendor/branchy'], $result['tracking']);
+        $this->assertSame([], $result['uncheckable']);
+        $this->assertSame(['from' => '1.0.0', 'to' => '1.1.0'], $result['updates']['vendor/tagged']);
+    }
+
+    /** And it costs no request, which is what keeps a nightly check cheap. */
+    public function test_a_branch_install_is_never_fetched(): void
+    {
+        $check = new UpdateCheck($this->cache);
+        $asked = [];
+
+        $check->refresh(
+            ['vendor/branchy' => 'dev-main', 'vendor/other' => '1.x-dev'],
+            function (string $name) use (&$asked) { $asked[] = $name; return null; }
+        );
+
+        $this->assertSame([], $asked, 'Nothing to ask: neither has a version to compare.');
+    }
+
+    /** Something genuinely unreachable is still named, not quietly dropped. */
+    public function test_an_unreachable_package_is_still_reported(): void
+    {
+        $check = new UpdateCheck($this->cache);
+
+        $result = $check->refresh(['vendor/private' => '1.0.0'], fn () => null);
+
+        $this->assertSame(['vendor/private'], $result['uncheckable']);
+        $this->assertSame([], $result['tracking']);
+    }
 }

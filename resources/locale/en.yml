@@ -13,7 +13,8 @@ ernestdefoe-millwright:
     some_newer: "{count} package(s) have a newer version."
     checked_ago: "Checked {when}."
     never_checked: Not checked yet.
-    uncheckable: "{count} could not be checked — they are not on Packagist."
+    uncheckable: "{count} could not be checked — no repository this forum knows about lists them."
+    tracking: "{count} track a branch, so there is no version to compare."
     check_now: Check now
     checking: Checking…
 

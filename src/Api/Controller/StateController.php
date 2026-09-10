@@ -55,6 +55,13 @@ class StateController implements RequestHandlerInterface
                 'checkedAt'   => $cached['checkedAt'] ?? null,
                 'stale'       => $check->isStale(),
                 'uncheckable' => $cached['uncheckable'] ?? [],
+                /*
+                 * Separate from uncheckable on purpose: a branch install has no
+                 * version to compare, which is not the same as a package we
+                 * could not reach — and calling it a failure reads as a problem
+                 * where there is none.
+                 */
+                'tracking'    => $cached['tracking'] ?? [],
             ],
         ]);
     }

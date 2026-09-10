@@ -92,7 +92,18 @@ class CheckCommand extends AbstractCommand
         if ($result['uncheckable'] !== []) {
             // Said out loud rather than omitted: silence here would read as
             // "these are fine", which is not something this can know.
-            $this->info(count($result['uncheckable']) . ' package(s) are not on Packagist and could not be checked.');
+            $this->info(count($result['uncheckable']) . ' package(s) could not be checked anywhere: '
+                . implode(', ', $result['uncheckable']));
+        }
+
+        /*
+         * 🚨 Reported separately, because it is not a failure. A branch install
+         * has no version to be newer than; whether the branch has moved is a
+         * question for the update itself.
+         */
+        if (($result['tracking'] ?? []) !== []) {
+            $this->info(count($result['tracking']) . ' package(s) track a branch, so there is no version to compare: '
+                . implode(', ', $result['tracking']));
         }
 
         return 0;

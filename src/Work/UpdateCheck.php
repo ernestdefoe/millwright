@@ -80,8 +80,28 @@ class UpdateCheck
 
         $found = [];
         $unknown = [];
+        $tracking = [];
 
         foreach ($installed as $name => $version) {
+            /*
+             * 🚨 A package tracking a branch is not "uncheckable" — it is not a
+             * version question at all.
+             *
+             * `dev-main` has no version to be newer than. Whether the branch has
+             * moved is something only a resolve can answer, and this command
+             * deliberately does not resolve. Lumping these in with packages we
+             * genuinely could not reach told an admin that four extensions
+             * "could not be checked", which is two wrong things at once: they
+             * were reachable, and nothing was wrong.
+             *
+             * It also saves the request, which is the point of a nightly check
+             * staying cheap.
+             */
+            if (self::tracksABranch($version)) {
+                $tracking[] = $name;
+                continue;
+            }
+
             $versions = $fetch($name);
 
             if ($versions === null) {
@@ -106,6 +126,7 @@ class UpdateCheck
             'checkedAt' => time(),
             'updates'   => $found,
             'uncheckable' => $unknown,
+            'tracking'    => $tracking,
         ];
 
         @file_put_contents($this->cachePath, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
@@ -117,7 +138,7 @@ class UpdateCheck
     public function cached(): array
     {
         if (! is_file($this->cachePath)) {
-            return ['checkedAt' => null, 'updates' => [], 'uncheckable' => []];
+            return ['checkedAt' => null, 'updates' => [], 'uncheckable' => [], 'tracking' => []];
         }
 
         return (array) json_decode((string) file_get_contents($this->cachePath), true);
@@ -140,14 +161,18 @@ class UpdateCheck
      *
      * @param list<string> $versions
      */
+    /** A branch install: `dev-main`, `1.x-dev`. */
+    public static function tracksABranch(string $version): bool
+    {
+        return str_starts_with($version, 'dev-') || str_contains($version, '-dev');
+    }
+
     private function newestComparable(array $versions, string $installed): ?string
     {
-        $installedIsDev = str_starts_with($installed, 'dev-') || str_contains($installed, '-dev');
+        $installedIsDev = self::tracksABranch($installed);
 
         $candidates = array_values(array_filter($versions, function (string $v) use ($installedIsDev) {
-            $isDev = str_starts_with($v, 'dev-') || str_contains($v, '-dev');
-
-            return $isDev === $installedIsDev;
+            return self::tracksABranch($v) === $installedIsDev;
         }));
 
         if ($candidates === []) {

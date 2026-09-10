@@ -39,7 +39,7 @@ export default class MillwrightPage extends ExtensionPage {
   loadError: string | null = null;
   host: any = null;
   installed: Installed[] = [];
-  updates: any = { available: {}, checkedAt: null, stale: true, uncheckable: [] };
+  updates: any = { available: {}, checkedAt: null, stale: true, uncheckable: [], tracking: [] };
   checking = false;
   tab: 'installed' | 'discover' | 'sources' | 'host' = 'installed';
   run: any = null;
@@ -413,6 +413,7 @@ export default class MillwrightPage extends ExtensionPage {
   checkLine() {
     const n = this.updateCount();
     const uncheckable = (this.updates?.uncheckable || []).length;
+    const tracking = (this.updates?.tracking || []).length;
 
     return (
       <div className="Millwright-checkline">
@@ -420,6 +421,7 @@ export default class MillwrightPage extends ExtensionPage {
           <b>{n === 0 ? t('none_newer') : t('some_newer', { count: n })}</b>{' '}
           {this.updates?.checkedAt ? t('checked_ago', { when: this.ago(this.updates.checkedAt) }) : t('never_checked')}
           {uncheckable > 0 ? ' ' + t('uncheckable', { count: uncheckable }) : ''}
+          {tracking > 0 ? ' ' + t('tracking', { count: tracking }) : ''}
         </span>
         <button className="Button Button--link" disabled={this.checking} onclick={() => this.checkNow()}>
           {this.checking ? t('checking') : t('check_now')}
