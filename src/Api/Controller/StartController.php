@@ -3,7 +3,7 @@
 namespace ErnestDefoe\Millwright\Api\Controller;
 
 use ErnestDefoe\Millwright\Host\Capability;
-use ErnestDefoe\Millwright\Work\UpdateCheck;
+use ErnestDefoe\Millwright\Plan\Repin;
 use ErnestDefoe\Millwright\Run\Drivers;
 use ErnestDefoe\Millwright\Run\RunStore;
 use ErnestDefoe\Millwright\Run\StepRunner;
@@ -178,40 +178,15 @@ class StartController implements RequestHandlerInterface
             return [];
         }
 
-        $cached = (new UpdateCheck($this->paths->storage . '/millwright/updates.json'))->cached();
-        $available = (array) ($cached['updates'] ?? []);
-        $require = (array) ($this->readJson($this->paths->base . '/composer.json')['require'] ?? []);
-
-        $out = [];
-
-        foreach ($packages as $package) {
-            $to = $available[$package]['to'] ?? null;
-            $constraint = $require[$package] ?? null;
-
-            if (! is_string($to) || $to === '' || ! is_string($constraint)) {
-                continue;
-            }
-
-            if (! preg_match('/^v?\\d+\\.\\d+\\.\\d+/', $constraint) || preg_match('/[\\^~*|]|\\s-\\s/', $constraint)) {
-                continue;
-            }
-
-            /*
-             * Keep the site's own spelling. A forum that writes `v0.3.1` gets
-             * `v0.3.2`, not `0.3.2`: a constraint that changes shape reads as
-             * something nobody did on purpose.
-             */
-            $out[$package] = str_starts_with($constraint, 'v') && ! str_starts_with($to, 'v') ? 'v' . $to : $to;
-        }
-
-        return $out;
-    }
-
-    /** @return array<string,mixed> */
-    private function readJson(string $path): array
-    {
-        $data = is_file($path) ? json_decode((string) file_get_contents($path), true) : null;
-
-        return is_array($data) ? $data : [];
+        /*
+         * 🚨 The rules themselves live in Plan\Repin, because the console can
+         * raise a pin too and the two must never be allowed to disagree about
+         * what is allowed. What stays here is the question of PERMISSION: the
+         * browser asks WHETHER, and never to what.
+         */
+        return (new Repin(
+            $this->paths->base . '/composer.json',
+            $this->paths->storage . '/millwright/updates.json'
+        ))->targetsFor($packages);
     }
 }

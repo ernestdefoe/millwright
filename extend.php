@@ -3,6 +3,7 @@
 use ErnestDefoe\Millwright\Api\Controller;
 use ErnestDefoe\Millwright\Console\CheckCommand;
 use ErnestDefoe\Millwright\Console\RepairFormatterCommand;
+use ErnestDefoe\Millwright\Console\UpdateCommand;
 use ErnestDefoe\Millwright\MillwrightServiceProvider;
 use Flarum\Extend;
 
@@ -23,6 +24,13 @@ return [
          * loads a half-old class map.
          */
         ->command(RepairFormatterCommand::class)
+        /*
+         * 🚨 The same run the admin screen drives, with a terminal turning the
+         * handle instead of a browser. Deliberately not scheduled, and never
+         * will be: an update that starts itself is an update nobody chose to be
+         * present for.
+         */
+        ->command(UpdateCommand::class)
         /*
          * 🚨 Daily, and cheap enough to mean it. This is one HTTP call per
          * installed package with no Composer involved — a resolve on a schedule
