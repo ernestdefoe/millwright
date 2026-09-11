@@ -69,6 +69,13 @@ moment Composer exits is reporting on a site that may still be executing the
 previous version of the files for up to a minute — and if the update broke
 something, nobody finds out from the tool.
 
+**Survives being run as root.** `php flarum …` typed as root writes root-owned
+files into `storage/` that the web user can never replace — removing a file needs
+write permission on its *directory*, and that is root's too. The formatter cache
+is the usual casualty: posts stop rendering site-wide while `/` carries on
+answering 200, so nobody notices for hours. Millwright ships a guard for the
+console entry that ends the whole class of it — see below.
+
 ## Compared with Extension Manager
 
 Flarum's Extension Manager does run migrations, publish assets and clear caches
@@ -121,6 +128,29 @@ faster would have achieved.
 If you have a queue worker, it carries the work on when you close the tab. If you
 do not, the page does it. **The queue is never what makes an update work** — that
 distinction is the whole design.
+
+## The root guard
+
+Install it once, as root, on the site:
+
+```bash
+bash vendor/ernestdefoe/millwright/tools/install-root-guard.sh /var/www/html www-data
+```
+
+That patches the site's `flarum` console entry. From then on, a command run as
+root heals any root-owned files an earlier root run stranded in `storage/`, then
+drops to the web user *before* Flarum boots — so it writes exactly what php-fpm
+would have written. Running it as the web user is unaffected; the guard does
+nothing.
+
+It is idempotent (re-running replaces the guard rather than stacking copies),
+it lints the patched file before writing it and leaves the original in place if
+the lint fails, and it is safe to call on every container boot. In Docker, call
+it from your entrypoint so a rebuilt volume gets it back.
+
+`millwright:repair-formatter` is the command this protects. Without the guard it
+can only tell you which files to remove as root and exit 1 — it has no way to
+remove them itself. With the guard, it just works, whoever typed it.
 
 ## What it deliberately does not do
 
