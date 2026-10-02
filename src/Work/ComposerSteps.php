@@ -367,7 +367,7 @@ class ComposerSteps implements Steps
     private function finalise(string $item, Run $run): string
     {
         return match ($item) {
-            'register'   => $this->composerCommand(['install', '--no-scripts'], 'Composer now knows about the change'),
+            'register'   => $this->register(),
             'migrations' => $this->flarum('migrate', 'migrations run'),
             'assets'     => $this->flarum('assets:publish', 'assets published'),
             'caches'     => $this->clearCaches(),
@@ -658,6 +658,39 @@ class ComposerSteps implements Steps
         $changed = @filemtime($autoloader);
 
         return ($changed ?: time()) + $freq + 2;
+    }
+
+    /**
+     * Make Composer's record and autoloader match the tree, without letting it
+     * re-extract anything. See InstalledRecord for the outage this prevents.
+     *
+     * 🚨 The dry run is the guard, not a formality. If Composer would still
+     * change files after the record is synced, something disagrees that this
+     * step does not understand — and finding that out by letting Composer
+     * delete its own dependencies is how a site goes down. Stopping here leaves
+     * the applied tree in place and rollback available.
+     */
+    private function register(): string
+    {
+        $this->raisePins();
+
+        (new InstalledRecord($this->installPath))->syncFromLock();
+
+        $dry = $this->composer->run(['install', '--no-scripts', '--dry-run']);
+        if ($dry['code'] !== 0) {
+            throw new RuntimeException("Composer failed:\n" . $dry['output']);
+        }
+
+        $planned = InstalledRecord::plannedOperations($dry['output']);
+        if ($planned > 0) {
+            throw new RuntimeException(
+                "Composer still wants to change $planned package(s) after the update was applied, so it was stopped "
+                . "before touching any files. Nothing is broken; roll this run back from the Millwright screen.\n"
+                . $dry['output']
+            );
+        }
+
+        return $this->composerCommand(['install', '--no-scripts'], 'Composer now knows about the change');
     }
 
     private function composerCommand(array $args, string $note): string

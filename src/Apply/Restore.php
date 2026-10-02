@@ -3,6 +3,7 @@
 namespace ErnestDefoe\Millwright\Apply;
 
 use ErnestDefoe\Millwright\Work\ComposerRunner;
+use ErnestDefoe\Millwright\Work\InstalledRecord;
 use Throwable;
 
 /**
@@ -60,6 +61,12 @@ class Restore
              * moved its files out from under it.
              */
             try {
+                // 🚨 Record first, or `install` re-extracts the packages just
+                // put back — with a Composer that lives in this same vendor/,
+                // which is how an update took wowcraft.online down. Synced
+                // from the restored lock, install only rebuilds the autoloader.
+                (new InstalledRecord($this->basePath))->syncFromLock();
+
                 $result = $this->composer->run(['install', '--no-scripts']);
 
                 if ($result['code'] === 0) {
