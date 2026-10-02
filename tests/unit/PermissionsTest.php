@@ -3,7 +3,12 @@
 namespace ErnestDefoe\Millwright\Tests\Unit;
 
 use ErnestDefoe\Millwright\Plan\Change;
+use ErnestDefoe\Millwright\Work\ComposerStepsFactory;
 use ErnestDefoe\Millwright\Work\Permissions;
+use ErnestDefoe\Millwright\Run\Run;
+use Flarum\Foundation\Config;
+use Flarum\Foundation\Paths;
+use RuntimeException;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -71,5 +76,44 @@ class PermissionsTest extends TestCase
         $this->assertSame([$this->dir . '/storage/cache/77/e1/entry'], $blocked);
         $this->assertStringContainsString('chown -R', $this->permissions()->explain($blocked));
         $this->assertStringContainsString('Nothing was changed', $this->permissions()->explain($blocked));
+    }
+
+    /**
+     * 🚨 The wiring, not just the rule: built the way a real run builds it,
+     * planning includes the check and the check refuses and puts the
+     * composer files back.
+     */
+    public function test_a_real_run_refuses_at_planning_and_restores_the_composer_files(): void
+    {
+        chmod($this->dir . '/vendor/acme/widget', 0555);
+        file_put_contents($this->dir . '/composer.json', 'NEW-JSON');
+        file_put_contents($this->dir . '/composer.lock', 'NEW-LOCK');
+
+        $runDir = $this->dir . '/storage/millwright/runs/r1';
+        mkdir($runDir, 0775, true);
+        file_put_contents($runDir . '/composer.json.before', 'OLD-JSON');
+        file_put_contents($runDir . '/composer.lock.before', 'OLD-LOCK');
+        file_put_contents($runDir . '/plan.json', json_encode(['changes' => [
+            ['op' => 'replace', 'package' => 'acme/widget', 'from' => '1.0.0', 'to' => '2.0.0'],
+        ]]));
+
+        $paths = new Paths([
+            'base' => $this->dir, 'public' => $this->dir . '/public',
+            'storage' => $this->dir . '/storage', 'vendor' => $this->dir . '/vendor',
+        ]);
+        $steps = (new ComposerStepsFactory($paths, new Config(['url' => 'https://example.test'])))->for('r1');
+        $run = Run::start('r1', time());
+
+        $this->assertContains('check file permissions', $steps->itemsFor('plan', $run));
+
+        try {
+            $steps->doItem('plan', 'check file permissions', $run);
+            $this->fail('a run that cannot move a package was allowed to start');
+        } catch (RuntimeException $e) {
+            $this->assertStringContainsString($this->dir . '/vendor/acme/widget', $e->getMessage());
+        }
+
+        $this->assertSame('OLD-JSON', file_get_contents($this->dir . '/composer.json'));
+        $this->assertSame('OLD-LOCK', file_get_contents($this->dir . '/composer.lock'));
     }
 }
