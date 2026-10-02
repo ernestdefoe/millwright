@@ -72,7 +72,7 @@ class ComposerSteps implements Steps
     public function itemsFor(string $phase, Run $run): array
     {
         return match ($phase) {
-            'plan'     => ['check the site', 'work out what changes'],
+            'plan'     => ['check the site', 'work out what changes', 'check file permissions'],
             'fetch'    => array_map(fn (Change $c) => $c->package, $this->downloadable()),
             'apply'    => array_map(fn (Change $c) => $c->package, $this->plan()),
             'finalise' => ['register', 'migrations', 'assets', 'caches', 'code cache', 'check the site again'],
@@ -83,7 +83,11 @@ class ComposerSteps implements Steps
     public function doItem(string $phase, string $item, Run $run): ?string
     {
         return match ($phase) {
-            'plan'     => $item === 'check the site' ? $this->baseline() : $this->resolve(),
+            'plan'     => match ($item) {
+                'check the site'         => $this->baseline(),
+                'check file permissions' => $this->checkPermissions(),
+                default                  => $this->resolve(),
+            },
             'fetch'    => $this->fetchOne($item),
             'apply'    => $this->applyOne($item),
             'finalise' => $this->finalise($item, $run),
@@ -658,6 +662,36 @@ class ComposerSteps implements Steps
         $changed = @filemtime($autoloader);
 
         return ($changed ?: time()) + $freq + 2;
+    }
+
+    /**
+     * Refuse before anything is downloaded or moved if the run would hit a file
+     * it cannot change. See Permissions for the two half-finished runs this
+     * replaces. Skipped, not passed, when the paths were never supplied.
+     */
+    private function checkPermissions(): string
+    {
+        if ($this->vendorPath === '' || $this->storagePath === '') {
+            return 'file permissions not checked on this host';
+        }
+
+        $permissions = new Permissions($this->installPath, $this->vendorPath, $this->storagePath);
+        $blocked = $permissions->blocked($this->plan());
+
+        if ($blocked !== []) {
+            // The resolve has already rewritten these; put them back so the
+            // refusal's "Nothing was changed" is true and no rollback is owed.
+            foreach (['composer.lock', 'composer.json'] as $file) {
+                $saved = $this->workDir . '/' . $file . '.before';
+                if (is_file($saved)) {
+                    @copy($saved, $this->installPath . '/' . $file);
+                }
+            }
+
+            throw new RuntimeException($permissions->explain($blocked));
+        }
+
+        return 'every file this update changes is writable';
     }
 
     /**
