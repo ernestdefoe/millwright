@@ -68,6 +68,10 @@ ernestdefoe-millwright:
     failed_at: "It stopped during: {step}"
     roll_back: Put everything back
     rolling_back: Putting everything back…
+    roll_back_confirm: >-
+      Put the extensions this update changed back to the versions they were
+      before it, along with composer.json and composer.lock? Database migrations
+      the update ran are not undone.
     rollback_failed: >-
       The rollback itself failed. Nothing was deleted at any point, so the old
       files are still under storage/millwright/trash.

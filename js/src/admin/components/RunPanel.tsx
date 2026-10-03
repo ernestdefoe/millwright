@@ -174,6 +174,23 @@ export default class RunPanel extends Component<RunPanelAttrs> {
           <div className="Millwright-stall">{t('nothing_moved')}</div>
         ) : null}
 
+        {/*
+          * 🚨 A FINISHED update can be put back too, and the screen used to
+          * offer that only on a failure. The endpoint, the journal and the
+          * trash all exist for exactly this — "it worked, and I wish it had
+          * not" is the rollback people actually need — so a button that only
+          * appears when something broke left the feature unreachable.
+          */}
+        {done ? (
+          <button
+            className="Button"
+            disabled={this.rollingBack}
+            onclick={() => confirm(String(t('roll_back_confirm'))) && this.rollback()}
+          >
+            {this.rollingBack ? t('rolling_back') : t('roll_back')}
+          </button>
+        ) : null}
+
         {done || rolled || failed ? (
           <button className="Button Button--link Millwright-dismiss" onclick={() => this.attrs.ondismiss()}>
             {t('dismiss')}
@@ -221,7 +238,16 @@ export default class RunPanel extends Component<RunPanelAttrs> {
           * act on if it stops.
           */}
         <div className="Millwright-progressText">
-          {total ? t('working_on', { item, index: Math.min(run.index + 1, total), total }) : t('working_out')}
+          {/*
+            * 🚨 "Asking Composer what this involves" is the PLAN phase's
+            * sentence. Every phase starts with no items for a moment, and it
+            * used to say that during the download, the swap and the finish too.
+            */}
+          {total
+            ? t('working_on', { item, index: Math.min(run.index + 1, total), total })
+            : run.phase === 'plan'
+              ? t('working_out')
+              : null}
         </div>
       </div>
     );
