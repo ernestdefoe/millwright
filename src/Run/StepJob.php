@@ -75,21 +75,25 @@ class StepJob extends AbstractJob
             }
 
             /*
-             * Another driver has it — the admin page is probably polling. Stop
-             * rather than spin: it is making progress, and two drivers taking
-             * turns on one lock is wasted work on a host that is already busy.
-             */
-            if ($runner->wasBusy()) {
-                return;
-            }
-
-            /*
+             * 🚨 Another driver has the lock — almost always the admin page,
+             * which polls from the moment the run starts. This used to RETURN,
+             * and nothing ever dispatched another job: the page won the first
+             * race, the worker bowed out in 3ms, and the run was driven by the
+             * browser alone. Close the tab and the update stopped dead halfway,
+             * on a screen that had just promised it "will carry on even if you
+             * close this page". Proved on the demo: stuck in apply for minutes
+             * with the worker idle.
+             *
+             * So it waits its turn instead. The lock already makes two drivers
+             * safe; the cost is one worker sleeping between turns, which is the
+             * job it was dispatched to do.
+             *
              * 🚨 A waiting step is waiting on the CLOCK, not on us. Calling it
              * again immediately would spin the loop as fast as the filesystem
              * answers for the whole budget, on a host that has just been made
              * to run a Composer install.
              */
-            if ($runner->wasWaiting()) {
+            if ($runner->wasBusy() || $runner->wasWaiting()) {
                 sleep(2);
             }
         } while (time() < $until);
