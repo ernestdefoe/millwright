@@ -2,8 +2,10 @@
 
 namespace ErnestDefoe\Millwright\Apply;
 
+use ErnestDefoe\Millwright\Host\PhpBinary;
 use ErnestDefoe\Millwright\Work\ComposerRunner;
 use ErnestDefoe\Millwright\Work\InstalledRecord;
+use ErnestDefoe\Millwright\Work\Process;
 use Throwable;
 
 /**
@@ -81,6 +83,50 @@ class Restore
             }
         }
 
+        if ($undone !== [] && $note === null) {
+            $note = $this->refresh($undone);
+        }
+
         return ['undone' => $undone, 'note' => $note];
+    }
+
+    /**
+     * Make the forum SERVE what was just put back.
+     *
+     * 🚨 Putting the files back is not the same as undoing the update. The
+     * update's last phase published the new version's assets and rebuilt the
+     * caches from it, and none of that lives in vendor/. Proved on the demo
+     * forum: after rolling fof/polls back from rc.4 to rc.3, vendor and the
+     * lock said rc.3 and public/assets/forum.js was still rc.4's code — the
+     * browser running one version's JavaScript against the other's PHP, which
+     * is the exact mismatch an update finishes by preventing.
+     *
+     * Same commands, same order, same subprocess as the update's finish.
+     *
+     * @param list<string> $undone appended to as each one succeeds
+     */
+    private function refresh(array &$undone): ?string
+    {
+        if (! is_file($this->basePath . '/flarum')) {
+            return null;   // not a forum (the tests' trees)
+        }
+
+        $php = (new PhpBinary())->path();
+
+        foreach (['assets:publish', 'cache:clear', 'millwright:repair-formatter'] as $command) {
+            $result = $php === null
+                ? ['code' => 1, 'output' => 'no command-line PHP was found on this host']
+                : Process::run([$php, $this->basePath . '/flarum', $command], $this->basePath);
+
+            if ($result['code'] !== 0) {
+                return "The files are back, but `php flarum $command` failed, so the forum may still be serving "
+                    . 'the newer version\'s assets. Run `php flarum assets:publish`, `php flarum cache:clear` and '
+                    . '`php flarum millwright:repair-formatter` to finish.';
+            }
+        }
+
+        $undone[] = 'assets and caches rebuilt';
+
+        return null;
     }
 }
