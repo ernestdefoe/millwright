@@ -195,4 +195,24 @@ class UpdateCheckTest extends TestCase
         $this->assertSame(['vendor/private'], $result['uncheckable']);
         $this->assertSame([], $result['tracking']);
     }
+
+    /**
+     * 🚨 A fresh install has no storage/millwright yet — nothing makes it until
+     * the first run. The check used to write into the missing directory, the @
+     * hid it, and the screen said "Not checked yet" forever.
+     */
+    public function test_the_result_is_kept_when_its_directory_does_not_exist_yet(): void
+    {
+        $dir = sys_get_temp_dir() . '/mw-fresh-' . bin2hex(random_bytes(6));
+        $check = new UpdateCheck($dir . '/millwright/updates.json');
+
+        $check->refresh(['a/b' => '1.0.0'], fn () => ['1.0.0', '1.1.0']);
+
+        $this->assertSame(['from' => '1.0.0', 'to' => '1.1.0'], $check->cached()['updates']['a/b'] ?? null);
+        $this->assertFalse($check->isStale());
+
+        @unlink($dir . '/millwright/updates.json');
+        @rmdir($dir . '/millwright');
+        @rmdir($dir);
+    }
 }

@@ -129,6 +129,20 @@ class UpdateCheck
             'tracking'    => $tracking,
         ];
 
+        /*
+         * 🚨 The directory is made here, not assumed. Nothing else creates
+         * storage/millwright until the first update run, so on a fresh install
+         * every check — the nightly one, the console one and "Check now" — wrote
+         * into a directory that did not exist, the @ swallowed it, and the
+         * screen said "Not checked yet" with no Update button anywhere, over a
+         * check that had just reported eleven newer versions.
+         */
+        $dir = dirname($this->cachePath);
+
+        if (! is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+
         @file_put_contents($this->cachePath, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
         return $result;
