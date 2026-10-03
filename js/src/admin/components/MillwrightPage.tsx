@@ -372,7 +372,6 @@ export default class MillwrightPage extends ExtensionPage {
     this.starting = true;
     this.notice = null;
     this.rollbackNote = null;
-    this.dismissed = false;
     m.redraw();
 
     app
@@ -383,6 +382,12 @@ export default class MillwrightPage extends ExtensionPage {
       })
       .then((data: any) => {
         this.starting = false;
+        /*
+         * 🚨 Un-dismissed only once the NEW run exists. Doing it before the
+         * request re-mounted the panel on the OLD, finished run: it polled,
+         * was told "idle", and stopped — in the same second the new run began.
+         */
+        this.dismissed = false;
         this.run = data.run;
         this.driver = data.driver || null;
         m.redraw();
@@ -398,6 +403,7 @@ export default class MillwrightPage extends ExtensionPage {
         const body = e?.response || {};
         this.notice = body.error || t('start_failed');
         if (body.run) {
+          this.dismissed = false;
           this.run = body.run;
           this.stale = !!body.stale;
         }

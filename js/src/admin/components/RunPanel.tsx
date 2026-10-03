@@ -1,6 +1,6 @@
 import app from 'flarum/admin/app';
 import apiUrl from '../apiUrl';
-import { pollOutcome, runIsOver } from '../runState';
+import { pollOutcome, runIsOver, shouldPoll } from '../runState';
 import Component from 'flarum/common/Component';
 
 declare const m: any;
@@ -48,9 +48,40 @@ export default class RunPanel extends Component<RunPanelAttrs> {
   /** What the last failure means and what to do next — see runState.pollOutcome. */
   private outcome = pollOutcome(null, 0);
 
+  /** The run the loop is following, so a new one starts with a clean slate. */
+  private following: string | null = null;
+
   oncreate(vnode: any) {
     super.oncreate(vnode);
-    this.poll();
+    this.follow();
+  }
+
+  /*
+   * 🚨 Checked after every redraw, not only on creation. A finished run keeps
+   * this panel mounted, so the next Update arrives as a new `run` attr on the
+   * SAME component — and when polling only began in oncreate, nothing polled
+   * that run at all. See runState.shouldPoll.
+   */
+  onupdate(vnode: any) {
+    super.onupdate(vnode);
+    this.follow();
+  }
+
+  private follow() {
+    const run = this.attrs.run;
+
+    if (run?.id && run.id !== this.following) {
+      // A different run: the last one's failures say nothing about this one.
+      this.following = run.id;
+      this.misses = 0;
+      this.watching = false;
+      this.lastStatus = null;
+      this.outcome = pollOutcome(null, 0);
+    }
+
+    if (!this.rollingBack && shouldPoll(run, this.polling)) {
+      this.poll();
+    }
   }
 
   onremove() {

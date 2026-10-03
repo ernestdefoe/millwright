@@ -7,6 +7,7 @@ import {
   pollOutcome,
   runIsLive,
   runIsOver,
+  shouldPoll,
   showingRun,
   sortForGrid,
 } from '../src/admin/runState';
@@ -214,5 +215,29 @@ describe('a requirement that admits exactly one version', () => {
 
   it('offers nothing to raise when there is no newer version', () => {
     expect(cardOffers({ update: null, constraint: '3.5.1' }).repin).toBe(false);
+  });
+});
+
+describe('a new run must be followed even when a finished one was on screen', () => {
+  /*
+   * 🚨 THE BUG. The panel only began polling when it was created, and stopped
+   * for good on a finished run. A finished run's panel stays mounted, so the
+   * next Update handed a live run to a panel that was no longer polling, and
+   * it showed the first step until the page was reloaded.
+   */
+  it('starts polling for a live run the panel is not yet following', () => {
+    expect(shouldPoll({ id: 'r2', state: 'running' }, false)).toBe(true);
+    expect(shouldPoll({ id: 'r2', state: 'pending' }, false)).toBe(true);
+  });
+
+  it('never starts a second loop', () => {
+    expect(shouldPoll({ id: 'r2', state: 'running' }, true)).toBe(false);
+  });
+
+  it('does not poll a run that is over, or no run at all', () => {
+    expect(shouldPoll({ id: 'r1', state: 'done' }, false)).toBe(false);
+    expect(shouldPoll({ id: 'r1', state: 'failed' }, false)).toBe(false);
+    expect(shouldPoll({ id: 'r1', state: 'rolled-back' }, false)).toBe(false);
+    expect(shouldPoll(null, false)).toBe(false);
   });
 });

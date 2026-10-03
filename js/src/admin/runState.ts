@@ -80,6 +80,24 @@ export function dismissalApplies(run: RunLike | null | undefined, storedId: stri
   return run.id === storedId;
 }
 
+/**
+ * Whether the run panel should start its polling loop now.
+ *
+ * 🚨 Asked on EVERY redraw, not only when the panel is created — and that
+ * difference is the frozen progress panel.
+ *
+ * A finished run keeps its panel on screen, and the loop stops for good once it
+ * sees that run is over. Pressing Update then hands the NEW run to the SAME
+ * component: Mithril updates it in place, `oncreate` never fires again, and
+ * nothing ever polled. The screen sat on "Working out what changes" with one
+ * line of log while the worker finished the whole update behind it — the
+ * second and every later update on a forum, never the first, which is why it
+ * "used to work".
+ */
+export function shouldPoll(run: RunLike | null | undefined, polling: boolean): boolean {
+  return !polling && runIsLive(run);
+}
+
 export type PollAction = 'drive' | 'watch' | 'stop';
 
 export interface PollOutcome {
