@@ -116,6 +116,26 @@ changed, which is not. Rollback replays it backwards, and its cost is
 proportional to what changed rather than to the size of your `vendor/` — so it
 works on a host with a disk quota where copying the tree would not.
 
+### The trash is tidied, never what a rollback needs
+
+Only the latest update can be rolled back, so the copies its journal names are
+never removed. Neither is anything belonging to an update still in progress,
+the most recent finished one, or anything that changed in the last day. Older
+copies are kept for the last 30 days or the last 5 updates, whichever keeps
+more (both are settings on the **This host** tab). What falls outside that is
+removed after every update and nightly: copies only an older update refers to,
+the `.rolledback` versions a rollback moved aside, and anything no update
+refers to at all. Each update's summary is kept; its journal and staging go
+with its copies.
+
+```bash
+php flarum millwright:prune --dry-run   # what would go, and how much room it frees
+php flarum millwright:prune
+```
+
+The removal never follows a symlink and refuses any path that is not directly
+inside the trash.
+
 ### Nothing loops
 
 One request does exactly one unit of work and returns. Progress is a function of

@@ -1,4 +1,5 @@
 import app from 'flarum/admin/app';
+import extractText from 'flarum/common/utils/extractText';
 import { extend } from 'flarum/common/extend';
 import DashboardPage from 'flarum/admin/components/DashboardPage';
 import ExtensionPage from 'flarum/admin/components/ExtensionPage';
@@ -70,7 +71,7 @@ app.initializers.add('ernestdefoe/millwright', () => {
 function removeWithMillwright(extension: any) {
   const name = extension.extra?.['flarum-extension']?.title || extension.name;
 
-  if (!confirm(app.translator.trans('ernestdefoe-millwright.admin.remove_confirm', { name }) as unknown as string)) {
+  if (!confirm(extractText(app.translator.trans('ernestdefoe-millwright.admin.remove_confirm', { name })))) {
     return;
   }
 

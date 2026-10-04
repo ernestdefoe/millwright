@@ -225,3 +225,35 @@ ernestdefoe-millwright:
       which hosts have one. To change a credential, enter the new value; it
       replaces the old one.
 
+
+    # ── rollback copies ──────────────────────────────────────────────────────
+    trash_title: Rollback copies
+    trash_help: >-
+      Every update keeps the versions it replaced, so it can be rolled back.
+      Copies no rollback can use any more are tidied after each update and
+      every night. The copies the latest update needs are never removed.
+    trash_size: Taking up
+    trash_size_value: "{size} in {count, plural, one {# copy} other {# copies}}"
+    trash_freeable: Can be tidied now
+    trash_freeable_value: "{size} — {count, plural, one {# item} other {# items}}"
+    trash_freeable_none: Nothing — everything kept is still needed
+    trash_last: Last tidied
+    trash_last_value: "{when} — {count, plural, =0 {nothing to remove} other {removed #, freed {size}}}"
+    trash_last_never: Not yet
+    trash_keep_days: Keep rollback copies for
+    trash_days: days
+    trash_keep_runs: or for the last
+    trash_runs: updates
+    trash_prune: Tidy now
+    trash_pruning: Tidying…
+    trash_saved: Saved.
+    trash_rule: >-
+      Copies from the last {days} days or the last {runs} updates are kept,
+      whichever keeps more. Copies for the latest update, for one still in
+      progress and for anything that changed in the last day are always kept.
+    trash_confirm: >-
+      Remove {count, plural, one {# item} other {# items}} and free {size}?
+      They belong to updates that can no longer be rolled back from this
+      screen. The latest update can still be rolled back.
+    trash_done: "{count, plural, =0 {Nothing needed removing.} one {Removed # item, freeing {size}.} other {Removed # items, freeing {size}.}}"
+    trash_failed: Millwright could not read its rollback copies.

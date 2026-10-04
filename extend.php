@@ -2,6 +2,7 @@
 
 use ErnestDefoe\Millwright\Api\Controller;
 use ErnestDefoe\Millwright\Console\CheckCommand;
+use ErnestDefoe\Millwright\Console\PruneCommand;
 use ErnestDefoe\Millwright\Console\RepairFormatterCommand;
 use ErnestDefoe\Millwright\Console\UpdateCommand;
 use ErnestDefoe\Millwright\MillwrightServiceProvider;
@@ -37,7 +38,18 @@ return [
          * would be 165 MB on somebody else's shared host, every night, for a
          * question they may not have asked.
          */
-        ->schedule(CheckCommand::class, fn ($event) => $event->daily()),
+        ->schedule(CheckCommand::class, fn ($event) => $event->daily())
+        /*
+         * 🚨 Tidies the rollback copies no rollback can reach. Also runs at the
+         * end of every update; nightly catches the forum that has not updated
+         * in a month and is still carrying the copies from the last one.
+         *
+         * 🚨 NO arguments, and it must stay that way: a scheduled
+         * `['--dry-run' => true]` renders as `--dry-run='1'`, which a no-value
+         * option refuses — every night, into /dev/null.
+         */
+        ->command(PruneCommand::class)
+        ->schedule(PruneCommand::class, fn ($event) => $event->dailyAt('04:20')),
 
     new Extend\Locales(__DIR__ . '/resources/locale'),
 
@@ -58,6 +70,13 @@ return [
         ->post('/millwright/update', 'millwright.update', Controller\StartController::class)
         ->post('/millwright/step', 'millwright.step', Controller\StepController::class)
         ->post('/millwright/rollback', 'millwright.rollback', Controller\RollbackController::class)
+        /*
+         * GET is a dry run (what a prune would free, for the confirm); POST
+         * prunes or saves the retention settings. Kept off /state, which is
+         * polled during an update — sizing the trash walks every file in it.
+         */
+        ->get('/millwright/trash', 'millwright.trash', Controller\TrashController::class)
+        ->post('/millwright/trash', 'millwright.trash.act', Controller\TrashController::class)
         /*
          * 🚨 Discovery is two endpoints, and the split is deliberate. `discover`
          * is one call to Packagist's search. `compat` is one call PER PACKAGE to

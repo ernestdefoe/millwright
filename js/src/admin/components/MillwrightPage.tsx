@@ -1,9 +1,11 @@
 import app from 'flarum/admin/app';
+import extractText from 'flarum/common/utils/extractText';
 import apiUrl from '../apiUrl';
 import { cardOffers, dismissalApplies, hidesPage, runIsLive, showingRun, sortForGrid } from '../runState';
 import ExtensionPage from 'flarum/admin/components/ExtensionPage';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import HostPanel from './HostPanel';
+import TrashPanel from './TrashPanel';
 import RunPanel from './RunPanel';
 import DiscoverTab from './DiscoverTab';
 import CorePanel from './CorePanel';
@@ -224,7 +226,12 @@ export default class MillwrightPage extends ExtensionPage {
           {this.hidesPage()
             ? null
             : this.tab === 'host'
-              ? <HostPanel host={this.host} />
+              ? (
+                <div>
+                  <HostPanel host={this.host} />
+                  <TrashPanel />
+                </div>
+              )
               : this.tab === 'sources'
                 ? <SourcesTab />
                 : this.tab === 'discover'
@@ -346,7 +353,7 @@ export default class MillwrightPage extends ExtensionPage {
       .map((e: any) => `  ${e.package}: ${e.constraint} → ${e.update?.to ?? '?'}`)
       .join('\n');
 
-    if (!confirm(String(t('repin_confirm', { count: list.length })) + '\n\n' + lines)) return;
+    if (!confirm(extractText(t('repin_confirm', { count: list.length })) + '\n\n' + lines)) return;
 
     this.start(names, 'update', true);
   }
@@ -357,7 +364,7 @@ export default class MillwrightPage extends ExtensionPage {
    * removal can too, but somebody should still mean it.
    */
   confirmRemove(e: Installed) {
-    if (!confirm(t('remove_confirm', { name: e.name }) as unknown as string)) return;
+    if (!confirm(extractText(t('remove_confirm', { name: e.name })))) return;
 
     this.start([e.package], 'remove');
   }

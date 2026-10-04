@@ -1,4 +1,5 @@
 import app from 'flarum/admin/app';
+import extractText from 'flarum/common/utils/extractText';
 import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import apiUrl from '../apiUrl';
@@ -120,7 +121,7 @@ export default class SourcesTab extends Component {
   }
 
   removeRepo(r: any) {
-    if (!confirm(t('repos_confirm', { url: r.url }) as unknown as string)) return;
+    if (!confirm(extractText(t('repos_confirm', { url: r.url })))) return;
 
     this.send({ action: 'remove-repository', url: r.url });
   }
@@ -267,7 +268,7 @@ export default class SourcesTab extends Component {
   }
 
   removeAuth(c: any) {
-    if (!confirm(t('auth_confirm', { host: c.host }) as unknown as string)) return;
+    if (!confirm(extractText(t('auth_confirm', { host: c.host })))) return;
 
     this.send({ action: 'remove-auth', kind: c.kind, host: c.host });
   }

@@ -818,3 +818,58 @@
   white-space: nowrap;
   color: var(--muted-color);
 }
+
+// ── rollback copies ─────────────────────────────────────────────────────────
+//
+// Three facts in a row, then the two settings and the button in the tinted
+// footer every other card uses for "change something".
+
+.Millwright-trash { margin-top: 20px; }
+
+.Millwright-trashNotice { margin: 0 18px 14px; }
+
+.Millwright-trashStats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px 24px;
+  margin: 0;
+  padding: 4px 18px 16px;
+
+  dt {
+    color: var(--muted-color);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 3px;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.Millwright-trashField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted-color);
+  white-space: nowrap;
+
+  // Overrides the footer's "inputs fill the row": these hold a number.
+  input.FormControl { flex: 0 0 auto; width: 76px; }
+}
+
+.Millwright-trashSpacer { flex: 1; }
+
+.Millwright-trashDone {
+  margin: 14px 18px 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.Millwright-trash .Millwright-callout { margin-top: 14px; }

@@ -2,6 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Prune\Pruner;
+use ErnestDefoe\Millwright\Prune\Retention;
 use ErnestDefoe\Millwright\Apply\Applier;
 use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Apply\Restore;
@@ -75,7 +77,13 @@ class ComposerSteps implements Steps
             'plan'     => ['check the site', 'work out what changes', 'check file permissions'],
             'fetch'    => array_map(fn (Change $c) => $c->package, $this->downloadable()),
             'apply'    => array_map(fn (Change $c) => $c->package, $this->plan()),
-            'finalise' => ['register', 'migrations', 'assets', 'caches', 'code cache', 'check the site again'],
+            /*
+             * 🚨 'tidy the trash' is LAST, after the site has been checked: an
+             * update that is about to be undone automatically must not have its
+             * housekeeping run first. Its copies would be kept anyway — this
+             * run is the newest — but there is no reason to find out.
+             */
+            'finalise' => ['register', 'migrations', 'assets', 'caches', 'code cache', 'check the site again', 'tidy the trash'],
             default    => [],
         };
     }
@@ -365,6 +373,41 @@ class ComposerSteps implements Steps
         throw new RuntimeException("$package is not in the plan.");
     }
 
+    /**
+     * Remove rollback copies no rollback can reach any more.
+     *
+     * 🚨 Never fails the run, and never takes long. The update is finished and
+     * verified by now; housekeeping that throws must not turn it red and offer
+     * to undo correct work, so a failure is reported in the log and left for
+     * the nightly prune. The time budget keeps a host that cuts requests at 30
+     * seconds from killing this step mid-way — what is left is picked up later.
+     */
+    private function tidyTrash(): string
+    {
+        if ($this->storagePath === '') {
+            return 'Old rollback copies were not tidied: no storage path is known here.';
+        }
+
+        try {
+            $dir = $this->storagePath . '/millwright';
+            $summary = (new Pruner($dir, new Retention($dir)))->prune('finished update', 10.0);
+        } catch (\Throwable $e) {
+            return 'Old rollback copies were left for the nightly tidy: ' . $e->getMessage();
+        }
+
+        if ($summary['removed'] === 0) {
+            return 'No old rollback copies to remove.';
+        }
+
+        return sprintf(
+            'Removed %d old rollback %s, freeing %s.%s',
+            $summary['removed'],
+            $summary['removed'] === 1 ? 'copy' : 'copies',
+            Pruner::human((int) $summary['freed']),
+            $summary['complete'] ? '' : ' The rest will be tidied tonight.'
+        );
+    }
+
     /** Longer than this and telling the truth beats parking the admin screen. */
     private const WAIT_CAP = 180;
 
@@ -376,6 +419,7 @@ class ComposerSteps implements Steps
             'assets'     => $this->flarum('assets:publish', 'assets published'),
             'caches'     => $this->clearCaches(),
             'check the site again' => $this->verify($run),
+            'tidy the trash'       => $this->tidyTrash(),
             /*
              * 🚨 Last, and it is the step that decides whether any of the others
              * were visible. On a host with opcache.validate_timestamps off, every
