@@ -143,7 +143,7 @@ class UpdateCommand extends AbstractCommand
             return 1;
         }
 
-        if ((new Capability($this->paths->base))->resolveTier() === Capability::NONE) {
+        if ((new Capability($this->paths->base, \ErnestDefoe\Millwright\Host\PhpBinary::forStorage($this->paths->storage)))->resolveTier() === Capability::NONE) {
             $this->error('This host does not have enough memory for Composer to work out what an update involves. '
                 . 'Nothing was started. Ask your host to raise memory_limit to 256 MB and try again.');
 

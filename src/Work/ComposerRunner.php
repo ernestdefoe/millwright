@@ -37,6 +37,12 @@ class ComposerRunner
         $this->php = new PhpBinary($phpBin);
     }
 
+    /** The command-line PHP every subprocess Millwright starts is run with. */
+    public function php(): ?string
+    {
+        return $this->php->path();
+    }
+
     public function canSpawn(): bool
     {
         if (! function_exists('proc_open')) {
@@ -144,6 +150,7 @@ class ComposerRunner
         }
 
         return 'No command-line PHP could be found on this host, so Composer cannot be run in its own process. '
-            . 'Ask your host where the PHP CLI binary lives.';
+            . 'Millwright → This host says why (on hosting panels it is usually open_basedir) and lets you '
+            . 'enter the path yourself.';
     }
 }

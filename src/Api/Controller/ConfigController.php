@@ -6,6 +6,7 @@ use ErnestDefoe\Millwright\Config\AuthTokens;
 use ErnestDefoe\Millwright\Config\JsonFile;
 use ErnestDefoe\Millwright\Config\Repositories;
 use ErnestDefoe\Millwright\Config\Stability;
+use ErnestDefoe\Millwright\Host\PhpOverride;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
 use Illuminate\Support\Arr;
@@ -42,6 +43,25 @@ class ConfigController implements RequestHandlerInterface
         try {
             if ($method === 'GET') {
                 return new JsonResponse($this->state());
+            }
+
+            /*
+             * The command-line PHP, for the hosts where looking for one cannot
+             * work (open_basedir, an unusual layout). Refused unless it RUNS
+             * and says it is the CLI, and the reason comes back as a key the
+             * page translates.
+             */
+            if ($action === 'set-php') {
+                $override = new PhpOverride($this->paths->storage);
+                $path = trim((string) Arr::get($body, 'path', ''));
+
+                if ($path !== '' && ($refusal = $override->refusal($path)) !== null) {
+                    return new JsonResponse(['errorKey' => $refusal[0], 'errorParams' => $refusal[1]], 422);
+                }
+
+                $override->set($path === '' ? null : $path);
+
+                return new JsonResponse(['php' => $override->get()]);
             }
 
             match ($action) {

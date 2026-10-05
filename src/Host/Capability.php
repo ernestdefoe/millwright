@@ -26,8 +26,11 @@ class Capability
     public const TARGETED = 'targeted';
     public const NONE     = 'none';
 
-    public function __construct(private string $installPath)
+    private PhpBinary $php;
+
+    public function __construct(private string $installPath, PhpBinary $php)
     {
+        $this->php = $php;
     }
 
     /** @return array<string,mixed> */
@@ -38,6 +41,7 @@ class Capability
             $this->memoryCheck($memory),
             $this->timeCheck(),
             $this->subprocessCheck(),
+            ...$this->phpCheck(),
             $this->opcacheCheck(),
             $this->diskCheck(),
         ];
@@ -47,6 +51,7 @@ class Capability
             'tier'     => $this->applyTier(),
             'checks'   => $checks,
             'summary'  => $this->summary($memory),
+            'summaryKey' => $this->summaryKey(),
         ];
     }
 
@@ -135,17 +140,99 @@ class Capability
          * in-process path, because running Composer inside the web request is
          * the fault this extension exists to avoid. The panel now says what the
          * code actually does.
+         *
+         * 🚨 And it names the php.ini, and says that it is the WEBSITE's. The
+         * usual way somebody "proves" this is wrong is to test proc_open over
+         * SSH, where it works — because that is a different PHP with its own
+         * configuration.
          */
+        $ini = $this->php->diagnose()['ini'];
+
         return [
-            'id'   => 'subprocess',
-            'ok'   => $ok,
-            'warn' => false,
-            'what' => $ok ? 'Can run Composer as a separate process' : 'Cannot start a separate process',
-            'why'  => $ok
-                ? 'Composer runs outside the web request, so its memory use is its own and cannot take the site down with it.'
-                : 'proc_open is disabled here, so Composer cannot be run at all. Millwright can inspect this host but not update it. '
-                    . 'Ask your host to remove proc_open from disable_functions.',
+            'id'      => 'subprocess',
+            'ok'      => $ok,
+            'warn'    => false,
+            'whatKey' => $ok ? 'host.spawn_ok' : 'host.spawn_disabled',
+            'whyKeys' => $ok
+                ? [['key' => 'host.spawn_ok_why']]
+                : array_values(array_filter([
+                    ['key' => 'host.spawn_disabled_why'],
+                    $ini !== null ? ['key' => 'host.spawn_disabled_ini', 'params' => ['ini' => $ini]] : null,
+                    ['key' => 'host.ssh_differs'],
+                ])),
         ];
+    }
+
+    /**
+     * Is there a command-line PHP to run Composer with — and if not, exactly
+     * what is in the way.
+     *
+     * Three different faults that used to share one sentence: proc_open is
+     * disabled (the row above), proc_open works but no CLI PHP was found
+     * (open_basedir, or not installed), or one was found and fails to run.
+     *
+     * @return list<array<string,mixed>>
+     */
+    private function phpCheck(): array
+    {
+        if (! $this->canSpawn()) {
+            return [];     // the row above already says why nothing can run
+        }
+
+        $d = $this->php->diagnose();
+
+        if ($d['found'] !== null) {
+            $lines = [['key' => $d['override'] !== null ? 'host.php_found_override_why' : 'host.php_found_why']];
+
+            return [[
+                'id'         => 'php',
+                'ok'         => true,
+                'warn'       => false,
+                'whatKey'    => 'host.php_found',
+                'whatParams' => ['path' => $d['found'], 'version' => (string) ($d['version'] ?? '')],
+                'whyKeys'    => $lines,
+                'override'   => $d['override'],
+            ]];
+        }
+
+        $lines = [];
+
+        if ($d['override'] !== null) {
+            $lines[] = ['key' => 'host.php_override_broken', 'params' => ['path' => $d['override']]];
+        }
+
+        if ($d['detected'] !== null) {
+            $what = ['host.php_override_broken_title', []];
+            $lines[] = ['key' => 'host.php_override_detected', 'params' => ['path' => $d['detected']]];
+        } elseif ($d['failedPath'] !== null) {
+            $what = ['host.php_fails', ['path' => $d['failedPath']]];
+            $lines[] = ['key' => 'host.php_fails_why', 'params' => ['error' => (string) $d['failedError']]];
+        } elseif ($d['openBasedir'] !== null && $d['hiddenPath'] !== null) {
+            $what = ['host.php_hidden', ['path' => $d['hiddenPath']]];
+            $dir = dirname($d['hiddenPath']);
+            $lines[] = ['key' => 'host.php_hidden_why', 'params' => ['openBasedir' => $d['openBasedir']]];
+            $lines[] = ['key' => match ($d['panel']) {
+                PhpBinary::PANEL_PLESK  => 'host.php_hidden_fix_plesk',
+                PhpBinary::PANEL_CPANEL => 'host.php_hidden_fix_cpanel',
+                default                 => 'host.php_hidden_fix_generic',
+            }, 'params' => ['dir' => $dir . '/']];
+        } else {
+            $what = ['host.php_missing', []];
+            $lines[] = ['key' => 'host.php_missing_why'];
+        }
+
+        $lines[] = ['key' => 'host.ssh_differs'];
+        $lines[] = ['key' => 'host.php_override_hint'];
+
+        return [[
+            'id'         => 'php',
+            'ok'         => false,
+            'warn'       => false,
+            'whatKey'    => $what[0],
+            'whatParams' => $what[1],
+            'whyKeys'    => $lines,
+            'override'   => $d['override'],
+        ]];
     }
 
     /**
@@ -222,6 +309,19 @@ class Capability
         };
     }
 
+    /**
+     * The summary when the blocker is the command-line PHP — which the English
+     * summary below would otherwise call "everything works".
+     */
+    private function summaryKey(): ?string
+    {
+        if (! $this->canSpawn()) {
+            return null;
+        }
+
+        return $this->php->diagnose()['found'] === null ? 'host.summary_no_php' : null;
+    }
+
     private function memoryBytes(): int
     {
         $raw = trim((string) ini_get('memory_limit'));
@@ -243,13 +343,7 @@ class Capability
 
     private function canSpawn(): bool
     {
-        if (! function_exists('proc_open')) {
-            return false;
-        }
-
-        $disabled = array_map('trim', explode(',', (string) ini_get('disable_functions')));
-
-        return ! in_array('proc_open', $disabled, true);
+        return $this->php->canSpawn();
     }
 
 }

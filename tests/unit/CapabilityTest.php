@@ -3,6 +3,7 @@
 namespace ErnestDefoe\Millwright\Tests\Unit;
 
 use ErnestDefoe\Millwright\Host\Capability;
+use ErnestDefoe\Millwright\Host\PhpBinary;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -18,7 +19,7 @@ class CapabilityTest extends TestCase
         ini_set('memory_limit', $limit);
 
         try {
-            return $fn(new Capability(sys_get_temp_dir()));
+            return $fn(new Capability(sys_get_temp_dir(), new PhpBinary()));
         } finally {
             ini_set('memory_limit', $was);
         }
@@ -50,11 +51,17 @@ class CapabilityTest extends TestCase
     {
         // 🚨 A capability panel that lists facts without consequences is the same
         // failure as a spinner: technically informative, practically useless.
-        $report = (new Capability(sys_get_temp_dir()))->report();
+        $report = (new Capability(sys_get_temp_dir(), new PhpBinary()))->report();
 
         $this->assertNotEmpty($report['checks']);
 
         foreach ($report['checks'] as $check) {
+            // Translated rows carry keys; the page turns them into words.
+            if (isset($check['whatKey'])) {
+                $this->assertNotEmpty($check['whyKeys'], "'{$check['whatKey']}' does not say what it means for the user");
+                continue;
+            }
+
             $this->assertNotEmpty($check['what'], 'a check with no label');
             $this->assertGreaterThan(40, strlen($check['why']), "'{$check['what']}' does not say what it means for the user");
         }

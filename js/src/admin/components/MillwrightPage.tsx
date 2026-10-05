@@ -228,7 +228,7 @@ export default class MillwrightPage extends ExtensionPage {
             : this.tab === 'host'
               ? (
                 <div>
-                  <HostPanel host={this.host} />
+                  <HostPanel host={this.host} onchange={() => this.load()} />
                   <TrashPanel />
                 </div>
               )

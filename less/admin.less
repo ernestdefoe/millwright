@@ -873,3 +873,40 @@
 }
 
 .Millwright-trash .Millwright-callout { margin-top: 14px; }
+
+// ── the command-line PHP setting (This host) ─────────────────────────────────
+
+.Millwright-phpSetting {
+  margin-top: 18px;
+  padding: 14px @mw-pad;
+  border: 1px solid @mw-border;
+  border-radius: @mw-radius;
+  background: var(--body-bg);
+
+  label { display: block; }
+}
+
+.Millwright-phpSetting-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  max-width: 720px;
+
+  input.FormControl { flex: 1 1 260px; min-width: 0; font-family: var(--font-family-monospace, monospace); }
+}
+
+.Millwright-phpSetting-msg {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--muted-color);
+
+  // The text stays the theme's own colour: a borrowed alert colour can be
+  // white. The red is the bar beside it.
+  &.is-error {
+    color: var(--text-color);
+    padding: 6px 10px;
+    border-inline-start: 3px solid #d83e3e;
+    background: color-mix(in srgb, #d83e3e 8%, transparent);
+  }
+}

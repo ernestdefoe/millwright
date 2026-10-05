@@ -94,6 +94,24 @@ So the gap is on **updates**, not installs. Update an already-enabled extension
 that ships a new migration or new JS, and the schema is left behind the code and
 the browser keeps serving the old assets, with nothing saying so.
 
+## Troubleshooting: Millwright says it can't run Composer
+
+Open **Millwright → This host**. It names which of three things is in the way, and what to change.
+
+**proc_open is disabled.** The website's PHP lists `proc_open` in `disable_functions`, so it cannot start any other program. Ask your host to remove it for this site. The row names the php.ini the setting comes from.
+
+**No command-line PHP was found.** Composer runs under PHP's command-line program, and Millwright looks for the one that matches the PHP your site runs on. The usual reason it cannot find one on a hosting panel is `open_basedir`: the website's PHP is only allowed to look inside your site's own folders, so the command-line PHP is invisible to it even though it is installed. Millwright tries the likely paths anyway, and when none answers it shows the path open_basedir hid and the fix for your panel:
+
+- **Plesk:** Websites & Domains → your domain → PHP Settings → `open_basedir`. Add `:/opt/plesk/php/8.5/bin/` to the end of the value (use the version your site runs), save, and reload the This host tab.
+- **cPanel:** MultiPHP INI Editor → choose the domain → `open_basedir`. Add `:/opt/cpanel/ea-php85/root/usr/bin/` (your version), save, and reload. Some cPanel hosts only let support change it.
+- **Anything else:** add the directory to `open_basedir` in the site's php.ini or PHP-FPM pool (`php_admin_value[open_basedir]`) and restart PHP-FPM.
+
+If you know where the command-line PHP is, you can also enter its full path under **Command-line PHP path** on the same tab. Millwright runs it before saving and refuses anything that is not the command-line PHP, such as `php-fpm`.
+
+**A command-line PHP was found but fails to run.** The row shows the error it printed, often a PHP extension that fails to load. Ask your host, with that error.
+
+Testing over SSH does not settle any of this. The PHP you run over SSH is configured separately from the PHP that runs your website, so `proc_open` and `open_basedir` can be fine there and still block the site.
+
 ## How it works
 
 ### Applying a change is two renames, never a delete

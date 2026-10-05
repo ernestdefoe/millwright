@@ -257,3 +257,76 @@ ernestdefoe-millwright:
       screen. The latest update can still be rolled back.
     trash_done: "{count, plural, =0 {Nothing needed removing.} one {Removed # item, freeing {size}.} other {Removed # items, freeing {size}.}}"
     trash_failed: Millwright could not read its rollback copies.
+
+    # 🚨 The host tab's PHP diagnosis. Three faults, three fixes: proc_open
+    # disabled, no command-line PHP found (usually open_basedir), or one found
+    # that fails to run. And always the reminder that the PHP somebody tests
+    # over SSH is configured separately from the website's.
+    host:
+      spawn_ok: Can run Composer as a separate process
+      spawn_ok_why: Composer runs outside the web request, so its memory use is its own and cannot take the site down with it.
+      spawn_disabled: Cannot start a separate process (proc_open is disabled)
+      spawn_disabled_why: >-
+        This website's PHP lists proc_open in disable_functions, so Composer
+        cannot be run at all. Millwright can inspect this host but not update it.
+        Ask your host to remove proc_open from disable_functions for this site.
+      spawn_disabled_ini: "The setting comes from {ini}, or from the PHP settings of this site in your hosting panel."
+      ssh_differs: >-
+        If proc_open and PHP work when you test them over SSH, that is expected:
+        the PHP you use over SSH is a different program, configured separately
+        from the PHP that runs your website. What matters here is the website's.
+      php_found: "Command-line PHP: {path} {version}"
+      php_found_why: Found and proved by running it. Composer and Flarum's own commands run with this PHP.
+      php_found_override_why: This is the path set below. It runs, and reports itself as the command-line PHP.
+      php_hidden: "open_basedir is hiding the command-line PHP ({path})"
+      php_hidden_why: >-
+        This website's PHP is only allowed to look inside: {openBasedir}. The
+        command-line PHP lives outside that list, so Millwright cannot find it,
+        even though it is installed.
+      php_hidden_fix_plesk: >-
+        To fix it in Plesk: Websites & Domains → your domain → PHP Settings →
+        open_basedir, and add :{dir} to the end of the value. Save, then reload
+        this page.
+      php_hidden_fix_cpanel: >-
+        To fix it in cPanel: MultiPHP INI Editor → choose this domain → find
+        open_basedir and add :{dir} to the end of it (or ask your host to). Save,
+        then reload this page.
+      php_hidden_fix_generic: >-
+        To fix it: add :{dir} to open_basedir in this site's php.ini or PHP-FPM
+        pool (php_admin_value[open_basedir]), then restart PHP-FPM and reload
+        this page.
+      php_fails: "Found a command-line PHP that will not run ({path})"
+      php_fails_why: "Running it failed with: {error}"
+      php_missing: No command-line PHP was found
+      php_missing_why: >-
+        Composer needs PHP's command-line program (often called php or php8.x),
+        and none was found in the usual places. Ask your host where it is, or
+        to install it.
+      php_override_broken_title: The command-line PHP set below does not work
+      php_override_broken: "The path set below, {path}, does not run as the command-line PHP. It may have moved after a PHP upgrade."
+      php_override_detected: "Millwright found a working one at {path}. Use that path below, or clear the setting to let Millwright find it."
+      php_override_hint: If you know where the command-line PHP is, enter its full path below and Millwright will check it and use it.
+      summary_no_php: >-
+        Composer cannot be run on this host yet, because the command-line PHP it
+        needs could not be found or does not work. The PHP row below says why
+        and what to change.
+      php_setting_label: Command-line PHP path
+      php_setting_help: >-
+        Only needed when Millwright cannot find it by itself. Use the full path
+        to the command-line PHP (not php-fpm), for example
+        /opt/plesk/php/8.5/bin/php. It is checked by running it before it is
+        saved. Leave empty to let Millwright look.
+      php_setting_save: Save
+      php_setting_clear: Clear
+      php_setting_saved: Saved. Millwright will use this PHP.
+      php_setting_cleared: Cleared. Millwright will look for the command-line PHP itself.
+
+    php_path_not_absolute: Enter the full path, starting with /.
+    php_path_missing: "There is nothing at {path}."
+    php_path_not_executable: "{path} exists but is not executable."
+    php_path_hidden_and_silent: >-
+      {path} is outside this site's open_basedir, so Millwright cannot look at
+      it, and running it did nothing. Check the path, or add its folder to
+      open_basedir.
+    php_path_did_not_run: "{path} did not run. {error}"
+    php_path_not_cli: '{path} is PHP, but the "{sapi}" kind, not the command-line PHP. Use the php binary beside it, not php-fpm or php-cgi.'

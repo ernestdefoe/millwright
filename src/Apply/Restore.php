@@ -2,7 +2,6 @@
 
 namespace ErnestDefoe\Millwright\Apply;
 
-use ErnestDefoe\Millwright\Host\PhpBinary;
 use ErnestDefoe\Millwright\Work\ComposerRunner;
 use ErnestDefoe\Millwright\Work\InstalledRecord;
 use ErnestDefoe\Millwright\Work\Process;
@@ -111,7 +110,7 @@ class Restore
             return null;   // not a forum (the tests' trees)
         }
 
-        $php = (new PhpBinary())->path();
+        $php = $this->composer->php();
 
         foreach (['assets:publish', 'cache:clear', 'millwright:repair-formatter'] as $command) {
             $result = $php === null

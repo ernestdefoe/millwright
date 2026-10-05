@@ -16,7 +16,6 @@ use ErnestDefoe\Millwright\Host\Verdict;
 use ErnestDefoe\Millwright\Host\ErrorLog;
 use ErnestDefoe\Millwright\Run\NotYet;
 use ErnestDefoe\Millwright\Run\Reverted;
-use ErnestDefoe\Millwright\Host\PhpBinary;
 use ErnestDefoe\Millwright\Run\Steps;
 use RuntimeException;
 
@@ -798,7 +797,7 @@ class ComposerSteps implements Steps
          * because this one alone was spawned with a binary that cannot run a
          * script. Under FPM, PHP_BINARY is php-fpm.
          */
-        $php = (new PhpBinary())->path();
+        $php = $this->composer->php();
 
         if ($php === null) {
             throw new RuntimeException(

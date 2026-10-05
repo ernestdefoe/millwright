@@ -35,7 +35,8 @@ class RollbackController implements RequestHandlerInterface
         return new ComposerRunner(
             $this->paths->base,
             null,
-            $this->paths->storage . '/.composer'
+            $this->paths->storage . '/.composer',
+            (new \ErnestDefoe\Millwright\Host\PhpOverride($this->paths->storage))->get()
         );
     }
 

@@ -62,7 +62,12 @@ class ComposerStepsFactory implements StepsFactory
         return new ComposerSteps(
             $this->paths->base,
             $workDir->root(),
-            new ComposerRunner($this->paths->base, null, $this->paths->storage . '/.composer'),
+            new ComposerRunner(
+                $this->paths->base,
+                null,
+                $this->paths->storage . '/.composer',
+                (new \ErnestDefoe\Millwright\Host\PhpOverride($this->paths->storage))->get()
+            ),
             new Fetcher($workDir->staging(), $this->paths->base . '/auth.json'),
             new Applier($this->paths->vendor, $workDir->staging(), $workDir->trash(), $journal),
             $journal,

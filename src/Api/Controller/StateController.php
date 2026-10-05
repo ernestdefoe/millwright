@@ -3,6 +3,7 @@
 namespace ErnestDefoe\Millwright\Api\Controller;
 
 use ErnestDefoe\Millwright\Host\Capability;
+use ErnestDefoe\Millwright\Host\PhpBinary;
 use ErnestDefoe\Millwright\Run\RunStore;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 use Flarum\Extension\ExtensionManager;
@@ -40,7 +41,7 @@ class StateController implements RequestHandlerInterface
         $cached = $check->cached();
 
         return new JsonResponse([
-            'host'       => (new Capability($this->paths->base))->report(),
+            'host'       => (new Capability($this->paths->base, PhpBinary::forStorage($this->paths->storage)))->report(),
             'installed'  => $this->installed($cached['updates'] ?? []),
             'run'        => $run?->toArray(),
             'runIsStale' => $run !== null && $run->isStale(time()),

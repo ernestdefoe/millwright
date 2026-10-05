@@ -103,7 +103,7 @@ class StartController implements RequestHandlerInterface
             }
         }
 
-        $capability = new Capability($this->paths->base);
+        $capability = new Capability($this->paths->base, \ErnestDefoe\Millwright\Host\PhpBinary::forStorage($this->paths->storage));
 
         if ($packages === []) {
             return new JsonResponse(['error' => 'Nothing was selected, so nothing was started.'], 422);
