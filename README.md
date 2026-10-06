@@ -262,6 +262,11 @@ an item and recording it. That item is then redone on resume, and the test
 asserts the repeat rather than pretending it cannot happen. Everything in the
 applier is built so a repeat is a no-op.
 
+## Support
+
+- **Support forum:** [Millwright on ernestdefoe.online](https://ernestdefoe.online/d/83)
+- **Bug reports:** [GitHub issues](https://github.com/ernestdefoe/millwright/issues)
+
 ## Licence
 
 MIT. See [LICENSE](LICENSE).
