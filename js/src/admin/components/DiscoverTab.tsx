@@ -23,6 +23,10 @@ interface Verdict {
   version: string | null;
   requires: string | null;
   stability: string | null;
+  /** True when this name is a dead end another package took over. */
+  replaced?: boolean;
+  /** That package, when it could be named. */
+  replacedBy?: string | null;
 }
 
 interface DiscoverAttrs {
@@ -67,6 +71,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
   private loadingMore = false;
   private results: Found[] = [];
   private verdicts: Record<string, Verdict> = {};
+  private installedNames: string[] = [];
   private checking = false;
   private error: string | null = null;
   private core: string | null = null;
@@ -205,7 +210,15 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
               * compatibility answer while still offering Install, so the tag
               * beside the button read like a verdict on the wrong question.
               */}
-            {r.abandoned ? (
+            {this.replacement(r, v) ? (
+              <span className="Millwright-tag Millwright-tag--warn" title={t('replaced_why') as unknown as string}>
+                {t('replaced_by', { replacement: this.replacement(r, v) })}
+              </span>
+            ) : v?.replaced ? (
+              <span className="Millwright-tag Millwright-tag--warn" title={t('replaced_why') as unknown as string}>
+                {t('replaced')}
+              </span>
+            ) : r.abandoned ? (
               <span className="Millwright-tag Millwright-tag--warn" title={this.abandonedTitle(r)}>
                 {t('abandoned')}
               </span>
@@ -260,10 +273,42 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
       : (t('abandoned_why') as unknown as string);
   }
 
+  /**
+   * The package to use instead of this one, if any: the one Packagist names for
+   * an abandoned package, or the new name of a repository that moved.
+   */
+  replacement(r: Found, v?: Verdict): string | null {
+    if (v?.replacedBy) return v.replacedBy;
+    return typeof r.abandoned === 'string' && r.abandoned ? r.abandoned : null;
+  }
+
   action(r: Found, v?: Verdict) {
     if (r.installed) {
       return <span className="Millwright-tag Millwright-tag--ok">{t('already_installed')}</span>;
     }
+
+    /*
+     * 🚨 A replaced package is never offered under its old name. Installing
+     * v17development/flarum-seo gave Extension Manager users FoF SEO under the
+     * wrong id, which then refused to enable (discuss.flarum.org d/40012). The
+     * button installs what replaced it, and the server refuses the old name
+     * whatever the screen offered.
+     */
+    const instead = this.replacement(r, v);
+
+    if (instead) {
+      if (this.installedNames.includes(instead)) {
+        return <span className="Millwright-tag Millwright-tag--ok">{t('installed_as', { replacement: instead })}</span>;
+      }
+
+      return this.verdicts[instead]?.compatible !== true ? null : (
+        <button className="Button Button--primary Button--sm" disabled={this.attrs.starting} onclick={() => this.attrs.oninstall(instead)}>
+          {t('install_replacement', { replacement: instead })}
+        </button>
+      );
+    }
+
+    if (v?.replaced) return null;
 
     // Not offered when it cannot work. The badge beside it says why.
     if (!v || v.compatible !== true) return null;
@@ -317,6 +362,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
 
         this.searching = false;
         this.results = data.results || [];
+        this.installedNames = data.installedNames || this.installedNames;
         this.more = !!data.more;
         this.error = data.error || null;
         m.redraw();
@@ -392,6 +438,14 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
         this.checking = false;
         this.verdicts = { ...this.verdicts, ...(data.verdicts || {}) };
         this.core = data.core || this.core;
+
+        // A replacement is offered in place of the package it replaced, so it
+        // is held to the same rule: no button until we know it works here.
+        const owed = this.results
+          .map((r) => this.replacement(r, this.verdicts[r.name]))
+          .filter((n): n is string => !!n && !this.verdicts[n] && !this.installedNames.includes(n));
+        if (owed.length) this.checkCompat([...new Set(owed)], mine);
+
         m.redraw();
       })
       .catch(() => {

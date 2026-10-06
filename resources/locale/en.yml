@@ -126,6 +126,13 @@ ernestdefoe-millwright:
     abandoned_why: >-
       Its author has marked it as no longer maintained. It may still work.
     abandoned_for: "Its author says to use {replacement} instead."
+    replaced: replaced
+    replaced_by: "replaced by {replacement}"
+    replaced_why: >-
+      This name is an old one. The extension moved to a new package, and installing the old name
+      gives you the new extension under the wrong id, which then cannot be enabled.
+    install_replacement: "Install {replacement}"
+    installed_as: "installed as {replacement}"
 
     core_title: Flarum itself
     core_loading: Checking Flarum…

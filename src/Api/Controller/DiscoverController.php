@@ -67,6 +67,10 @@ class DiscoverController implements RequestHandlerInterface
             $found['results'][$i]['installed'] = isset($installed[$row['name']]);
         }
 
+        // So a replaced package's card can say the replacement is already here
+        // rather than offer to install it a second time.
+        $found['installedNames'] = array_keys($installed);
+
         return new JsonResponse($found);
     }
 

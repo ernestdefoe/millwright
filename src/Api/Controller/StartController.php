@@ -2,6 +2,9 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use ErnestDefoe\Millwright\Discover\Cache;
+use ErnestDefoe\Millwright\Discover\Compatibility;
+use ErnestDefoe\Millwright\Discover\Packagist;
 use ErnestDefoe\Millwright\Host\Capability;
 use ErnestDefoe\Millwright\Plan\Repin;
 use ErnestDefoe\Millwright\Run\Drivers;
@@ -9,6 +12,7 @@ use ErnestDefoe\Millwright\Run\RunStore;
 use ErnestDefoe\Millwright\Run\StepRunner;
 use ErnestDefoe\Millwright\Work\WorkDir;
 use Flarum\Extension\ExtensionManager;
+use Flarum\Foundation\Application;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
 use Illuminate\Support\Arr;
@@ -33,7 +37,34 @@ class StartController implements RequestHandlerInterface
         private Drivers $drivers,
         private Paths $paths,
         private ExtensionManager $extensions,
+        private Application $app,
     ) {
+    }
+
+    /**
+     * 🚨 A replaced package is never installed under its old name, whatever
+     * the screen showed. Installing v17development/flarum-seo gave Extension
+     * Manager users FoF SEO under the wrong id, which then refused to enable
+     * (discuss.flarum.org d/40012). Asked here, on the server, so a stale tab
+     * or a hand-made request cannot get round it; the verdict is the cached one
+     * the Find tab already fetched, so this costs nothing in the usual case.
+     *
+     * @param list<string> $packages
+     */
+    private function replaced(array $packages): ?string
+    {
+        $packagist = new Packagist(new Cache($this->paths->storage . '/millwright/packagist'));
+        $verdicts = $packagist->verdicts(array_slice($packages, 0, 5), new Compatibility(ltrim($this->app->version(), 'v')));
+
+        foreach ($verdicts as $name => $verdict) {
+            if (! empty($verdict['replaced'])) {
+                return $verdict['replacedBy']
+                    ? "$name has been replaced by {$verdict['replacedBy']}. Install {$verdict['replacedBy']} instead; installing the old name gives you the new extension under the wrong id."
+                    : "$name has been replaced by another package, so it was not installed. Its Packagist page or repository names the one to use now.";
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -107,6 +138,10 @@ class StartController implements RequestHandlerInterface
 
         if ($packages === []) {
             return new JsonResponse(['error' => 'Nothing was selected, so nothing was started.'], 422);
+        }
+
+        if ($mode === 'install' && ($refusal = $this->replaced($packages)) !== null) {
+            return new JsonResponse(['error' => $refusal], 422);
         }
 
         if ($mode === 'remove' && ($refusal = $this->cannotRemove($packages)) !== null) {

@@ -39,7 +39,7 @@ class Compatibility
 
     /**
      * @param array<string,mixed> $p2 the decoded p2 metadata for one package
-     * @return array{compatible:?bool, version:?string, requires:?string, stability:?string}
+     * @return array{compatible:?bool, version:?string, requires:?string, stability:?string, replaced:bool, replacedBy:?string, source:?array<string,mixed>}
      */
     public function verdict(string $name, array $p2): array
     {
@@ -47,8 +47,89 @@ class Compatibility
 
         if (! is_array($versions) || $versions === []) {
             // Not on Packagist, or nothing published. Unknown, and said so.
-            return ['compatible' => null, 'version' => null, 'requires' => null, 'stability' => null];
+            return ['compatible' => null, 'version' => null, 'requires' => null, 'stability' => null, 'replaced' => false, 'replacedBy' => null, 'source' => null];
         }
+
+        $versions = self::expand($versions, (string) ($p2['minified'] ?? ''));
+
+        return $this->judge($name, $versions) + $this->replacement($name, $versions[0]);
+    }
+
+    /**
+     * 🚨 Packagist's p2 files are minified: only the newest release is complete,
+     * and every later entry lists just the keys that CHANGED from the one above
+     * it, with "__unset" for a key that went away. Read raw, an older release
+     * that inherits its flarum/core requirement looks like it has none and is
+     * skipped, so a beta newer than a stable release with the same requirement
+     * won the verdict. Expanded exactly as Composer's MetadataMinifier does.
+     *
+     * @param list<array<string,mixed>> $versions
+     * @return list<array<string,mixed>>
+     */
+    public static function expand(array $versions, string $minified): array
+    {
+        if ($minified !== 'composer/2.0') {
+            return array_values($versions);
+        }
+
+        $out = [];
+        $current = null;
+
+        foreach ($versions as $release) {
+            if ($current === null) {
+                $current = (array) $release;
+            } else {
+                foreach ((array) $release as $key => $value) {
+                    if ($value === '__unset') {
+                        unset($current[$key]);
+                    } else {
+                        $current[$key] = $value;
+                    }
+                }
+            }
+
+            $out[] = $current;
+        }
+
+        return $out;
+    }
+
+    /**
+     * Whether this name is a dead end that another package took over.
+     *
+     * 🚨 Two shapes, and Extension Manager catches neither (discuss.flarum.org
+     * d/40012). One is an author marking it abandoned with a replacement. The
+     * other is quieter: the repository moved to a new name, and its composer.json
+     * now says it REPLACES the old one, so the old name on Packagist serves the
+     * new package's code. v17development/flarum-seo is that, and installing it
+     * gives you FoF SEO under the wrong id, which then refuses to enable over a
+     * circular dependency. The tell is a release that replaces its own name; the
+     * real name is resolved from the repository (see Packagist::verdicts()).
+     *
+     * @param array<string,mixed> $latest the newest release, expanded
+     * @return array{replaced:bool, replacedBy:?string, source:?array<string,mixed>}
+     */
+    private function replacement(string $name, array $latest): array
+    {
+        $abandoned = $latest['abandoned'] ?? null;
+
+        if (is_string($abandoned) && $abandoned !== '' && strtolower($abandoned) !== strtolower($name)) {
+            return ['replaced' => true, 'replacedBy' => strtolower($abandoned), 'source' => null];
+        }
+
+        if (isset(array_change_key_case((array) ($latest['replace'] ?? []))[strtolower($name)])) {
+            return ['replaced' => true, 'replacedBy' => null, 'source' => (array) ($latest['source'] ?? [])];
+        }
+
+        return ['replaced' => false, 'replacedBy' => null, 'source' => null];
+    }
+
+    /**
+     * @param list<array<string,mixed>> $versions expanded
+     * @return array{compatible:?bool, version:?string, requires:?string, stability:?string}
+     */
+    private function judge(string $name, array $versions): array
+    {
 
         $best = null;
 

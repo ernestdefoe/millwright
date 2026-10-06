@@ -112,31 +112,96 @@ class Packagist
          * site used to run for a day after an upgrade, which is exactly when
          * somebody goes looking for extensions that now work.
          */
-        $scope = 'compat:' . $compat->coreVersion() . ':';
+        // "v2": verdicts cached before replacements were detected carry no
+        // replaced flag, and must not be read as "not replaced".
+        $scope = 'compat:v2:' . $compat->coreVersion() . ':';
 
         foreach ($names as $name) {
-            $cached = $this->cache->get($scope . $name);
+            $out[$name] = $this->one($name, $compat, $scope);
+        }
 
-            if ($cached !== null) {
-                $out[$name] = $cached;
-                continue;
+        /*
+         * 🚨 Followed to the end. jaspervriends/flarum-seo names
+         * v17development/flarum-seo as its replacement, which is itself an old
+         * name for fof/seo: offering the middle one would install the very
+         * thing this guards against. Three hops at most, and never in a circle.
+         */
+        foreach ($out as $name => $verdict) {
+            $seen = [$name => true];
+
+            for ($hop = 0; $hop < 3 && ! empty($verdict['replacedBy']) && ! isset($seen[$verdict['replacedBy']]); $hop++) {
+                $next = $this->one($verdict['replacedBy'], $compat, $scope);
+                $seen[$verdict['replacedBy']] = true;
+
+                if (empty($next['replaced']) || empty($next['replacedBy'])) {
+                    break;
+                }
+
+                $out[$name]['replacedBy'] = $verdict['replacedBy'] = $next['replacedBy'];
             }
-
-            $body = ($this->get)('https://repo.packagist.org/p2/' . $name . '.json');
-
-            if ($body === null) {
-                // Not cached: a package that could not be reached today may be
-                // reachable in a minute, and caching "unknown" would hide it.
-                $out[$name] = ['compatible' => null, 'version' => null, 'requires' => null, 'stability' => null];
-                continue;
-            }
-
-            $verdict = $compat->verdict($name, (array) json_decode($body, true));
-            $this->cache->put($scope . $name, $verdict);
-            $out[$name] = $verdict;
         }
 
         return $out;
+    }
+
+    /** @return array<string,mixed> */
+    private function one(string $name, Compatibility $compat, string $scope): array
+    {
+        $cached = $this->cache->get($scope . $name);
+
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        $body = ($this->get)('https://repo.packagist.org/p2/' . $name . '.json');
+
+        if ($body === null) {
+            // Not cached: a package that could not be reached today may be
+            // reachable in a minute, and caching "unknown" would hide it.
+            return ['compatible' => null, 'version' => null, 'requires' => null, 'stability' => null, 'replaced' => false, 'replacedBy' => null];
+        }
+
+        $verdict = $compat->verdict($name, (array) json_decode($body, true));
+
+        if ($verdict['replaced'] && $verdict['replacedBy'] === null) {
+            $verdict['replacedBy'] = $this->realName($name, (array) $verdict['source']);
+        }
+
+        unset($verdict['source']);
+        $this->cache->put($scope . $name, $verdict);
+
+        return $verdict;
+    }
+
+    /**
+     * The name a moved repository goes by now, read from its own composer.json.
+     *
+     * Only ever asked for a package whose newest release replaces its own name,
+     * so this is one extra request for a rare case, cached with the verdict.
+     * 🚨 GitHub only, and the host is fixed here rather than taken from the
+     * metadata: a source URL is somebody else's data, and following it wherever
+     * it points would let a package steer this server's requests. Anywhere else,
+     * the answer is "replaced, by something we can't name" — install is still
+     * refused, just without a suggestion.
+     *
+     * @param array<string,mixed> $source
+     */
+    private function realName(string $name, array $source): ?string
+    {
+        $url = (string) ($source['url'] ?? '');
+        $ref = (string) ($source['reference'] ?? '');
+
+        if (! preg_match('#^https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+?)(?:\.git)?/?$#', $url, $m)
+            || ! preg_match('#^[A-Za-z0-9._/-]{1,100}$#', $ref) || str_contains($ref, '..')) {
+            return null;
+        }
+
+        $body = ($this->get)("https://raw.githubusercontent.com/{$m[1]}/{$m[2]}/{$ref}/composer.json");
+        $real = strtolower((string) (json_decode((string) $body, true)['name'] ?? ''));
+
+        return preg_match('#^[a-z0-9]([_.-]?[a-z0-9]+)*/[a-z0-9](([_.]|-{1,2})?[a-z0-9]+)*$#', $real) && $real !== strtolower($name)
+            ? $real
+            : null;
     }
 
     private function fetch(string $url): ?string
