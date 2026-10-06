@@ -1,5 +1,4 @@
 import app from 'flarum/admin/app';
-import extractText from 'flarum/common/utils/extractText';
 import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import apiUrl from '../apiUrl';
@@ -7,6 +6,7 @@ import apiUrl from '../apiUrl';
 declare const m: any;
 
 const t = (k: string, p?: any) => app.translator.trans('ernestdefoe-millwright.admin.' + k, p);
+const s = (k: string, p?: any) => t(k, p) as unknown as string;
 
 /**
  * Where Composer looks, what it will accept, and how it authenticates.
@@ -22,22 +22,76 @@ const t = (k: string, p?: any) => app.translator.trans('ernestdefoe-millwright.a
  * hosts have one; entering a value replaces it. That is a deliberate limit, not
  * an oversight — a settings page that displays your token back to you turns
  * every screenshot into a leak.
+ *
+ * The screen reads a source the way a person names it: "ernestdefoe/bespoke on
+ * GitHub", not a URL in a monospace column. Every value it shows is still the
+ * exact one Composer gets.
  */
+
+interface Repo {
+  type: string;
+  url: string;
+}
+
+interface Stored {
+  kind: string;
+  host: string;
+  detail: string;
+}
+
+/** What a repository URL points at, for the icon and the readable name. */
+function describe(url: string, type: string): { icon: string; name: string; where: string; tone: string } {
+  if (type === 'path') {
+    return { icon: 'fas fa-folder-open', name: url.replace(/\/+$/, '').split('/').pop() || url, where: url, tone: 'path' };
+  }
+
+  const m = /^https?:\/\/([^/]+)\/(.+?)(?:\.git)?\/?$/i.exec(url.trim());
+  if (!m) return { icon: 'fas fa-box', name: url, where: '', tone: 'other' };
+
+  const host = m[1].toLowerCase();
+  const name = type === 'composer' ? host : m[2];
+
+  if (host.endsWith('github.com')) return { icon: 'fab fa-github', name, where: host, tone: 'github' };
+  if (host.includes('gitlab')) return { icon: 'fab fa-gitlab', name, where: host, tone: 'gitlab' };
+  if (host.includes('bitbucket')) return { icon: 'fab fa-bitbucket', name, where: host, tone: 'bitbucket' };
+
+  return { icon: type === 'composer' ? 'fas fa-cubes' : 'fas fa-code-branch', name, where: host, tone: 'other' };
+}
+
+const TYPES: Record<string, { icon: string }> = {
+  vcs: { icon: 'fas fa-code-branch' },
+  composer: { icon: 'fas fa-cubes' },
+  path: { icon: 'fas fa-folder-open' },
+};
+
+const KINDS: Record<string, { icon: string; host: string }> = {
+  'github-oauth': { icon: 'fab fa-github', host: 'github.com' },
+  'gitlab-token': { icon: 'fab fa-gitlab', host: 'gitlab.com' },
+  bearer: { icon: 'fas fa-key', host: '' },
+  'http-basic': { icon: 'fas fa-user-lock', host: '' },
+};
+
+const LADDER = ['stable', 'RC', 'beta', 'alpha', 'dev'];
+
 export default class SourcesTab extends Component {
   private loading = true;
   private saving = false;
   private data: any = null;
   private error: string | null = null;
 
-  // add-repository form
+  // repositories
   private repoType = 'vcs';
   private repoUrl = '';
+  private filter = '';
+  private confirmRepo: string | null = null;
 
-  // add-credential form
+  // credentials
   private authKind = 'github-oauth';
-  private authHost = '';
+  private authHost = 'github.com';
   private authUser = '';
   private authSecret = '';
+  private reveal = false;
+  private confirmAuth: string | null = null;
 
   oninit(vnode: any) {
     super.oninit(vnode);
@@ -49,13 +103,58 @@ export default class SourcesTab extends Component {
     if (!this.data) return <div className="Millwright-notice">{this.error || t('config_failed')}</div>;
 
     return (
-      <div className="Millwright-sources">
-        {this.error ? <div className="Millwright-notice">{this.error}</div> : null}
-        <div className="Millwright-sourcesNote">{this.data.note}</div>
-
+      <div className="Millwright-sources Millwright-src">
+        {this.overview()}
+        {this.error ? (
+          <div className="Millwright-src-error" role="alert">
+            <i className="fas fa-circle-exclamation" aria-hidden="true" />
+            <span>{this.error}</span>
+          </div>
+        ) : null}
         {this.repositories()}
         {this.stability()}
         {this.credentials()}
+        <p className="Millwright-src-note">
+          <i className="fas fa-circle-info" aria-hidden="true" /> {this.data.note}
+        </p>
+      </div>
+    );
+  }
+
+  // ── at a glance ─────────────────────────────────────────────────────────
+
+  /**
+   * Three answers before any detail: where Composer looks, how finished a
+   * release must be, and how many hosts it can sign in to. Each tile jumps to
+   * the card that changes it.
+   */
+  overview() {
+    const repos: Repo[] = this.data.repositories || [];
+    const stored: Stored[] = this.data.auth?.stored || [];
+    const level = this.data.stability?.minimumStability || 'stable';
+
+    const tile = (icon: string, value: any, label: any, target: string) => (
+      <a
+        className="Millwright-src-stat"
+        href={'#' + target}
+        onclick={(e: Event) => {
+          e.preventDefault();
+          document.getElementById(target)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }}
+      >
+        <span className="Millwright-src-statIcon"><i className={icon} aria-hidden="true" /></span>
+        <span className="Millwright-src-statText">
+          <strong>{value}</strong>
+          <span>{label}</span>
+        </span>
+      </a>
+    );
+
+    return (
+      <div className="Millwright-src-overview">
+        {tile('fas fa-code-branch', repos.length, t('src_stat_repos', { count: repos.length }), 'mw-src-repos')}
+        {tile('fas fa-flask', t('level_' + level.toLowerCase()), t('src_stat_level'), 'mw-src-stability')}
+        {tile('fas fa-key', stored.length, t('src_stat_auth', { count: stored.length }), 'mw-src-auth')}
       </div>
     );
   }
@@ -63,114 +162,268 @@ export default class SourcesTab extends Component {
   // ── repositories ────────────────────────────────────────────────────────
 
   repositories() {
-    const repos = this.data.repositories || [];
+    const repos: Repo[] = this.data.repositories || [];
+    const q = this.filter.trim().toLowerCase();
+    const shown = q ? repos.filter((r) => r.url.toLowerCase().includes(q)) : repos;
 
     return (
-      <section className="Millwright-card">
-        <header className="Millwright-cardHead">
-          <h3>{t('repos_title')}</h3>
-          <p>{t('repos_help')}</p>
+      <section className="Millwright-src-card" id="mw-src-repos">
+        <header className="Millwright-src-head">
+          <div className="Millwright-src-headIcon"><i className="fas fa-code-branch" aria-hidden="true" /></div>
+          <div className="Millwright-src-headText">
+            <h3>
+              {t('repos_title')} <span className="Millwright-src-count">{repos.length}</span>
+            </h3>
+            <p>{t('repos_help')}</p>
+          </div>
+          {repos.length > 6 ? (
+            <label className="Millwright-src-filter">
+              <i className="fas fa-magnifying-glass" aria-hidden="true" />
+              <input
+                type="search"
+                placeholder={s('src_filter')}
+                aria-label={s('src_filter')}
+                value={this.filter}
+                oninput={(e: any) => (this.filter = e.target.value)}
+              />
+            </label>
+          ) : null}
         </header>
 
         {repos.length === 0 ? (
-          <div className="Millwright-cardEmpty">{t('repos_none')}</div>
+          <div className="Millwright-src-empty">
+            <i className="fas fa-box-open" aria-hidden="true" />
+            <span>{t('repos_none')}</span>
+          </div>
+        ) : shown.length === 0 ? (
+          <div className="Millwright-src-empty">
+            <span>{t('src_no_match', { query: this.filter })}</span>
+          </div>
         ) : (
-          <ul className="Millwright-rows">
-            {repos.map((r: any) => (
-              <li className="Millwright-row" key={r.url}>
-                <span className="Millwright-kind">{r.type}</span>
-                <span className="Millwright-rowMain" title={r.url}>{r.url}</span>
-                <span />
-                <button
-                  className="Millwright-rowAction"
-                  disabled={this.saving}
-                  title={t('remove') as unknown as string}
-                  onclick={() => this.removeRepo(r)}
-                >
-                  {t('remove')}
-                </button>
-              </li>
-            ))}
-          </ul>
+          this.groups(shown).map((g) => (
+            <div className="Millwright-src-group" key={g.key}>
+              <div className="Millwright-src-groupHead">
+                <span className={'Millwright-src-logo Millwright-src-logo--sm Millwright-src-logo--' + g.tone}>
+                  <i className={g.icon} aria-hidden="true" />
+                </span>
+                <strong>{g.owner}</strong>
+                {g.where ? <span>{g.where}</span> : null}
+                <span className="Millwright-src-count">{g.repos.length}</span>
+              </div>
+              <ul className="Millwright-src-tiles">{g.repos.map((r) => this.repoTile(r, g.owner))}</ul>
+            </div>
+          ))
         )}
 
-        <form
-          className="Millwright-cardFoot"
-          onsubmit={(e: Event) => {
-            e.preventDefault();
-            this.send({ action: 'add-repository', type: this.repoType, url: this.repoUrl }, () => (this.repoUrl = ''));
-          }}
-        >
-          <select className="FormControl Millwright-kindSelect" value={this.repoType} onchange={(e: any) => (this.repoType = e.target.value)}>
-            {(this.data.types || []).map((ty: string) => (
-              <option key={ty} value={ty}>{ty}</option>
-            ))}
-          </select>
-          <input
-            className="FormControl"
-            placeholder={t('repos_placeholder') as unknown as string}
-            value={this.repoUrl}
-            oninput={(e: any) => (this.repoUrl = e.target.value)}
-          />
-          <button className="Button Button--primary" type="submit" disabled={this.saving || !this.repoUrl.trim()}>
-            {t('add')}
-          </button>
-        </form>
+        {this.addRepo(repos)}
       </section>
     );
   }
 
-  removeRepo(r: any) {
-    if (!confirm(extractText(t('repos_confirm', { url: r.url })))) return;
+  /**
+   * 🚨 Grouped by owner and host, so "ernestdefoe · github.com" is said once
+   * instead of twenty-two times. Most forums keep their private extensions
+   * under one account, and the repeated half of every row was the clutter.
+   */
+  groups(repos: Repo[]) {
+    const out: { key: string; owner: string; where: string; icon: string; tone: string; repos: Repo[] }[] = [];
 
-    this.send({ action: 'remove-repository', url: r.url });
+    for (const r of repos) {
+      const d = describe(r.url, r.type);
+      const slash = r.type === 'vcs' ? d.name.indexOf('/') : -1;
+      const owner = slash > 0 ? d.name.slice(0, slash) : s('type_' + r.type);
+      const key = owner + '@' + (slash > 0 ? d.where : r.type);
+      let g = out.find((x) => x.key === key);
+
+      if (!g) {
+        g = { key, owner, where: slash > 0 ? d.where : '', icon: slash > 0 ? d.icon : (TYPES[r.type] || TYPES.vcs).icon, tone: slash > 0 ? d.tone : 'other', repos: [] };
+        out.push(g);
+      }
+
+      g.repos.push(r);
+    }
+
+    return out;
+  }
+
+  repoTile(r: Repo, owner: string) {
+    const d = describe(r.url, r.type);
+    const confirming = this.confirmRepo === r.url;
+    const linkable = /^https?:\/\//i.test(r.url);
+    const short = d.name.startsWith(owner + '/') ? d.name.slice(owner.length + 1) : d.name;
+
+    return (
+      <li className={'Millwright-src-tile' + (confirming ? ' is-confirming' : '')} key={r.url} title={r.url}>
+        {confirming ? (
+          <div className="Millwright-src-tileConfirm">
+            <span>{t('src_remove_named', { name: short })}</span>
+            <span>
+              <button className="Button Button--sm" onclick={() => (this.confirmRepo = null)}>{t('cancel')}</button>
+              <button
+                className="Button Button--sm Button--danger"
+                disabled={this.saving}
+                onclick={() => this.send({ action: 'remove-repository', url: r.url }, () => (this.confirmRepo = null))}
+              >
+                {t('remove')}
+              </button>
+            </span>
+          </div>
+        ) : (
+          [
+            <span className="Millwright-src-tileName">{short}</span>,
+            r.type !== 'vcs' ? <span className="Millwright-src-badge">{t('type_' + r.type)}</span> : null,
+            <span className="Millwright-src-tileActions">
+              {linkable ? (
+                <a className="Millwright-src-icon Millwright-src-icon--sm" href={r.url} target="_blank" rel="noopener noreferrer" title={s('src_open')} aria-label={s('src_open')}>
+                  <i className="fas fa-arrow-up-right-from-square" aria-hidden="true" />
+                </a>
+              ) : null}
+              <button
+                className="Millwright-src-icon Millwright-src-icon--sm Millwright-src-icon--danger"
+                disabled={this.saving}
+                title={s('remove')}
+                aria-label={s('src_remove_label', { name: d.name })}
+                onclick={() => (this.confirmRepo = r.url)}
+              >
+                <i className="fas fa-trash-can" aria-hidden="true" />
+              </button>
+            </span>,
+          ]
+        )}
+      </li>
+    );
+  }
+
+  addRepo(repos: Repo[]) {
+    const types: string[] = this.data.types || ['vcs', 'composer', 'path'];
+    const url = this.repoUrl.trim();
+    const d = url ? describe(url, this.repoType) : null;
+    const duplicate = url !== '' && repos.some((r) => r.url.replace(/\/+$/, '') === url.replace(/\/+$/, ''));
+
+    return (
+      <form
+        className="Millwright-src-add"
+        onsubmit={(e: Event) => {
+          e.preventDefault();
+          if (!url || duplicate) return;
+          this.send({ action: 'add-repository', type: this.repoType, url }, () => (this.repoUrl = ''));
+        }}
+      >
+        <div className="Millwright-src-addTitle">{t('src_add_repo')}</div>
+
+        <div className="Millwright-src-choices" role="radiogroup" aria-label={s('src_add_repo')}>
+          {types.map((ty) => (
+            <button
+              type="button"
+              role="radio"
+              aria-checked={this.repoType === ty ? 'true' : 'false'}
+              className={'Millwright-src-choice' + (this.repoType === ty ? ' is-on' : '')}
+              onclick={() => (this.repoType = ty)}
+            >
+              <i className={(TYPES[ty] || TYPES.vcs).icon} aria-hidden="true" />
+              <span>
+                <strong>{t('type_' + ty)}</strong>
+                <small>{t('type_' + ty + '_help')}</small>
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className="Millwright-src-field">
+          <span className={'Millwright-src-fieldIcon' + (d ? ' Millwright-src-logo--' + d.tone : '')}>
+            <i className={d ? d.icon : (TYPES[this.repoType] || TYPES.vcs).icon} aria-hidden="true" />
+          </span>
+          <input
+            placeholder={s('type_' + this.repoType + '_placeholder')}
+            aria-label={s('type_' + this.repoType + '_placeholder')}
+            value={this.repoUrl}
+            oninput={(e: any) => (this.repoUrl = e.target.value)}
+          />
+          <button className="Button Button--primary" type="submit" disabled={this.saving || !url || duplicate}>
+            <i className="fas fa-plus" aria-hidden="true" /> {t('add')}
+          </button>
+        </div>
+
+        {/*
+          * Says what will be added before it is, in the same words the list
+          * uses — or why it won't be.
+          */}
+        {duplicate ? (
+          <div className="Millwright-src-hint is-warn">{t('src_duplicate')}</div>
+        ) : d && d.where ? (
+          <div className="Millwright-src-hint">{t('src_will_add', { name: d.name, where: d.where })}</div>
+        ) : null}
+      </form>
+    );
   }
 
   // ── stability ───────────────────────────────────────────────────────────
 
   stability() {
-    const s = this.data.stability || {};
+    const st = this.data.stability || {};
+    const current: string = st.minimumStability || 'stable';
+    const levels: string[] = st.levels || LADDER;
+    const explains: Record<string, string> = {};
+    (st.explains || []).forEach((e: any) => (explains[e.level] = e.means));
 
     return (
-      <section className="Millwright-card">
-        <header className="Millwright-cardHead">
-          <h3>{t('stability_title')}</h3>
-          <p>{t('stability_help')}</p>
+      <section className="Millwright-src-card" id="mw-src-stability">
+        <header className="Millwright-src-head">
+          <div className="Millwright-src-headIcon"><i className="fas fa-flask" aria-hidden="true" /></div>
+          <div className="Millwright-src-headText">
+            <h3>{t('stability_title')}</h3>
+            <p>{t('stability_help')}</p>
+          </div>
         </header>
 
-        <div className="Millwright-cardControls">
-          <select
-            className="FormControl"
-            value={s.minimumStability}
-            disabled={this.saving}
-            onchange={(e: any) =>
-              this.send({ action: 'set-stability', minimumStability: e.target.value, preferStable: s.preferStable })
-            }
-          >
-            {(s.levels || []).map((l: string) => (
-              <option key={l} value={l}>{l}</option>
-            ))}
-          </select>
+        <div className="Millwright-src-body">
+          {/*
+            * 🚨 A ladder, most finished first, because that is what the setting
+            * is: everything at and above the chosen step is accepted. A select
+            * hid the other four choices and the order between them.
+            */}
+          <div className="Millwright-src-ladder" role="radiogroup" aria-label={s('stability_title')}>
+            {levels.map((l, i) => {
+              const on = l === current;
+              const accepted = i <= levels.indexOf(current);
 
-          <label className="Millwright-check">
+              return (
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={on ? 'true' : 'false'}
+                  title={explains[l] || ''}
+                  disabled={this.saving}
+                  className={'Millwright-src-step' + (on ? ' is-on' : accepted ? ' is-accepted' : '')}
+                  onclick={() => !on && this.send({ action: 'set-stability', minimumStability: l, preferStable: st.preferStable })}
+                >
+                  <strong>{t('level_' + l.toLowerCase())}</strong>
+                  {l === 'beta' ? <small className="Millwright-src-reco">{t('src_recommended')}</small> : <small>{t('level_' + l.toLowerCase() + '_short')}</small>}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="Millwright-src-callout">
+            <i className="fas fa-lightbulb" aria-hidden="true" />
+            <span>{st.consequence}</span>
+          </div>
+
+          <label className="Millwright-src-switch">
             <input
               type="checkbox"
-              checked={s.preferStable}
+              role="switch"
+              checked={!!st.preferStable}
               disabled={this.saving}
-              onchange={(e: any) =>
-                this.send({ action: 'set-stability', minimumStability: s.minimumStability, preferStable: e.target.checked })
-              }
+              onchange={(e: any) => this.send({ action: 'set-stability', minimumStability: current, preferStable: e.target.checked })}
             />
-            {t('prefer_stable')}
+            <span className="Millwright-src-track" aria-hidden="true"><span /></span>
+            <span className="Millwright-src-switchText">
+              <strong>{t('prefer_stable')}</strong>
+              <small>{t('src_prefer_stable_help')}</small>
+            </span>
           </label>
         </div>
-
-        {/*
-          * 🚨 The consequence of the CURRENT setting, in words. "beta" is a
-          * value; "most Flarum 2 extensions are published as betas, so this is
-          * the usual choice" is the thing somebody is actually deciding about.
-          */}
-        <div className="Millwright-callout">{s.consequence}</div>
       </section>
     );
   }
@@ -179,98 +432,238 @@ export default class SourcesTab extends Component {
 
   credentials() {
     const a = this.data.auth || {};
-    const stored = a.stored || [];
+    const stored: Stored[] = a.stored || [];
 
     return (
-      <section className="Millwright-card">
-        <header className="Millwright-cardHead">
-          <h3>{t('auth_title')}</h3>
-          <p>{t('auth_help')}</p>
+      <section className="Millwright-src-card" id="mw-src-auth">
+        <header className="Millwright-src-head">
+          <div className="Millwright-src-headIcon"><i className="fas fa-key" aria-hidden="true" /></div>
+          <div className="Millwright-src-headText">
+            <h3>
+              {t('auth_title')} <span className="Millwright-src-count">{stored.length}</span>
+            </h3>
+            <p>{t('auth_help')}</p>
+          </div>
         </header>
 
         {stored.length === 0 ? (
-          <div className="Millwright-cardEmpty">{t('auth_none')}</div>
+          <div className="Millwright-src-empty">
+            <i className="fas fa-lock-open" aria-hidden="true" />
+            <span>{t('auth_none')}</span>
+          </div>
         ) : (
-          <ul className="Millwright-rows">
-            {stored.map((c: any) => (
-              <li className="Millwright-row" key={c.kind + c.host}>
-                <span className="Millwright-kind">{c.kind}</span>
-                <span className="Millwright-rowMain">{c.host}</span>
-                <span className="Millwright-held">{c.detail}</span>
-                <button
-                  className="Millwright-rowAction"
-                  disabled={this.saving}
-                  onclick={() => this.removeAuth(c)}
-                >
-                  {t('remove')}
-                </button>
-              </li>
-            ))}
-          </ul>
+          <ul className="Millwright-src-list">{stored.map((c) => this.authRow(c))}</ul>
         )}
 
-        <form
-          className="Millwright-cardFoot Millwright-cardFoot--wrap"
-          onsubmit={(e: Event) => {
-            e.preventDefault();
-            this.send(
-              {
-                action: 'set-auth',
-                kind: this.authKind,
-                host: this.authHost,
-                username: this.authUser,
-                secret: this.authSecret,
-              },
-              () => {
-                // 🚨 Cleared from memory as soon as it has been sent.
-                this.authSecret = '';
-                this.authUser = '';
-                this.authHost = '';
-              }
-            );
-          }}
-        >
-          <select className="FormControl Millwright-kindSelect" value={this.authKind} onchange={(e: any) => (this.authKind = e.target.value)}>
-            {(a.kinds || []).map((k: string) => (
-              <option key={k} value={k}>{k}</option>
-            ))}
-          </select>
-          <input
-            className="FormControl"
-            placeholder={t('auth_host_placeholder') as unknown as string}
-            value={this.authHost}
-            oninput={(e: any) => (this.authHost = e.target.value)}
-          />
-          {this.authKind === 'http-basic' ? (
-            <input
-              className="FormControl"
-              placeholder={t('auth_user_placeholder') as unknown as string}
-              value={this.authUser}
-              oninput={(e: any) => (this.authUser = e.target.value)}
-            />
-          ) : null}
-          <input
-            className="FormControl"
-            type="password"
-            autocomplete="off"
-            placeholder={t('auth_secret_placeholder') as unknown as string}
-            value={this.authSecret}
-            oninput={(e: any) => (this.authSecret = e.target.value)}
-          />
-          <button className="Button Button--primary" type="submit" disabled={this.saving || !this.authHost.trim() || !this.authSecret}>
-            {t('save')}
-          </button>
-        </form>
+        {this.addAuth(a.kinds || Object.keys(KINDS))}
 
-        <div className="Millwright-callout Millwright-callout--lock">{t('auth_writeonly')}</div>
+        <div className="Millwright-src-callout Millwright-src-callout--lock">
+          <i className="fas fa-shield-halved" aria-hidden="true" />
+          <span>{t('auth_writeonly')}</span>
+        </div>
       </section>
     );
   }
 
-  removeAuth(c: any) {
-    if (!confirm(extractText(t('auth_confirm', { host: c.host })))) return;
+  authRow(c: Stored) {
+    const key = c.kind + '|' + c.host;
+    const confirming = this.confirmAuth === key;
+    const kind = KINDS[c.kind] || KINDS.bearer;
 
-    this.send({ action: 'remove-auth', kind: c.kind, host: c.host });
+    return (
+      <li className={'Millwright-src-item' + (confirming ? ' is-confirming' : '')} key={key}>
+        <span className={'Millwright-src-logo Millwright-src-logo--' + (c.kind.split('-')[0] || 'other')}>
+          <i className={kind.icon} aria-hidden="true" />
+        </span>
+        <span className="Millwright-src-itemText">
+          <strong>{c.host}</strong>
+          <span>
+            <span className="Millwright-src-badge">{t('kind_' + c.kind)}</span>
+            <span className="Millwright-src-held">
+              <i className="fas fa-lock" aria-hidden="true" /> {c.detail === 'token set' ? t('src_token_stored') : c.detail}
+            </span>
+          </span>
+        </span>
+
+        {confirming ? (
+          <span className="Millwright-src-confirm">
+            <span>{t('src_remove_q')}</span>
+            <button className="Button Button--sm" onclick={() => (this.confirmAuth = null)}>{t('cancel')}</button>
+            <button
+              className="Button Button--sm Button--danger"
+              disabled={this.saving}
+              onclick={() => this.send({ action: 'remove-auth', kind: c.kind, host: c.host }, () => (this.confirmAuth = null))}
+            >
+              {t('remove')}
+            </button>
+          </span>
+        ) : (
+          <span className="Millwright-src-actions">
+            <button
+              className="Button Button--sm"
+              disabled={this.saving}
+              onclick={() => {
+                // Replacing is entering a new value for the same host: the form
+                // is filled in and the secret field is where the cursor lands.
+                this.authKind = c.kind;
+                this.authHost = c.host;
+                this.authSecret = '';
+                setTimeout(() => (document.getElementById('mw-src-secret') as HTMLInputElement | null)?.focus(), 0);
+              }}
+            >
+              {t('src_replace')}
+            </button>
+            <button
+              className="Millwright-src-icon Millwright-src-icon--danger"
+              disabled={this.saving}
+              title={s('remove')}
+              aria-label={s('src_remove_label', { name: c.host })}
+              onclick={() => (this.confirmAuth = key)}
+            >
+              <i className="fas fa-trash-can" aria-hidden="true" />
+            </button>
+          </span>
+        )}
+      </li>
+    );
+  }
+
+  /**
+   * 🚨 Every credential kind links to the page that makes one. A field that asks
+   * for a token without saying where tokens come from sends somebody to search
+   * GitHub's settings for the right screen and the right scope.
+   */
+  tokenLink(): { href: string; label: string } | null {
+    const host = this.authHost.trim() || KINDS[this.authKind]?.host || '';
+
+    if (this.authKind === 'github-oauth') {
+      return {
+        href: 'https://github.com/settings/tokens/new?scopes=repo&description=Millwright',
+        label: s('src_token_github'),
+      };
+    }
+
+    if (this.authKind === 'gitlab-token' && /^[a-z0-9.-]+$/i.test(host)) {
+      return { href: 'https://' + host + '/-/user_settings/personal_access_tokens', label: s('src_token_gitlab') };
+    }
+
+    return null;
+  }
+
+  addAuth(kinds: string[]) {
+    const basic = this.authKind === 'http-basic';
+    const link = this.tokenLink();
+
+    return (
+      <form
+        className="Millwright-src-add"
+        onsubmit={(e: Event) => {
+          e.preventDefault();
+          this.send(
+            { action: 'set-auth', kind: this.authKind, host: this.authHost, username: this.authUser, secret: this.authSecret },
+            () => {
+              // 🚨 Cleared from memory as soon as it has been sent.
+              this.authSecret = '';
+              this.authUser = '';
+              this.reveal = false;
+              this.authHost = KINDS[this.authKind]?.host || '';
+            }
+          );
+        }}
+      >
+        <div className="Millwright-src-addTitle">{t('src_add_auth')}</div>
+
+        <div className="Millwright-src-choices Millwright-src-choices--four" role="radiogroup" aria-label={s('src_add_auth')}>
+          {kinds.map((k) => (
+            <button
+              type="button"
+              role="radio"
+              aria-checked={this.authKind === k ? 'true' : 'false'}
+              className={'Millwright-src-choice' + (this.authKind === k ? ' is-on' : '')}
+              onclick={() => {
+                const was = KINDS[this.authKind]?.host || '';
+                this.authKind = k;
+                // Fill the obvious host, but never overwrite one somebody typed.
+                if (!this.authHost.trim() || this.authHost === was) this.authHost = KINDS[k]?.host || '';
+              }}
+            >
+              <i className={(KINDS[k] || KINDS.bearer).icon} aria-hidden="true" />
+              <span>
+                <strong>{t('kind_' + k)}</strong>
+                <small>{t('kind_' + k + '_help')}</small>
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className={'Millwright-src-grid' + (basic ? ' Millwright-src-grid--three' : '')}>
+          <label className="Millwright-src-labelled">
+            <span>{t('src_host')}</span>
+            <input
+              className="FormControl"
+              placeholder={s('auth_host_placeholder')}
+              value={this.authHost}
+              oninput={(e: any) => (this.authHost = e.target.value)}
+            />
+          </label>
+
+          {basic ? (
+            <label className="Millwright-src-labelled">
+              <span>{t('src_username')}</span>
+              <input
+                className="FormControl"
+                autocomplete="off"
+                placeholder={s('auth_user_placeholder')}
+                value={this.authUser}
+                oninput={(e: any) => (this.authUser = e.target.value)}
+              />
+            </label>
+          ) : null}
+
+          <label className="Millwright-src-labelled">
+            <span>{basic ? t('src_password') : t('src_token')}</span>
+            <span className="Millwright-src-secret">
+              <input
+                id="mw-src-secret"
+                className="FormControl"
+                type={this.reveal ? 'text' : 'password'}
+                autocomplete="new-password"
+                spellcheck={false}
+                placeholder={s('auth_secret_placeholder')}
+                value={this.authSecret}
+                oninput={(e: any) => (this.authSecret = e.target.value)}
+              />
+              <button
+                type="button"
+                className="Millwright-src-icon"
+                aria-label={s(this.reveal ? 'src_hide' : 'src_show')}
+                title={s(this.reveal ? 'src_hide' : 'src_show')}
+                onclick={() => (this.reveal = !this.reveal)}
+              >
+                <i className={this.reveal ? 'fas fa-eye-slash' : 'fas fa-eye'} aria-hidden="true" />
+              </button>
+            </span>
+          </label>
+        </div>
+
+        <div className="Millwright-src-addFoot">
+          {link ? (
+            <a className="Millwright-src-link" href={link.href} target="_blank" rel="noopener noreferrer">
+              <i className="fas fa-arrow-up-right-from-square" aria-hidden="true" /> {link.label}
+            </a>
+          ) : (
+            <span />
+          )}
+          <button
+            className="Button Button--primary"
+            type="submit"
+            disabled={this.saving || !this.authHost.trim() || !this.authSecret || (basic && !this.authUser.trim())}
+          >
+            <i className="fas fa-lock" aria-hidden="true" /> {t('src_save_auth')}
+          </button>
+        </div>
+      </form>
+    );
   }
 
   // ── plumbing ────────────────────────────────────────────────────────────
@@ -285,7 +678,7 @@ export default class SourcesTab extends Component {
       })
       .catch((e: any) => {
         this.loading = false;
-        this.error = e?.response?.error || (t('config_failed') as unknown as string);
+        this.error = e?.response?.error || s('config_failed');
         m.redraw();
       });
   }
@@ -310,7 +703,7 @@ export default class SourcesTab extends Component {
          * tells them what to change; "could not save" does not.
          */
         this.saving = false;
-        this.error = e?.response?.error || (t('config_failed') as unknown as string);
+        this.error = e?.response?.error || s('config_failed');
         m.redraw();
       });
   }

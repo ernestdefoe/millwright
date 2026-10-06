@@ -910,3 +910,716 @@
     background: color-mix(in srgb, #d83e3e 8%, transparent);
   }
 }
+
+// ── Sources, redesigned ──────────────────────────────────────────────────────
+//
+// 🚨 Scoped to .Millwright-src so the shared card chrome other tabs use is
+// untouched. Same three shades as everywhere else, plus the forum's primary
+// colour for "this is chosen" — nothing here pins a light-mode grey.
+
+@mw-primary-soft: color-mix(in srgb, var(--primary-color) 12%, transparent);
+@mw-primary-line: color-mix(in srgb, var(--primary-color) 45%, transparent);
+@mw-danger: #d83e3e;
+
+.Millwright-src {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+
+  i[aria-hidden] { line-height: 1; }
+}
+
+// at a glance
+.Millwright-src-overview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+
+  @media (max-width: 760px) { grid-template-columns: 1fr; }
+}
+
+.Millwright-src-stat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid @mw-border;
+  border-radius: @mw-radius;
+  background: var(--body-bg);
+  color: var(--text-color);
+  text-decoration: none;
+  transition: border-color .15s, transform .15s, box-shadow .15s;
+
+  &:hover, &:focus-visible {
+    text-decoration: none;
+    border-color: @mw-primary-line;
+    box-shadow: 0 4px 14px -8px var(--primary-color);
+    transform: translateY(-1px);
+  }
+}
+
+.Millwright-src-statIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: @mw-primary-soft;
+  color: var(--primary-color);
+  font-size: 16px;
+}
+
+.Millwright-src-statText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  strong { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+  span { color: var(--muted-color); font-size: 12.5px; }
+}
+
+// cards
+.Millwright-src-card {
+  border: 1px solid @mw-border;
+  border-radius: @mw-radius + 2px;
+  background: var(--body-bg);
+  overflow: hidden;
+  scroll-margin-top: 80px;
+}
+
+.Millwright-src-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px @mw-pad 16px;
+  flex-wrap: wrap;
+}
+
+.Millwright-src-headIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: @mw-tint;
+  border: 1px solid @mw-hairline;
+  color: var(--muted-color);
+  font-size: 15px;
+}
+
+.Millwright-src-headText {
+  flex: 1 1 320px;
+  min-width: 0;
+
+  h3 { margin: 2px 0 4px; font-size: 15.5px; font-weight: 700; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; }
+  p { margin: 0; color: var(--muted-color); font-size: 13px; line-height: 1.55; max-width: 70ch; }
+}
+
+.Millwright-src-count {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: @mw-tint;
+  border: 1px solid @mw-hairline;
+  color: var(--muted-color);
+}
+
+.Millwright-src-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  align-self: center;
+  padding: 0 12px;
+  height: 34px;
+  border: 1px solid @mw-border;
+  border-radius: 999px;
+  background: @mw-tint;
+  color: var(--muted-color);
+  margin: 0;
+  font-weight: normal;
+
+  input {
+    border: 0;
+    background: transparent;
+    outline: none;
+    color: var(--text-color);
+    font: inherit;
+    font-size: 13px;
+    width: 190px;
+  }
+
+  &:focus-within { border-color: @mw-primary-line; box-shadow: 0 0 0 3px @mw-primary-soft; }
+}
+
+// rows
+.Millwright-src-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid @mw-hairline;
+}
+
+.Millwright-src-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 11px @mw-pad;
+  border-bottom: 1px solid @mw-hairline;
+  transition: background .12s;
+
+  &:last-child { border-bottom: 0; }
+  &:hover { background: @mw-tint; }
+  &.is-confirming { background: color-mix(in srgb, @mw-danger 7%, transparent); }
+
+  .Millwright-src-actions { opacity: .55; transition: opacity .12s; }
+  &:hover .Millwright-src-actions, &:focus-within .Millwright-src-actions { opacity: 1; }
+}
+
+.Millwright-src-logo {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  font-size: 17px;
+  background: @mw-tint;
+  color: var(--text-color);
+  border: 1px solid @mw-hairline;
+}
+
+.Millwright-src-logo--github { background: color-mix(in srgb, var(--text-color) 88%, transparent); color: var(--body-bg); border-color: transparent; }
+.Millwright-src-logo--gitlab { background: color-mix(in srgb, #fc6d26 14%, transparent); color: #e2432a; border-color: transparent; }
+.Millwright-src-logo--bitbucket { background: color-mix(in srgb, #2684ff 14%, transparent); color: #2684ff; border-color: transparent; }
+.Millwright-src-logo--path { background: color-mix(in srgb, #d9a400 16%, transparent); color: #b88a00; border-color: transparent; }
+.Millwright-src-logo--bearer,
+.Millwright-src-logo--http { background: @mw-primary-soft; color: var(--primary-color); border-color: transparent; }
+
+.Millwright-src-itemText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  > strong {
+    font-size: 14px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  > span { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--muted-color); }
+}
+
+.Millwright-src-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: @mw-tint;
+  border: 1px solid @mw-hairline;
+  color: var(--muted-color);
+}
+
+.Millwright-src-held { display: inline-flex; align-items: center; gap: 5px; color: #2e9b5b; font-weight: 600; }
+
+.Millwright-src-actions,
+.Millwright-src-confirm {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.Millwright-src-confirm > span { font-size: 13px; font-weight: 600; margin-right: 4px; }
+
+.Millwright-src-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-color);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background .12s, color .12s, border-color .12s;
+
+  &:hover, &:focus-visible { background: @mw-tint; border-color: @mw-hairline; color: var(--text-color); text-decoration: none; }
+  &[disabled] { opacity: .4; cursor: default; }
+}
+
+.Millwright-src-icon--danger:hover,
+.Millwright-src-icon--danger:focus-visible { color: @mw-danger; background: color-mix(in srgb, @mw-danger 9%, transparent); }
+
+.Millwright .Button--danger,
+.Millwright-src .Button--danger { background: @mw-danger; color: #fff; }
+
+.Millwright-src-empty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px @mw-pad;
+  border-top: 1px solid @mw-hairline;
+  color: var(--muted-color);
+  font-size: 13px;
+
+  i { font-size: 18px; opacity: .7; }
+}
+
+// add forms
+.Millwright-src-add {
+  padding: 16px @mw-pad 18px;
+  border-top: 1px solid @mw-hairline;
+  background: @mw-tint;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.Millwright-src-addTitle {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--muted-color);
+}
+
+.Millwright-src-choices {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+
+  &--four { grid-template-columns: repeat(4, 1fr); }
+
+  @media (max-width: 900px) { grid-template-columns: repeat(2, 1fr); &--four { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { grid-template-columns: 1fr; &--four { grid-template-columns: 1fr; } }
+}
+
+.Millwright-src-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid @mw-border;
+  border-radius: 9px;
+  background: var(--body-bg);
+  color: var(--text-color);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  transition: border-color .12s, box-shadow .12s, background .12s;
+
+  > i { margin-top: 2px; font-size: 15px; color: var(--muted-color); width: 18px; text-align: center; }
+
+  > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  strong { font-size: 13px; font-weight: 600; }
+  small { font-size: 11.5px; color: var(--muted-color); line-height: 1.35; }
+
+  &:hover { border-color: @mw-primary-line; }
+  &:focus-visible { outline: none; box-shadow: 0 0 0 3px @mw-primary-soft; }
+
+  &.is-on {
+    border-color: var(--primary-color);
+    background: @mw-primary-soft;
+    box-shadow: inset 0 0 0 1px var(--primary-color);
+
+    > i { color: var(--primary-color); }
+  }
+}
+
+.Millwright-src-field {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+
+  input {
+    flex: 1;
+    min-width: 0;
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid @mw-border;
+    border-radius: 9px;
+    background: var(--body-bg);
+    color: var(--text-color);
+    font: inherit;
+    font-size: 13.5px;
+    outline: none;
+
+    &:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px @mw-primary-soft; }
+  }
+
+  .Button { height: 38px; border-radius: 9px; }
+}
+
+.Millwright-src-fieldIcon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  border-radius: 9px;
+  border: 1px solid @mw-border;
+  background: var(--body-bg);
+  color: var(--muted-color);
+  font-size: 16px;
+}
+
+.Millwright-src-hint {
+  font-size: 12.5px;
+  color: var(--muted-color);
+  padding-left: 46px;
+
+  &.is-warn { color: #b87100; }
+}
+
+.Millwright-src-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 10px;
+
+  &--three { grid-template-columns: 1fr 1fr 1.2fr; }
+
+  @media (max-width: 700px) { grid-template-columns: 1fr; &--three { grid-template-columns: 1fr; } }
+}
+
+.Millwright-src-labelled {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  font-weight: normal;
+
+  > span:first-child { font-size: 12px; font-weight: 600; color: var(--muted-color); }
+
+  .FormControl { border-radius: 9px; height: 38px; }
+}
+
+.Millwright-src-secret {
+  position: relative;
+  display: block;
+
+  .FormControl { padding-right: 42px; }
+  .Millwright-src-icon { position: absolute; right: 3px; top: 3px; }
+}
+
+.Millwright-src-addFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  .Button { border-radius: 9px; }
+}
+
+.Millwright-src-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+// stability
+.Millwright-src-body {
+  padding: 4px @mw-pad 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.Millwright-src-ladder {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  padding: 4px;
+  border: 1px solid @mw-border;
+  border-radius: 11px;
+  background: @mw-tint;
+
+  @media (max-width: 640px) { grid-template-columns: repeat(2, 1fr); gap: 4px; }
+}
+
+.Millwright-src-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 9px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-color);
+  cursor: pointer;
+  font: inherit;
+  transition: background .15s, color .15s, box-shadow .15s;
+
+  strong { font-size: 13.5px; font-weight: 700; }
+  small { font-size: 11px; opacity: .85; }
+
+  &:hover:not(.is-on) { color: var(--text-color); background: color-mix(in srgb, var(--text-color) 5%, transparent); }
+  &:focus-visible { outline: none; box-shadow: 0 0 0 3px @mw-primary-soft; }
+
+  &.is-accepted { color: var(--text-color); }
+
+  &.is-on {
+    background: var(--primary-color);
+    color: #fff;
+    box-shadow: 0 6px 16px -10px var(--primary-color);
+
+    small { opacity: .9; }
+  }
+
+  &[disabled] { cursor: progress; }
+}
+
+.Millwright-src-reco {
+  color: #2e9b5b;
+  font-weight: 700;
+
+  .is-on & { color: #fff; }
+}
+
+.Millwright-src-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 9px;
+  background: color-mix(in srgb, #2e9b5b 9%, transparent);
+  border: 1px solid color-mix(in srgb, #2e9b5b 22%, transparent);
+  font-size: 13px;
+  line-height: 1.55;
+
+  > i { color: #2e9b5b; margin-top: 3px; }
+}
+
+.Millwright-src-callout--lock {
+  margin: 0 @mw-pad 18px;
+  background: @mw-tint;
+  border-color: @mw-hairline;
+  color: var(--muted-color);
+
+  > i { color: var(--muted-color); }
+}
+
+.Millwright-src-switch {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  cursor: pointer;
+  font-weight: normal;
+
+  input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+
+  .Millwright-src-track {
+    flex: none;
+    position: relative;
+    width: 38px;
+    height: 22px;
+    margin-top: 1px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--text-color) 22%, transparent);
+    transition: background .15s;
+
+    span {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .25);
+      transition: transform .15s;
+    }
+  }
+
+  input:checked + .Millwright-src-track { background: var(--primary-color); }
+  input:checked + .Millwright-src-track span { transform: translateX(16px); }
+  input:focus-visible + .Millwright-src-track { box-shadow: 0 0 0 3px @mw-primary-soft; }
+}
+
+.Millwright-src-switchText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  strong { font-size: 13.5px; font-weight: 600; }
+  small { font-size: 12px; color: var(--muted-color); }
+}
+
+.Millwright-src-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 9px;
+  background: color-mix(in srgb, @mw-danger 9%, transparent);
+  border: 1px solid color-mix(in srgb, @mw-danger 30%, transparent);
+  color: var(--text-color);
+  font-size: 13px;
+
+  > i { color: @mw-danger; }
+}
+
+.Millwright-src-note {
+  margin: 0;
+  color: var(--muted-color);
+  font-size: 12.5px;
+}
+
+// Flarum's admin caps .FormControl and bare inputs at a fixed width; inside
+// these fields they fill the space they're given instead.
+.Millwright-src-field input,
+.Millwright-src-labelled .FormControl,
+.Millwright-src-secret .FormControl {
+  width: 100%;
+  max-width: none;
+}
+
+// repositories as compact cards, grouped by owner
+.Millwright-src-group {
+  padding: 4px @mw-pad 16px;
+  border-top: 1px solid @mw-hairline;
+
+  & + & { border-top: 1px dashed @mw-hairline; }
+}
+
+.Millwright-src-groupHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0 10px;
+  font-size: 13px;
+
+  strong { font-weight: 700; }
+  > span:not(.Millwright-src-logo):not(.Millwright-src-count) { color: var(--muted-color); }
+  .Millwright-src-count { margin-left: 2px; }
+}
+
+.Millwright-src-logo--sm {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+// 🚨 Explicit columns from the page width, not auto-fill: auto-fill beside the
+// admin sidebar has collapsed to one column on this site before.
+.Millwright-src-tiles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+
+  @media (min-width: 700px) { grid-template-columns: repeat(2, 1fr); }
+  @media (min-width: 1100px) { grid-template-columns: repeat(3, 1fr); }
+  @media (min-width: 1500px) { grid-template-columns: repeat(4, 1fr); }
+}
+
+.Millwright-src-tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 6px 6px 6px 12px;
+  border: 1px solid @mw-border;
+  border-radius: 9px;
+  background: var(--body-bg);
+  transition: border-color .12s, box-shadow .12s;
+
+  &:hover, &:focus-within {
+    border-color: @mw-primary-line;
+    box-shadow: 0 3px 12px -8px var(--primary-color);
+  }
+
+  &.is-confirming {
+    grid-column: span 1;
+    border-color: color-mix(in srgb, @mw-danger 45%, transparent);
+    background: color-mix(in srgb, @mw-danger 6%, transparent);
+  }
+
+  .Millwright-src-badge { flex: none; }
+}
+
+.Millwright-src-tileName {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.Millwright-src-tileActions {
+  flex: none;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity .12s;
+
+  .Millwright-src-tile:hover &,
+  .Millwright-src-tile:focus-within & { opacity: 1; }
+
+  @media (hover: none) { opacity: 1; }
+}
+
+.Millwright-src-icon--sm { width: 28px; height: 28px; font-size: 12px; border-radius: 7px; }
+
+.Millwright-src-tileConfirm {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+
+  > span:first-child { font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  > span:last-child { display: flex; gap: 4px; flex: none; }
+  .Button--sm { padding: 4px 9px; font-size: 12px; }
+}
+
+.Millwright-src-callout--lock {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid @mw-hairline;
+  border-radius: 0;
+  padding: 12px @mw-pad;
+}
+
+// Flarum styles every search input; inside the pill it should be bare.
+.Millwright-src-filter input[type=search] {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  height: auto;
+  padding: 0;
+  min-width: 0;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+
+  &::-webkit-search-decoration { -webkit-appearance: none; }
+}
+
+// 🚨 Themes (Bespoke, for one) style every input with a border and fill. The
+// pill IS the field here, so the input inside it must stay bare whatever the
+// theme says.
+.Millwright-src .Millwright-src-filter input[type=search] {
+  border: 0 !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}

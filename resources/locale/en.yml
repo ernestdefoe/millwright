@@ -191,6 +191,7 @@ ernestdefoe-millwright:
 
     tab_sources: Sources
     add: Add
+    cancel: Cancel
     save: Save
     config_failed: >-
       Millwright could not read composer.json. Nothing has been changed.
@@ -212,6 +213,61 @@ ernestdefoe-millwright:
       version", which sounds like the package is missing rather than like a
       setting is wrong.
     prefer_stable: Still prefer a stable release when one exists
+
+    # ── Sources, redesigned ───────────────────────────────────────────────
+    src_stat_repos: "{count, plural, one {repository} other {repositories}}"
+    src_stat_level: lowest release accepted
+    src_stat_auth: "{count, plural, one {host can sign in} other {hosts can sign in}}"
+    src_filter: Filter repositories
+    src_no_match: "No repository matches “{query}”."
+    src_open: Open in a new tab
+    src_remove_q: Remove?
+    src_remove_named: "Remove {name}?"
+    src_remove_label: "Remove {name}"
+    src_add_repo: Add a repository
+    src_duplicate: That repository is already listed.
+    src_will_add: "Adds {name} from {where}."
+    src_recommended: recommended
+    src_prefer_stable_help: >-
+      When an extension has both a beta and a finished release that would work, take the finished one.
+    src_add_auth: Add a credential
+    src_host: Host
+    src_username: Username
+    src_password: Password
+    src_token: Token
+    src_show: Show
+    src_hide: Hide
+    src_replace: Replace
+    src_token_stored: token stored
+    src_save_auth: Save credential
+    src_token_github: Create a GitHub token (repo scope)
+    src_token_gitlab: Create a GitLab access token
+    type_vcs: Git repository
+    type_vcs_help: GitHub, GitLab, Bitbucket or any Git host
+    type_vcs_placeholder: "https://github.com/you/your-extension"
+    type_composer: Composer repository
+    type_composer_help: Private Packagist or a paid marketplace
+    type_composer_placeholder: "https://repo.example.com"
+    type_path: Folder on this server
+    type_path_help: A local checkout, for development
+    type_path_placeholder: "/home/you/extensions/your-extension"
+    kind_github-oauth: GitHub token
+    kind_github-oauth_help: Private GitHub repositories
+    kind_gitlab-token: GitLab token
+    kind_gitlab-token_help: GitLab.com or your own GitLab
+    kind_bearer: Bearer token
+    kind_bearer_help: Marketplaces that give you an API token
+    kind_http-basic: Username & password
+    kind_http-basic_help: Private Packagist and older repositories
+    level_stable: Stable
+    level_stable_short: finished only
+    level_rc: RC
+    level_rc_short: release candidates
+    level_beta: Beta
+    level_alpha: Alpha
+    level_alpha_short: early previews
+    level_dev: Dev
+    level_dev_short: unreleased code
 
     auth_title: Credentials
     auth_help: >-
