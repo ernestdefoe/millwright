@@ -143,6 +143,18 @@ class Opcache
         }
 
         if (! $situation['canReset'] || ! @opcache_reset()) {
+            /*
+             * 🚨 false does not always mean "could not". opcache_reset()
+             * answers false while an earlier reset is still PENDING — it waits
+             * for every worker to go idle — and a pending reset has already
+             * switched the cache off, so every request compiles from disk.
+             * Reading that as a failure parked an in-process run on dev for
+             * most of the 60-second revalidate window, twice per update.
+             */
+            if ($this->resetPending()) {
+                return ['done' => true, 'why' => 'Cleared PHP\'s compiled-code cache so the new files are used.'];
+            }
+
             return [
                 'done' => false,
                 'why'  => $situation['validates']
@@ -154,5 +166,13 @@ class Opcache
         }
 
         return ['done' => true, 'why' => 'Cleared PHP\'s compiled-code cache so the new files are used.'];
+    }
+
+    /** A reset has been asked for and not happened yet: the cache is bypassed meanwhile. */
+    private function resetPending(): bool
+    {
+        $status = function_exists('opcache_get_status') ? @opcache_get_status(false) : false;
+
+        return is_array($status) && ! empty($status['restart_pending']);
     }
 }
