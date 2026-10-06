@@ -328,12 +328,53 @@ ernestdefoe-millwright:
     host:
       spawn_ok: Can run Composer as a separate process
       spawn_ok_why: Composer runs outside the web request, so its memory use is its own and cannot take the site down with it.
-      spawn_disabled: Cannot start a separate process (proc_open is disabled)
-      spawn_disabled_why: >-
-        This website's PHP lists proc_open in disable_functions, so Composer
-        cannot be run at all. Millwright can inspect this host but not update it.
-        Ask your host to remove proc_open from disable_functions for this site.
-      spawn_disabled_ini: "The setting comes from {ini}, or from the PHP settings of this site in your hosting panel."
+      in_process: Runs without separate processes
+      in_process_why: >-
+        Millwright cannot start a separate process on this host, so it runs
+        Composer inside the web request instead. Composer still
+        only works out what changes; Millwright downloads and swaps the files
+        itself, journalled, so every update can be rolled back as usual.
+      in_process_limits: >-
+        The limits: Composer shares the request's memory and time, so the first
+        update takes longer while Composer's cache is cold (measured on a forum
+        with 346 packages and 22 private GitHub repositories: about {cold}
+        seconds the first time, about {warm} once the cache is warm), and
+        private Git repositories need a GitHub token or a Composer repository,
+        because git cannot run here.
+      in_process_fix_ini: "To run Composer in its own process instead, ask your host to remove proc_open from disable_functions. The setting comes from {ini}, or from the PHP settings of this site in your hosting panel."
+      in_process_fix: To run Composer in its own process instead, ask your host to remove proc_open from disable_functions for this site.
+      in_process_no_php: >-
+        No command-line PHP was found to start a separate process with (the PHP
+        row below says why). Fixing that moves Composer back into its own
+        process.
+      memory_in_process: "Memory: {limit} (raised while Composer works)"
+      memory_in_process_why: >-
+        This host lets Millwright lift memory_limit while Composer runs inside
+        the request, and it is put back afterwards, so updates of any size can
+        be worked out.
+      time_none: "Execution limit: none"
+      time_limit: "Execution limit: {seconds} seconds"
+      time_in_process_lifted: >-
+        Millwright lifts the time limit while Composer works out an update, and
+        puts it back afterwards. A proxy in front of PHP can still cut a long
+        request short; if one does, Millwright tries again with what Composer
+        already downloaded.
+      time_in_process_locked: >-
+        This host limits each request to {seconds} seconds of PHP time and
+        does not let Millwright extend that. Working out an update is one
+        request, so on a cold cache it may be cut short, by this limit or by
+        the web server's own timeout.
+      time_in_process_retry: >-
+        If it is, nothing is changed: Millwright tries again by itself, up to
+        six times, and each try starts further along because Composer keeps
+        what it downloaded. If it still cannot finish, ask your host to raise
+        max_execution_time for this site (120 seconds is plenty).
+      git_needed: Some package sources need git, which cannot run here
+      git_needed_why: >-
+        Composer reads these sources with git, and this host does not let PHP
+        start programs, so an update would stop before changing anything.
+      git_needed_token: "Add a GitHub token under Sources so Composer reads these through GitHub's API instead: {urls}"
+      git_needed_git: "These can only be read with git. Serve their packages from a Composer repository (Packagist, Private Packagist or Satis) instead, or remove the source: {urls}"
       ssh_differs: >-
         If proc_open and PHP work when you test them over SSH, that is expected:
         the PHP you use over SSH is a different program, configured separately
@@ -369,10 +410,19 @@ ernestdefoe-millwright:
       php_override_broken: "The path set below, {path}, does not run as the command-line PHP. It may have moved after a PHP upgrade."
       php_override_detected: "Millwright found a working one at {path}. Use that path below, or clear the setting to let Millwright find it."
       php_override_hint: If you know where the command-line PHP is, enter its full path below and Millwright will check it and use it.
-      summary_no_php: >-
-        Composer cannot be run on this host yet, because the command-line PHP it
-        needs could not be found or does not work. The PHP row below says why
-        and what to change.
+      summary_in_process: >-
+        Everything works on this host, with Composer running inside the web
+        request because separate processes are not allowed. Updates still
+        replace one package at a time, journalled, so they stay safe and
+        reversible.
+      summary_in_process_time: >-
+        Updates work here, with Composer running inside the web request. This
+        host's time limit is short and locked, so the first update may need a
+        retry or two, which Millwright does by itself.
+      summary_in_process_git: >-
+        Composer runs inside the web request on this host, and some of this
+        site's package sources need git, which cannot run here. The git row
+        below says what to change.
       php_setting_label: Command-line PHP path
       php_setting_help: >-
         Only needed when Millwright cannot find it by itself. Use the full path

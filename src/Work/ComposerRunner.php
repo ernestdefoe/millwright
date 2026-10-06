@@ -6,23 +6,29 @@ use ErnestDefoe\Millwright\Host\PhpBinary;
 use RuntimeException;
 
 /**
- * Runs Composer, out of process where the host allows it.
+ * Runs Composer: in its own process where the host allows it, inside this one
+ * where it does not.
  *
- * 🚨 A subprocess by preference, and the reason is the whole story of why the
- * current tooling fails. Extension Manager runs Composer *inside* the PHP worker
- * serving the request, which is what makes its memory cap load-bearing, what
- * makes a killed request able to take the vendor directory with it, and what
- * puts a booted Flarum's memory on the same budget as the resolve.
- *
- * Out of process, none of that is true: Composer gets its own limit, its own
+ * 🚨 A subprocess by preference. Extension Manager runs Composer inside the PHP
+ * worker serving the request AND lets it rewrite vendor/, so a killed request
+ * can take the vendor directory with it and a booted Flarum shares the
+ * resolve's memory budget. Out of process, Composer gets its own limit, its own
  * lifetime, and its failures are exit codes rather than a dead worker.
  *
- * Where a subprocess is impossible — proc_open disabled, or no command-line PHP
- * — this refuses, and says which of those it is. That is a real limitation and
- * it is stated rather than papered over: running Composer in-process is the
- * thing that makes the current tooling fragile, so offering it as a fallback
- * would be reintroducing the fault this exists to avoid. The host panel tells
- * an admin where they stand before they press anything.
+ * 🚨 In-process where a subprocess is impossible — proc_open disabled, or no
+ * command-line PHP — and this used to refuse instead. What made Extension
+ * Manager fragile was never the process Composer ran in: it was Composer
+ * writing vendor/ from inside a request that could be killed. Millwright never
+ * lets Composer touch a package directory. Composer only RESOLVES (`--no-install`
+ * writes composer.lock and nothing else), Fetcher downloads, and Applier swaps
+ * directories with journalled renames. The one write Composer makes here is the
+ * autoloader at the register step, and ComposerSteps guards that separately.
+ * So running the resolver in the request costs memory and time, both of which
+ * are asked for and reported, and nothing that a kill can break.
+ *
+ * Shared hosting is where this matters: on IONOS/Plesk and most cPanel plans
+ * proc_open is disabled for the website, and Millwright could not run there at
+ * all.
  */
 class ComposerRunner
 {
@@ -37,23 +43,42 @@ class ComposerRunner
         $this->php = new PhpBinary($phpBin);
     }
 
+    /** The same runner, judging the host through a different PhpBinary. */
+    public function withPhp(PhpBinary $php): self
+    {
+        $copy = clone $this;
+        $copy->php = $php;
+
+        return $copy;
+    }
+
     /** The command-line PHP every subprocess Millwright starts is run with. */
     public function php(): ?string
     {
         return $this->php->path();
     }
 
+    /**
+     * Composer will run inside this PHP process rather than in its own.
+     *
+     * 🚨 Asked of THIS process. A queue worker's PHP often has a different
+     * php.ini from the website's, so the same run can spawn from the worker and
+     * run in-process from the admin page — and both are fine.
+     */
+    public function inProcess(): bool
+    {
+        return ! $this->canSpawn() && class_exists(\Composer\Console\Application::class);
+    }
+
+    /** A command-line PHP can be started: proc_open allowed, and one was found. */
+    public function processes(): bool
+    {
+        return $this->php->canSpawn() && $this->php->path() !== null;
+    }
+
     public function canSpawn(): bool
     {
-        if (! function_exists('proc_open')) {
-            return false;
-        }
-
-        $disabled = array_map('trim', explode(',', (string) ini_get('disable_functions')));
-
-        return ! in_array('proc_open', $disabled, true)
-            && $this->binary() !== null
-            && $this->php->path() !== null;
+        return $this->processes() && $this->binary() !== null;
     }
 
     /**
@@ -63,6 +88,10 @@ class ComposerRunner
     public function run(array $args, int $timeout = 600): array
     {
         if (! $this->canSpawn()) {
+            if ($this->inProcess()) {
+                return $this->runInProcess($args);
+            }
+
             throw new RuntimeException($this->whyNot());
         }
 
@@ -81,9 +110,139 @@ class ComposerRunner
              * panel depends on those measurements being real.
              */
             'COMPOSER_MEMORY_LIMIT' => '-1',
-            'COMPOSER_HOME' => $this->composerHome ?? ($this->installPath . '/storage/.composer'),
+            'COMPOSER_HOME' => $this->composerHome(),
             'HOME' => getenv('HOME') ?: $this->installPath,
         ], $timeout);
+    }
+
+    /**
+     * The same command, through Composer's own console application, in this
+     * process.
+     *
+     * 🚨 An argv ARRAY, exactly as the subprocess gets, and never a string to
+     * be parsed: the only user-supplied values are package names that
+     * StartController has already matched against Composer's own pattern.
+     *
+     * @param list<string> $args
+     * @return array{code:int, output:string}
+     */
+    public function runInProcess(array $args): array
+    {
+        /*
+         * 🚨 No plugins and no scripts, in-process always. Either would be
+         * somebody else's code running inside this request — and most of
+         * them start a program anyway, which is the thing this host forbids.
+         */
+        $argv = array_merge(
+            ['composer'],
+            $args,
+            array_values(array_diff(['--no-plugins', '--no-scripts'], $args)),
+            ['--no-interaction', '--working-dir=' . $this->installPath]
+        );
+
+        // Composer's own console output, never the page's.
+        $output = new \Symfony\Component\Console\Output\BufferedOutput(
+            \Symfony\Component\Console\Output\OutputInterface::VERBOSITY_NORMAL,
+            false
+        );
+
+        return InProcess::isolate($this->inProcessEnv(), function (array $limits) use ($argv, $output): array {
+            $application = new \Composer\Console\Application();
+            $application->setAutoExit(false);
+            $application->setCatchExceptions(false);
+
+            try {
+                $code = $application->run(new \Symfony\Component\Console\Input\ArgvInput($argv), $output);
+            } catch (\Throwable $e) {
+                $code = 1;
+                $output->writeln(self::explainThrowable($e));
+            }
+
+            $said = trim($output->fetch());
+
+            if ($code !== 0 && (! $limits['memory'] || ! $limits['time'])) {
+                $said .= "\n" . self::limitNote($limits);
+            }
+
+            return ['code' => $code, 'output' => $said];
+        });
+    }
+
+    /**
+     * 🚨 Every variable that changes what Composer does, set the way the
+     * subprocess sets them — plus the one that replaces a call to git.
+     *
+     * COMPOSER_ROOT_VERSION: without it Composer asks git what version the
+     * forum itself is, which is a process. With it, a Packagist-only resolve
+     * runs no program at all. Left alone if the host already sets it.
+     *
+     * @return array<string,string>
+     */
+    private function inProcessEnv(): array
+    {
+        $env = [
+            'COMPOSER_HOME'           => $this->composerHome(),
+            'COMPOSER_MEMORY_LIMIT'   => '-1',
+            'COMPOSER_NO_INTERACTION' => '1',
+            // The security audit is more network calls on a clock that is already running.
+            'COMPOSER_NO_AUDIT'       => '1',
+            // Symfony measures the terminal with `stty` when these are absent.
+            'COLUMNS'                 => '120',
+            'LINES'                   => '50',
+        ];
+
+        if (getenv('COMPOSER_ROOT_VERSION') === false && ! isset($_SERVER['COMPOSER_ROOT_VERSION'])) {
+            $env['COMPOSER_ROOT_VERSION'] = '1.0.0';
+        }
+
+        if ((getenv('HOME') ?: ($_SERVER['HOME'] ?? '')) === '') {
+            $env['HOME'] = $this->installPath;
+        }
+
+        return $env;
+    }
+
+    /** Where Composer keeps its cache and global auth: under storage/, so it survives between requests. */
+    public function composerHome(): string
+    {
+        return $this->composerHome ?? ($this->installPath . '/storage/.composer');
+    }
+
+    /**
+     * 🚨 Composer reaching for git on a host that cannot start programs throws
+     * Symfony's "relies on proc_open" LogicException, from deep inside a VCS or
+     * path repository. Turned into the sentence that says what to do.
+     */
+    public static function explainThrowable(\Throwable $e): string
+    {
+        for ($t = $e; $t !== null; $t = $t->getPrevious()) {
+            if (str_contains($t->getMessage(), 'proc_open')) {
+                return 'Composer needed to run git (for a Git or path repository) and this host does not allow PHP '
+                    . 'to start other programs. For a GitHub or GitLab repository, add an access token under '
+                    . 'Millwright → Sources so Composer uses their API instead of git; otherwise install the '
+                    . 'package from a Composer repository (Packagist, Private Packagist or Satis).';
+            }
+        }
+
+        return $e->getMessage();
+    }
+
+    /**
+     * @param array{memory:bool, time:bool} $limits
+     */
+    private static function limitNote(array $limits): string
+    {
+        $parts = [];
+
+        if (! $limits['memory']) {
+            $parts[] = 'this host does not let Millwright raise memory_limit (' . ini_get('memory_limit') . ')';
+        }
+
+        if (! $limits['time']) {
+            $parts[] = 'this host does not let Millwright lift the ' . ini_get('max_execution_time') . '-second time limit';
+        }
+
+        return 'Composer ran inside the web request, and ' . implode(', and ', $parts) . '.';
     }
 
     /**
@@ -96,11 +255,9 @@ class ComposerRunner
      * shipped. Depending on the host's would make the behaviour of an update
      * differ per host in ways nobody could reproduce.
      *
-     * Note this is still run as a SUBPROCESS. Bundling the library is how
-     * Extension Manager gets Composer too — the difference that matters is that
-     * it then calls Composer's API inside the PHP worker serving the request,
-     * which is what puts a booted Flarum and a dependency resolve on one memory
-     * budget. Same library, own process, own limit.
+     * Run as a subprocess wherever one can be started: same library, own
+     * process, own limit. The in-process fallback uses this same bundled
+     * library through its autoloader.
      */
     private function binary(): ?string
     {
@@ -126,31 +283,12 @@ class ComposerRunner
     }
 
     /**
-     * Which of the three preconditions is missing, in words that name the thing
-     * to fix. "Composer cannot be run" sends somebody hunting; "there is no
-     * command-line PHP" tells their host exactly what to install.
+     * Reached only when neither way can work: no subprocess, and no Composer
+     * library to run in-process either.
      */
     private function whyNot(): string
     {
-        if (! function_exists('proc_open')) {
-            return 'This host does not allow PHP to start other programs (proc_open is disabled), '
-                . 'so Composer cannot be run in its own process.';
-        }
-
-        $disabled = array_map('trim', explode(',', (string) ini_get('disable_functions')));
-
-        if (in_array('proc_open', $disabled, true)) {
-            return 'This host disables proc_open, so Composer cannot be run in its own process. '
-                . 'Ask your host to remove proc_open from disable_functions.';
-        }
-
-        if ($this->binary() === null) {
-            return 'Composer itself could not be found. It ships with Millwright, so this usually means the '
-                . 'install is incomplete — reinstalling the extension should restore it.';
-        }
-
-        return 'No command-line PHP could be found on this host, so Composer cannot be run in its own process. '
-            . 'Millwright → This host says why (on hosting panels it is usually open_basedir) and lets you '
-            . 'enter the path yourself.';
+        return 'Composer itself could not be found. It ships with Millwright, so this usually means the '
+            . 'install is incomplete — reinstalling the extension should restore it.';
     }
 }

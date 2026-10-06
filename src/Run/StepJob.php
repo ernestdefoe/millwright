@@ -70,7 +70,12 @@ class StepJob extends AbstractJob
         do {
             $run = $runner->step($this->runId);
 
-            if ($run->isFinished()) {
+            /*
+             * Finished — or waiting on something only the admin page can do
+             * on this host (see NeedsWebRequest). Re-dispatching would spin
+             * the queue until somebody opened the page; the page carries on.
+             */
+            if ($run->isFinished() || $runner->needsWebRequest()) {
                 return;
             }
 

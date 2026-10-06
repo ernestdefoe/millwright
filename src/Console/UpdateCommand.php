@@ -143,7 +143,7 @@ class UpdateCommand extends AbstractCommand
             return 1;
         }
 
-        if ((new Capability($this->paths->base, \ErnestDefoe\Millwright\Host\PhpBinary::forStorage($this->paths->storage)))->resolveTier() === Capability::NONE) {
+        if ((new Capability($this->paths->base, \ErnestDefoe\Millwright\Host\PhpBinary::forStorage($this->paths->storage), $this->paths->storage . '/.composer'))->resolveTier() === Capability::NONE) {
             $this->error('This host does not have enough memory for Composer to work out what an update involves. '
                 . 'Nothing was started. Ask your host to raise memory_limit to 256 MB and try again.');
 
@@ -256,6 +256,14 @@ class UpdateCommand extends AbstractCommand
             }
 
             $run = $this->runner->step($run->id);
+
+            if ($this->runner->needsWebRequest()) {
+                $this->emit($run->log);
+                $this->error("This host cannot start separate processes, so the rest of {$run->id} has to run from "
+                    . 'the web: open Millwright in the admin panel and it will carry on from here.');
+
+                return 1;
+            }
 
             if ($this->runner->wasBusy() || $this->runner->wasWaiting()) {
                 // Another driver has it, or the work is done but not live yet.

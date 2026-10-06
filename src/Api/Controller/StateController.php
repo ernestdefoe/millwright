@@ -41,7 +41,7 @@ class StateController implements RequestHandlerInterface
         $cached = $check->cached();
 
         return new JsonResponse([
-            'host'       => (new Capability($this->paths->base, PhpBinary::forStorage($this->paths->storage)))->report(),
+            'host'       => (new Capability($this->paths->base, PhpBinary::forStorage($this->paths->storage), $this->paths->storage . '/.composer'))->report(),
             'installed'  => $this->installed($cached['updates'] ?? []),
             'run'        => $run?->toArray(),
             'runIsStale' => $run !== null && $run->isStale(time()),

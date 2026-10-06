@@ -26,11 +26,48 @@ class Capability
     public const TARGETED = 'targeted';
     public const NONE     = 'none';
 
+    /**
+     * 🚨 MEASURED, in-process, on dev.ernestdefoe.online's own composer.json
+     * with proc_open disabled — a cold Composer cache, then a warm one. Shown
+     * on the panel so a short time limit can be judged against a real number.
+     */
+    private const RESOLVE_COLD = '145';
+    private const RESOLVE_WARM = '27';
+
     private PhpBinary $php;
 
-    public function __construct(private string $installPath, PhpBinary $php)
-    {
+    /** @var array{memory:bool, time:bool, timeLimit:int}|null */
+    private ?array $limits = null;
+
+    /** @var list<array{url:string, why:string}>|null */
+    private ?array $blockers = null;
+
+    /**
+     * @param array{memory:bool, time:bool, timeLimit:int}|null $limits for tests: what the host lets be lifted
+     */
+    public function __construct(
+        private string $installPath,
+        PhpBinary $php,
+        private ?string $composerHome = null,
+        ?array $limits = null,
+    ) {
         $this->php = $php;
+        $this->limits = $limits;
+    }
+
+    /**
+     * Composer will run inside the web request: no separate process can be
+     * started, or there is no command-line PHP to start one with.
+     */
+    public function inProcess(): bool
+    {
+        return ! $this->canSpawn() || $this->php->path() === null;
+    }
+
+    /** @return array{memory:bool, time:bool, timeLimit:int} */
+    private function limits(): array
+    {
+        return $this->limits ??= \ErnestDefoe\Millwright\Work\InProcess::limits();
     }
 
     /** @return array<string,mixed> */
@@ -42,6 +79,7 @@ class Capability
             $this->timeCheck(),
             $this->subprocessCheck(),
             ...$this->phpCheck(),
+            ...$this->gitCheck(),
             $this->opcacheCheck(),
             $this->diskCheck(),
         ];
@@ -99,6 +137,17 @@ class Capability
 
     private function memoryCheck(int $bytes): array
     {
+        if ($this->inProcess() && $this->limits()['memory']) {
+            return [
+                'id'      => 'memory',
+                'ok'      => true,
+                'warn'    => false,
+                'whatKey' => 'host.memory_in_process',
+                'whatParams' => ['limit' => (string) ini_get('memory_limit')],
+                'whyKeys' => [['key' => 'host.memory_in_process_why']],
+            ];
+        }
+
         $tier = $this->resolveTier($bytes);
         $mb   = $bytes === -1 ? 'unlimited' : round($bytes / 1048576) . ' MB';
 
@@ -119,6 +168,30 @@ class Capability
     {
         $limit = (int) ini_get('max_execution_time');
 
+        /*
+         * 🚨 In-process, the resolve is ONE long step inside one request, so
+         * the per-request limit is suddenly the thing that matters — and on
+         * IONOS/Plesk shared hosting it is both short and locked. Said here,
+         * before anybody presses Update, with the number.
+         */
+        if ($this->inProcess()) {
+            $lifted = $limit === 0 || $this->limits()['time'];
+
+            return [
+                'id'         => 'time',
+                'ok'         => true,
+                'warn'       => ! $lifted,
+                'whatKey'    => $limit === 0 ? 'host.time_none' : 'host.time_limit',
+                'whatParams' => ['seconds' => (string) $limit],
+                'whyKeys'    => $lifted
+                    ? [['key' => 'host.time_in_process_lifted']]
+                    : [
+                        ['key' => 'host.time_in_process_locked', 'params' => ['seconds' => (string) $limit]],
+                        ['key' => 'host.time_in_process_retry'],
+                    ],
+            ];
+        }
+
         return [
             'id'   => 'time',
             'ok'   => true,
@@ -132,35 +205,85 @@ class Capability
 
     private function subprocessCheck(): array
     {
-        $ok = $this->canSpawn();
-
         /*
-         * 🚨 A blocker, not a warning, and it used to say otherwise: "Composer
-         * runs in-process, that still works". It does not — there is no
-         * in-process path, because running Composer inside the web request is
-         * the fault this extension exists to avoid. The panel now says what the
-         * code actually does.
-         *
-         * 🚨 And it names the php.ini, and says that it is the WEBSITE's. The
+         * 🚨 It names the php.ini, and says that it is the WEBSITE's. The
          * usual way somebody "proves" this is wrong is to test proc_open over
          * SSH, where it works — because that is a different PHP with its own
          * configuration.
          */
+        if (! $this->inProcess()) {
+            return [
+                'id'      => 'subprocess',
+                'ok'      => true,
+                'warn'    => false,
+                'whatKey' => 'host.spawn_ok',
+                'whyKeys' => [['key' => 'host.spawn_ok_why']],
+            ];
+        }
+
+        /*
+         * Not a blocker any more: Composer runs inside the request instead.
+         * A warning, because that shares the request's memory and time — and
+         * the fix that removes the warning is named.
+         */
         $ini = $this->php->diagnose()['ini'];
+        $lines = [
+            ['key' => 'host.in_process_why'],
+            ['key' => 'host.in_process_limits', 'params' => ['cold' => self::RESOLVE_COLD, 'warm' => self::RESOLVE_WARM]],
+        ];
+
+        if (! $this->canSpawn()) {
+            $lines[] = $ini !== null
+                ? ['key' => 'host.in_process_fix_ini', 'params' => ['ini' => $ini]]
+                : ['key' => 'host.in_process_fix'];
+            $lines[] = ['key' => 'host.ssh_differs'];
+        } else {
+            $lines[] = ['key' => 'host.in_process_no_php'];
+        }
 
         return [
             'id'      => 'subprocess',
-            'ok'      => $ok,
-            'warn'    => false,
-            'whatKey' => $ok ? 'host.spawn_ok' : 'host.spawn_disabled',
-            'whyKeys' => $ok
-                ? [['key' => 'host.spawn_ok_why']]
-                : array_values(array_filter([
-                    ['key' => 'host.spawn_disabled_why'],
-                    $ini !== null ? ['key' => 'host.spawn_disabled_ini', 'params' => ['ini' => $ini]] : null,
-                    ['key' => 'host.ssh_differs'],
-                ])),
+            'ok'      => true,
+            'warn'    => true,
+            'whatKey' => 'host.in_process',
+            'whyKeys' => $lines,
         ];
+    }
+
+    /**
+     * Package sources Composer could only read with git — impossible in-process.
+     *
+     * @return list<array<string,mixed>>
+     */
+    private function gitCheck(): array
+    {
+        if (! $this->inProcess()) {
+            return [];
+        }
+
+        $blockers = $this->blockers ??= (new \ErnestDefoe\Millwright\Work\NeedsGit(
+            $this->installPath,
+            $this->composerHome ?? $this->installPath . '/storage/.composer'
+        ))->blockers();
+
+        if ($blockers === []) {
+            return [];
+        }
+
+        $tokens = array_column(array_filter($blockers, fn ($b) => $b['why'] === 'token'), 'url');
+        $git = array_column(array_filter($blockers, fn ($b) => $b['why'] === 'git'), 'url');
+
+        return [[
+            'id'      => 'git',
+            'ok'      => false,
+            'warn'    => false,
+            'whatKey' => 'host.git_needed',
+            'whyKeys' => array_values(array_filter([
+                ['key' => 'host.git_needed_why'],
+                $tokens !== [] ? ['key' => 'host.git_needed_token', 'params' => ['urls' => implode(', ', $tokens)]] : null,
+                $git !== [] ? ['key' => 'host.git_needed_git', 'params' => ['urls' => implode(', ', $git)]] : null,
+            ])),
+        ]];
     }
 
     /**
@@ -224,10 +347,12 @@ class Capability
         $lines[] = ['key' => 'host.ssh_differs'];
         $lines[] = ['key' => 'host.php_override_hint'];
 
+        // Not a blocker: without it, Composer and Flarum's commands run inside
+        // the web request instead (the row above says what that means).
         return [[
             'id'         => 'php',
-            'ok'         => false,
-            'warn'       => false,
+            'ok'         => true,
+            'warn'       => true,
             'whatKey'    => $what[0],
             'whatParams' => $what[1],
             'whyKeys'    => $lines,
@@ -297,11 +422,6 @@ class Capability
 
     private function summary(int $bytes): string
     {
-        if (! $this->canSpawn()) {
-            return 'Composer cannot be run on this host, because PHP is not allowed to start other programs. '
-                . 'Millwright can tell you what is installed, but it cannot update anything here.';
-        }
-
         return match ($this->resolveTier($bytes)) {
             self::FULL => 'Everything works on this host. Updates replace one package at a time, which is safe and reversible.',
             self::TARGETED => 'You can update extensions one at a time here. Updating Flarum itself needs a little more memory than this host allows.',
@@ -309,21 +429,29 @@ class Capability
         };
     }
 
-    /**
-     * The summary when the blocker is the command-line PHP — which the English
-     * summary below would otherwise call "everything works".
-     */
+    /** The summary when Composer runs in-process, which the English one would call "everything works". */
     private function summaryKey(): ?string
     {
-        if (! $this->canSpawn()) {
+        if (! $this->inProcess() || $this->resolveTier() === self::NONE) {
             return null;
         }
 
-        return $this->php->diagnose()['found'] === null ? 'host.summary_no_php' : null;
+        if ($this->gitCheck() !== []) {
+            return 'host.summary_in_process_git';
+        }
+
+        return $this->limits()['time'] || (int) ini_get('max_execution_time') === 0
+            ? 'host.summary_in_process'
+            : 'host.summary_in_process_time';
     }
 
     private function memoryBytes(): int
     {
+        // In-process, Millwright lifts the limit for the resolve if it may.
+        if ($this->inProcess() && $this->limits()['memory']) {
+            return -1;
+        }
+
         $raw = trim((string) ini_get('memory_limit'));
 
         if ($raw === '' || $raw === '-1') {

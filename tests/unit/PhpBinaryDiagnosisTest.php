@@ -72,7 +72,8 @@ class PhpBinaryDiagnosisTest extends TestCase
         $this->assertSame(PhpBinary::PANEL_PLESK, $php->panel());
 
         $row = $this->phpRow($php);
-        $this->assertFalse($row['ok']);
+        // A warning, not a blocker: Composer runs in-process without it.
+        $this->assertTrue($row['warn']);
         $this->assertSame('host.php_hidden', $row['whatKey']);
         $this->assertSame(self::PLESK_CLI, $row['whatParams']['path']);
 
@@ -128,9 +129,14 @@ class PhpBinaryDiagnosisTest extends TestCase
         $report = (new Capability(sys_get_temp_dir(), $php))->report();
         $rows = array_column($report['checks'], null, 'id');
 
-        $this->assertFalse($rows['subprocess']['ok']);
-        $this->assertSame('host.spawn_disabled', $rows['subprocess']['whatKey']);
-        $this->assertContains('host.ssh_differs', array_column($rows['subprocess']['whyKeys'], 'key'));
+        // No longer a blocker: Composer runs inside the request instead, and
+        // the row says so, with the fix that would move it back out.
+        $this->assertTrue($rows['subprocess']['ok']);
+        $this->assertTrue($rows['subprocess']['warn']);
+        $this->assertSame('host.in_process', $rows['subprocess']['whatKey']);
+        $keys = array_column($rows['subprocess']['whyKeys'], 'key');
+        $this->assertNotEmpty(array_intersect(['host.in_process_fix_ini', 'host.in_process_fix'], $keys), 'it names the fix');
+        $this->assertContains('host.ssh_differs', $keys);
         $this->assertArrayNotHasKey('php', $rows, 'the CLI PHP row would only repeat the same blocker');
     }
 
@@ -139,7 +145,10 @@ class PhpBinaryDiagnosisTest extends TestCase
         $php = $this->host([], null, '', '', ['/nonexistent/php-for-test']);
 
         $this->assertSame('host.php_missing', $this->phpRow($php)['whatKey']);
-        $this->assertSame('host.summary_no_php', (new Capability(sys_get_temp_dir(), $php))->report()['summaryKey']);
+        $this->assertSame(
+            'host.summary_in_process',
+            (new Capability(sys_get_temp_dir(), $php, null, ['memory' => true, 'time' => true, 'timeLimit' => 30]))->report()['summaryKey']
+        );
     }
 
     public function test_open_basedir_is_a_prefix_match_like_php_itself(): void
@@ -156,7 +165,7 @@ class PhpBinaryDiagnosisTest extends TestCase
         $php = $this->host([self::PLESK_CLI => ['code' => 0, 'out' => 'cli 8.5.1', 'err' => '']], '/opt/plesk/php/8.3/bin/php');
 
         $row = $this->phpRow($php);
-        $this->assertFalse($row['ok']);
+        $this->assertTrue($row['warn']);
         $keys = array_column($row['whyKeys'], 'key');
         $this->assertContains('host.php_override_broken', $keys);
         $this->assertContains('host.php_override_detected', $keys);

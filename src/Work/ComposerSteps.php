@@ -114,7 +114,6 @@ class ComposerSteps implements Steps
     private function resolve(): string
     {
         $lockPath = $this->installPath . '/composer.lock';
-        $before   = $this->readJson($lockPath);
 
         /*
          * 🚨 Saved BEFORE Composer is allowed to rewrite them, and used by the
@@ -122,9 +121,25 @@ class ComposerSteps implements Steps
          * without a copy taken here there is no way back to the site's own
          * record of itself — and a rollback that restores the files but not the
          * lock leaves a site whose manifest describes work that was undone.
+         *
+         * 🚨 Taken ONCE, and a retry starts from it. A resolve killed part-way
+         * — a host's time limit, a proxy timeout — can leave composer.json
+         * edited by `require` and the lock half-way to new. Copying again on
+         * the retry would save THAT as "before", and the rollback would put
+         * back the broken state; resolving on top of it would plan from it.
          */
-        copy($lockPath, $this->workDir . '/composer.lock.before');
-        copy($this->installPath . '/composer.json', $this->workDir . '/composer.json.before');
+        $this->startFromSaved();
+        $before = $this->readJson($this->workDir . '/composer.lock.before');
+
+        $inProcess = $this->composer->inProcess();
+
+        if ($inProcess) {
+            $blockers = (new NeedsGit($this->installPath, $this->composer->composerHome()))->blockers();
+
+            if ($blockers !== []) {
+                throw new RuntimeException(NeedsGit::explain($blockers));
+            }
+        }
 
         /*
          * 🚨 `require` for an install, `update` for an update, and they are not
@@ -171,7 +186,7 @@ class ComposerSteps implements Steps
 
         $raised = $this->raisePins();
 
-        $result = $this->composer->run($args);
+        $result = $inProcess ? $this->resolveInProcess($args) : $this->composer->run($args);
         $after  = $this->readJson($lockPath);
 
         if ($result['code'] !== 0 && ! $this->didWhatWasAsked($before, $after)) {
@@ -209,6 +224,170 @@ class ComposerSteps implements Steps
         $note = count($changes) . ' package(s) will change';
 
         return $raised === [] ? $note : implode('; ', $raised) . '. ' . $note;
+    }
+
+    /**
+     * How many times a resolve killed by the host is tried before giving up.
+     *
+     * 🚨 Six, from a measurement rather than a feeling: on dev's real
+     * composer.json (346 packages, 22 private GitHub repositories) a cold
+     * in-process resolve took 144s and a warm one 27s. Each killed attempt
+     * keeps what it downloaded, so a host that cuts requests at 30 seconds gets
+     * there in about five tries; three would give up on it with the cache
+     * nearly full.
+     */
+    private const RESOLVE_ATTEMPTS = 6;
+
+    /**
+     * Copy the manifests aside the first time; put them back on every retry.
+     */
+    private function startFromSaved(): void
+    {
+        foreach (['composer.lock', 'composer.json'] as $file) {
+            $saved = $this->workDir . '/' . $file . '.before';
+            $live = $this->installPath . '/' . $file;
+
+            if (is_file($saved)) {
+                if (@file_get_contents($saved) !== @file_get_contents($live)) {
+                    self::replaceFile($saved, $live);
+                }
+            } elseif (! copy($live, $saved)) {
+                throw new RuntimeException("Could not save a copy of $file before resolving, so nothing was started.");
+            }
+        }
+    }
+
+    /**
+     * The resolve, inside this request — and what happens when the host kills
+     * the request before Composer finishes.
+     *
+     * 🚨 On shared hosting the request has a time limit Millwright may not be
+     * allowed to lift, and a proxy in front of it may cut it off regardless. A
+     * kill there is not a failure of the update, so it must not look like one:
+     *
+     *   - A shutdown function puts composer.json and the lock back the moment
+     *     the request dies, so nothing is ever left half-written — PHP runs it
+     *     after a "Maximum execution time" or memory fatal. A kill PHP never
+     *     hears about (FPM's request_terminate_timeout, SIGKILL) is caught on
+     *     the retry instead, by startFromSaved().
+     *   - Composer keeps every package list it downloaded in COMPOSER_HOME
+     *     under storage/, so the next attempt starts warm and gets further.
+     *   - The admin page simply polls again; the next poll sees the attempt
+     *     that never came back, says so in the run's log, and tries again — up
+     *     to RESOLVE_ATTEMPTS times, then stops with a sentence naming the limit.
+     *
+     * @param list<string> $args
+     * @return array{code:int, output:string}
+     */
+    private function resolveInProcess(array $args): array
+    {
+        $path = $this->workDir . '/resolve.attempt.json';
+        $prev = is_file($path) ? (array) json_decode((string) @file_get_contents($path), true) : [];
+        $attempts = (int) ($prev['attempts'] ?? 0);
+
+        if ($attempts > 0) {
+            $how = $this->howItStopped($prev);
+
+            if ($attempts >= self::RESOLVE_ATTEMPTS) {
+                @unlink($path);
+                $this->startFromSaved();
+
+                throw new RuntimeException(
+                    'Nothing was changed. ' . $how . ' — ' . self::RESOLVE_ATTEMPTS . ' times in a row, before Composer '
+                    . 'finished working out this update. ' . $this->limitAdvice($prev)
+                );
+            }
+
+            if (empty($prev['announced'])) {
+                $prev['announced'] = true;
+                @file_put_contents($path, json_encode($prev));
+
+                throw new NotYet(
+                    $how . ' before Composer finished. Nothing was changed. Trying again (attempt '
+                    . ($attempts + 1) . ' of ' . self::RESOLVE_ATTEMPTS . '); Composer kept what it had already '
+                    . 'downloaded, so this attempt starts further along.'
+                );
+            }
+        }
+
+        $started = microtime(true);
+        @file_put_contents($path, json_encode(['attempts' => $attempts + 1, 'announced' => false, 'startedAt' => $started]));
+
+        $done = false;
+        $workDir = $this->workDir;
+        $installPath = $this->installPath;
+
+        register_shutdown_function(static function () use (&$done, $path, $started, $workDir, $installPath): void {
+            if ($done) {
+                return;
+            }
+
+            foreach (['composer.lock', 'composer.json'] as $file) {
+                if (is_file("$workDir/$file.before")) {
+                    self::replaceFile("$workDir/$file.before", "$installPath/$file");
+                }
+            }
+
+            $error = error_get_last();
+            $message = (string) ($error['message'] ?? '');
+            $record = (array) json_decode((string) @file_get_contents($path), true);
+            $record['stopped'] = match (true) {
+                str_contains($message, 'Maximum execution time') => 'time',
+                str_contains($message, 'Allowed memory size') => 'memory',
+                default => 'unknown',
+            };
+            $record['seconds'] = (int) round(microtime(true) - $started);
+            $record['timeLimit'] = (int) ini_get('max_execution_time');
+            $record['memoryLimit'] = (string) ini_get('memory_limit');
+            @file_put_contents($path, json_encode($record));
+        });
+
+        try {
+            return $this->composer->run($args);
+        } finally {
+            $done = true;
+            @unlink($path);
+        }
+    }
+
+    /** @param array<string,mixed> $attempt */
+    private function howItStopped(array $attempt): string
+    {
+        $seconds = (int) ($attempt['seconds'] ?? 0);
+
+        return match ($attempt['stopped'] ?? null) {
+            'time'   => 'This host stopped the request after ' . (int) ($attempt['timeLimit'] ?? $seconds) . ' seconds',
+            'memory' => 'This host stopped the request when it reached its memory limit ('
+                . (string) ($attempt['memoryLimit'] ?? '?') . ')',
+            'unknown' => 'The web server stopped the request after about ' . $seconds . ' seconds',
+            default  => 'The web server stopped the request',
+        };
+    }
+
+    /** @param array<string,mixed> $attempt */
+    private function limitAdvice(array $attempt): string
+    {
+        return match ($attempt['stopped'] ?? null) {
+            'memory' => 'Ask your host to raise memory_limit for this site (256 MB is plenty), or update fewer '
+                . 'extensions at once.',
+            default  => 'Composer keeps what it downloads, so pressing Update again later often gets further. If it '
+                . 'keeps stopping, ask your host to raise max_execution_time for this site (120 seconds is plenty), '
+                . 'or to allow proc_open so Composer can run in its own process.',
+        };
+    }
+
+    /** Copy beside, then rename over: never a half-written file in place. */
+    private static function replaceFile(string $from, string $to): bool
+    {
+        $tmp = $to . '.millwright-' . bin2hex(random_bytes(3));
+
+        if (! @copy($from, $tmp) || ! @rename($tmp, $to)) {
+            @unlink($tmp);
+
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -574,6 +753,10 @@ class ComposerSteps implements Steps
             );
         }
 
+        // Putting it back runs Composer, which must not happen in-process
+        // inside a long-lived process holding the update's classes.
+        $this->needsFreshCode();
+
         $done = $restore->run();
 
         $message = 'This update stopped the site from answering, so it has been put back. ' . $said;
@@ -749,8 +932,26 @@ class ComposerSteps implements Steps
      */
     private function register(): string
     {
+        $this->needsFreshCode();
+
         $this->raisePins();
 
+        $inProcess = $this->composer->inProcess();
+        $snapshot = $inProcess ? $this->snapshotAutoloader() : null;
+
+        try {
+            return $this->registerWith($snapshot);
+        } catch (\Throwable $e) {
+            if ($snapshot !== null) {
+                $this->restoreAutoloader($snapshot);
+            }
+
+            throw $e;
+        }
+    }
+
+    private function registerWith(?string $snapshot): string
+    {
         (new InstalledRecord($this->installPath))->syncFromLock();
 
         $dry = $this->composer->run(['install', '--no-scripts', '--dry-run']);
@@ -767,7 +968,67 @@ class ComposerSteps implements Steps
             );
         }
 
-        return $this->composerCommand(['install', '--no-scripts'], 'Composer now knows about the change');
+        if ($snapshot === null) {
+            return $this->composerCommand(['install', '--no-scripts'], 'Composer now knows about the change');
+        }
+
+        /*
+         * 🚨 In-process, the autoloader is written by THIS request, and a host
+         * that kills it mid-write would leave vendor/composer half old, half
+         * new: every page a fatal. The snapshot taken before the record was
+         * synced goes back on the way down, so a kill leaves the autoloader
+         * exactly as the apply phase left it — which rollback understands.
+         */
+        $done = false;
+        register_shutdown_function(function () use (&$done, $snapshot): void {
+            if (! $done) {
+                $this->restoreAutoloader($snapshot);
+            }
+        });
+
+        try {
+            return $this->composerCommand(['install', '--no-scripts'], 'Composer now knows about the change');
+        } finally {
+            $done = true;
+        }
+    }
+
+    /**
+     * Copy Composer's record and autoloader aside before an in-process install.
+     */
+    private function snapshotAutoloader(): string
+    {
+        $dir = $this->workDir . '/register.before';
+        $source = $this->installPath . '/vendor/composer';
+
+        if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
+            throw new RuntimeException('Could not save a copy of the autoloader, so Composer was not run.');
+        }
+
+        foreach ([...(glob($source . '/*.php') ?: []), $source . '/installed.json', $this->installPath . '/vendor/autoload.php'] as $file) {
+            if (is_file($file) && ! copy($file, $dir . '/' . $this->snapshotName($file))) {
+                throw new RuntimeException('Could not save a copy of the autoloader, so Composer was not run.');
+            }
+        }
+
+        return $dir;
+    }
+
+    private function restoreAutoloader(string $dir): void
+    {
+        foreach (glob($dir . '/*') ?: [] as $saved) {
+            $name = basename($saved);
+            $target = $name === 'autoload.php'
+                ? $this->installPath . '/vendor/autoload.php'
+                : $this->installPath . '/vendor/composer/' . substr($name, strlen('composer.'));
+
+            self::replaceFile($saved, $target);
+        }
+    }
+
+    private function snapshotName(string $file): string
+    {
+        return basename(dirname($file)) === 'composer' ? 'composer.' . basename($file) : basename($file);
     }
 
     private function composerCommand(array $args, string $note): string
@@ -786,10 +1047,12 @@ class ComposerSteps implements Steps
     private function flarum(string $command, string $note): string
     {
         /*
-         * 🚨 Run as a subprocess rather than in-process, and after the swap.
-         * These boot Flarum, and booting it inside the request that just
-         * replaced its files means loading a half-old, half-new class map. A
-         * fresh process gets the tree as it now is.
+         * 🚨 After the swap, and in a process that has the new code: its own
+         * process where the host allows one; otherwise this request, which
+         * needsFreshCode() has made sure started after the swap and after
+         * opcache let go of the old files. Booting Flarum's commands inside the
+         * request that replaced its files would load a half-old, half-new class
+         * map.
          *
          * 🚨 Through the same PhpBinary the Composer phases use. When these
          * disagreed, an update could get through planning, downloading and the
@@ -797,16 +1060,9 @@ class ComposerSteps implements Steps
          * because this one alone was spawned with a binary that cannot run a
          * script. Under FPM, PHP_BINARY is php-fpm.
          */
-        $php = $this->composer->php();
+        $this->needsFreshCode();
 
-        if ($php === null) {
-            throw new RuntimeException(
-                "The files are updated, but `flarum $command` could not be run: no command-line PHP was found on "
-                . 'this host. Run it yourself, or ask your host where the PHP CLI binary lives.'
-            );
-        }
-
-        $result = Process::run([$php, $this->installPath . '/flarum', $command], $this->installPath);
+        $result = (new FlarumCommand($this->installPath, $this->composer))->run($command);
 
         if ($result['code'] !== 0) {
             $lines = explode("\n", $result['output']);
@@ -815,6 +1071,17 @@ class ComposerSteps implements Steps
         }
 
         return $note;
+    }
+
+    /**
+     * Wait for a fresh request before running post-swap code in this process.
+     * A no-op wherever a subprocess does the work.
+     */
+    private function needsFreshCode(): void
+    {
+        if (! $this->composer->canSpawn()) {
+            (new FreshCode($this->workDir, $this->installPath, new Opcache()))->ensure();
+        }
     }
 
     /** @return list<Change> */

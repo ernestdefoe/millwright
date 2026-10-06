@@ -4,7 +4,7 @@ namespace ErnestDefoe\Millwright\Apply;
 
 use ErnestDefoe\Millwright\Work\ComposerRunner;
 use ErnestDefoe\Millwright\Work\InstalledRecord;
-use ErnestDefoe\Millwright\Work\Process;
+use ErnestDefoe\Millwright\Work\FlarumCommand;
 use Throwable;
 
 /**
@@ -58,8 +58,10 @@ class Restore
              * directory is gone, and dump-autoload regenerates the autoloader
              * FROM that record — it faithfully rebuilds the wrong thing.
              *
-             * A subprocess, so no Flarum boots inside the process that has just
-             * moved its files out from under it.
+             * A subprocess where the host allows, so no Flarum boots inside the
+             * process that has just moved its files out from under it. In-process
+             * otherwise: Composer's classes are not loaded by Flarum's boot, so
+             * they come from the restored files.
              */
             try {
                 // 🚨 Record first, or `install` re-extracts the packages just
@@ -100,7 +102,7 @@ class Restore
      * browser running one version's JavaScript against the other's PHP, which
      * is the exact mismatch an update finishes by preventing.
      *
-     * Same commands, same order, same subprocess as the update's finish.
+     * Same commands, same order, same runner as the update's finish.
      *
      * @param list<string> $undone appended to as each one succeeds
      */
@@ -110,12 +112,28 @@ class Restore
             return null;   // not a forum (the tests' trees)
         }
 
-        $php = $this->composer->php();
+        /*
+         * 🚨 In-process, the formatter is FORGOTTEN, not rebuilt. This request
+         * booted the version being rolled back, so building the formatter
+         * here would bake that version's extenders into the cache the older
+         * code then renders with. Forgotten, the next request — running the
+         * restored code — builds it from the right ones. Publishing assets and
+         * clearing caches only copy and delete files, so they are safe here.
+         */
+        $flarum = new FlarumCommand($this->basePath, $this->composer);
+        $inProcess = ! $this->composer->processes();
+        $commands = [
+            ['assets:publish', []],
+            ['cache:clear', []],
+            ['millwright:repair-formatter', $inProcess ? ['--flush-only' => true] : []],
+        ];
 
-        foreach (['assets:publish', 'cache:clear', 'millwright:repair-formatter'] as $command) {
-            $result = $php === null
-                ? ['code' => 1, 'output' => 'no command-line PHP was found on this host']
-                : Process::run([$php, $this->basePath . '/flarum', $command], $this->basePath);
+        foreach ($commands as [$command, $options]) {
+            try {
+                $result = $flarum->run($command, $options);
+            } catch (Throwable $e) {
+                $result = ['code' => 1, 'output' => $e->getMessage()];
+            }
 
             if ($result['code'] !== 0) {
                 return "The files are back, but `php flarum $command` failed, so the forum may still be serving "

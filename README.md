@@ -12,8 +12,9 @@ interrupted update costs you progress, never your site.
 
 - Flarum **2.0** or newer
 - PHP **8.3+**
-- PHP must be allowed to start a subprocess (`proc_open`). Millwright tells you
-  on its own settings page if your host forbids this.
+- Nothing else. Where PHP may start a subprocess (`proc_open`), Composer runs in
+  its own process. Where it may not, as on most shared hosting, Composer runs
+  inside the web request instead (see below). Millwright → This host says which.
 
 Composer ships with Millwright, so your host does not need it installed.
 
@@ -94,9 +95,18 @@ So the gap is on **updates**, not installs. Update an already-enabled extension
 that ships a new migration or new JS, and the schema is left behind the code and
 the browser keeps serving the old assets, with nothing saying so.
 
-## Troubleshooting: Millwright says it can't run Composer
+## Hosts without proc_open: "Runs without separate processes"
 
-Open **Millwright → This host**. It names which of three things is in the way, and what to change.
+When the website's PHP cannot start another program (`proc_open` in `disable_functions`, or no command-line PHP to start), Millwright runs Composer inside the web request. That is safe here because Composer never touches `vendor/`: it only works out the new `composer.lock`, and Millwright downloads and swaps the packages itself, journalled, exactly as it does everywhere else. The limits:
+
+- Composer shares the request's memory and time. Millwright lifts both while Composer runs where the host allows, and puts them back afterwards.
+- The first update on a cold Composer cache is slow. Measured on a forum with 346 packages and 22 private GitHub repositories: about 145 seconds cold, 27 warm. If the host or the web server cuts the request short, nothing is changed: composer.json and composer.lock are put back, and the next poll of the Millwright page tries again (up to six times), each time with more of Composer's cache already downloaded.
+- Git cannot run, so a Git source Composer would need git for is refused before anything changes, with the fix named: add a GitHub token under **Sources** so Composer reads the repository through GitHub's API, or serve the package from a Composer repository. Repositories marked `"no-api": true` always need git.
+- Migrations, asset publishing and cache clearing run through Flarum's own console inside a fresh request after the swap, once PHP's compiled-code cache has let go of the old files. A queue worker leaves those steps to the admin page, so keep it open until the update finishes.
+
+## Troubleshooting: Millwright says it can't run Composer in its own process
+
+Open **Millwright → This host**. It names what is in the way, and what to change. None of these stop updates any more; fixing them moves Composer back into its own process.
 
 **proc_open is disabled.** The website's PHP lists `proc_open` in `disable_functions`, so it cannot start any other program. Ask your host to remove it for this site. The row names the php.ini the setting comes from.
 

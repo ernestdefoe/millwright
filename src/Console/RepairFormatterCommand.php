@@ -38,7 +38,14 @@ class RepairFormatterCommand extends AbstractCommand
     {
         $this
             ->setName('millwright:repair-formatter')
-            ->setDescription('Rebuild the post formatter so its cached renderer and generated class agree.');
+            ->setDescription('Rebuild the post formatter so its cached renderer and generated class agree.')
+            /*
+             * Forget the cached formatter without building a new one. For a
+             * rollback run in-process: the request doing it booted the newer
+             * version, so the NEXT request — on the restored code — must be
+             * the one that builds it.
+             */
+            ->addOption('flush-only', null, \Symfony\Component\Console\Input\InputOption::VALUE_NONE, 'Only forget the cached formatter.');
     }
 
     protected function fire(): int
@@ -46,6 +53,13 @@ class RepairFormatterCommand extends AbstractCommand
         $formatter = resolve(Formatter::class);
 
         $formatter->flush();
+
+        if ($this->input->getOption('flush-only')) {
+            $this->info('Formatter forgotten; the next request rebuilds it.');
+
+            return 0;
+        }
+
         $formatter->warm();
 
         /*

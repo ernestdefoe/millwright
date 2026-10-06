@@ -44,6 +44,12 @@ class StepRunner
     private bool $waiting = false;
 
     /**
+     * True when the wait can only be ended by a web request — see
+     * NeedsWebRequest. A queue worker or terminal should stop asking.
+     */
+    private bool $needsWeb = false;
+
+    /**
      * 🚨 A factory is preferred over a fixed Steps, so the run id is an argument
      * rather than something the container decided once and remembered. Inside a
      * queue worker — a long-lived process — a remembered one carries the
@@ -78,6 +84,11 @@ class StepRunner
         return $this->waiting;
     }
 
+    public function needsWebRequest(): bool
+    {
+        return $this->needsWeb;
+    }
+
     public function begin(string $id): Run
     {
         $run = Run::start($id, $this->now());
@@ -93,6 +104,7 @@ class StepRunner
     {
         $this->busy = false;
         $this->waiting = false;
+        $this->needsWeb = false;
 
         $run = $this->store->load($id);
 
@@ -236,6 +248,7 @@ class StepRunner
                  * staying on the item costs nothing.
                  */
                 $this->waiting = true;
+                $this->needsWeb = $waiting instanceof NeedsWebRequest;
                 $run = $run->waiting($this->now(), $waiting->getMessage());
                 $this->store->save($run);
 
