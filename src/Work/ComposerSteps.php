@@ -321,6 +321,7 @@ class ComposerSteps implements Steps
         $installPath = $this->installPath;
 
         register_shutdown_function(static function () use (&$done, $path, $started, $workDir, $installPath): void {
+            // @phpstan-ignore if.alwaysFalse ($done is set by reference once the work completes)
             if ($done) {
                 return;
             }
@@ -988,6 +989,7 @@ class ComposerSteps implements Steps
          */
         $done = false;
         register_shutdown_function(function () use (&$done, $snapshot): void {
+            // @phpstan-ignore booleanNot.alwaysTrue ($done is set by reference once the work completes)
             if (! $done) {
                 $this->restoreAutoloader($snapshot);
             }

@@ -64,7 +64,7 @@ class SiteHealth
     }
 
     /**
-     * @return array{ok:bool, status:int|null, why:string}
+     * @return array{ok:bool, status:int|null, why:string, body?:string}
      */
     private function once(string $url): array
     {

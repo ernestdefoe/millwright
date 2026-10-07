@@ -39,7 +39,7 @@ class StepJob extends AbstractJob
      * state is on disk, so the correct recovery is for any driver to call step()
      * again — which the admin page does every couple of seconds regardless.
      */
-    public $tries = 1;
+    public int $tries = 1;
 
     /**
      * 🚨 Long enough for the one step that genuinely takes minutes.
@@ -56,7 +56,7 @@ class StepJob extends AbstractJob
      * for this job alone rather than making every other queue on the forum wait
      * fifteen minutes to notice a wedged job.
      */
-    public $timeout = 900;
+    public int $timeout = 900;
 
     public function __construct(private string $runId)
     {

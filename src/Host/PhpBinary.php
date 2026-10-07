@@ -140,7 +140,7 @@ class PhpBinary
             $version = null;
         }
         $result['ran'] = true;
-        $result['sapi'] = $sapi !== '' ? $sapi : null;
+        $result['sapi'] = $sapi;
         $result['version'] = $version;
         $result['ok'] = $run['code'] === 0 && $sapi === 'cli';
 
@@ -148,7 +148,7 @@ class PhpBinary
             $err = trim($run['err']) !== '' ? trim($run['err']) : trim($run['out']);
             $result['error'] = $err !== ''
                 ? mb_substr(strtok($err, "\n") ?: $err, 0, 300)
-                : ($sapi !== null && $sapi !== '' && $sapi !== 'cli' ? "reports SAPI \"$sapi\", not cli" : 'exit code ' . $run['code']);
+                : ($sapi !== null && $sapi !== 'cli' ? "reports SAPI \"$sapi\", not cli" : 'exit code ' . $run['code']);
         }
 
         return $this->probes[$candidate] = $result;
@@ -161,7 +161,7 @@ class PhpBinary
      * @return array{
      *   spawn: bool, found: ?string, version: ?string, override: ?string,
      *   openBasedir: ?string, hiddenPath: ?string, failedPath: ?string, failedError: ?string,
-     *   panel: ?string, ini: ?string
+     *   detected: ?string, panel: ?string, ini: ?string
      * }
      */
     public function diagnose(): array
@@ -207,7 +207,7 @@ class PhpBinary
                 break;
             }
 
-            if ($out['failedPath'] === null && $p['ran'] && ! $p['ok']) {
+            if ($out['failedPath'] === null && $p['ran']) {
                 $out['failedPath'] = $candidate;
                 $out['failedError'] = $p['error'];
             }

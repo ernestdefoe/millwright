@@ -77,6 +77,7 @@ class Change
             self::REPLACE => "{$this->package} {$this->from} → {$this->to}",
             self::ADD     => "{$this->package} {$this->to} (new)",
             self::REMOVE  => "{$this->package} {$this->from} (removed)",
+            default       => $this->package,
         };
     }
 

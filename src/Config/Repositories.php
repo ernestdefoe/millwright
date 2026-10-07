@@ -123,7 +123,7 @@ class Repositories
             throw new RuntimeException('That repository is not in composer.json.');
         }
 
-        $data['repositories'] = array_values($keep);
+        $data['repositories'] = $keep;
         $this->file->write($data);
     }
 }

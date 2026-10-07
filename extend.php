@@ -38,7 +38,7 @@ return [
          * would be 165 MB on somebody else's shared host, every night, for a
          * question they may not have asked.
          */
-        ->schedule(CheckCommand::class, fn ($event) => $event->daily())
+        ->schedule(CheckCommand::class, function ($event): void { $event->daily(); })
         /*
          * 🚨 Tidies the rollback copies no rollback can reach. Also runs at the
          * end of every update; nightly catches the forum that has not updated
@@ -49,7 +49,7 @@ return [
          * option refuses — every night, into /dev/null.
          */
         ->command(PruneCommand::class)
-        ->schedule(PruneCommand::class, fn ($event) => $event->dailyAt('04:20')),
+        ->schedule(PruneCommand::class, function ($event): void { $event->dailyAt('04:20'); }),
 
     new Extend\Locales(__DIR__ . '/resources/locale'),
 

@@ -441,7 +441,7 @@ class PruneTest extends TestCase
 
         // A keyed ['--dry-run' => true] renders as --dry-run='1' and fails nightly, silently.
         $this->assertMatchesRegularExpression(
-            '/->schedule\(PruneCommand::class, fn \(\$event\) => \$event->dailyAt\(\'[0-9:]+\'\)\)/',
+            '/->schedule\(PruneCommand::class, function \(\$event\): void \{ \$event->dailyAt\(\'[0-9:]+\'\); \}\)/',
             $extend
         );
         $this->assertStringContainsString('->command(PruneCommand::class)', $extend);

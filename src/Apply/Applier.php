@@ -106,6 +106,7 @@ class Applier
             Change::REPLACE => $this->replace($change),
             Change::ADD     => $this->add($change),
             Change::REMOVE  => $this->remove($change),
+            default         => throw new RuntimeException("Unknown change \"{$change->op}\" for {$change->package}"),
         };
 
         $this->journal->complete($seq);

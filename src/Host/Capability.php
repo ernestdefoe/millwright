@@ -159,7 +159,7 @@ class Capability
             'why'  => match ($tier) {
                 self::FULL     => 'A resolve on a forum this size peaks around 165 MB, so everything works, including updating Flarum itself.',
                 self::TARGETED => 'Enough to update one extension at a time, but not to re-resolve everything at once. Updating Flarum needs about 192 MB.',
-                self::NONE     => 'Below about 160 MB, Composer cannot resolve dependencies here at all. Ask your host to raise memory_limit — 256 MB is plenty.',
+                default        => 'Below about 160 MB, Composer cannot resolve dependencies here at all. Ask your host to raise memory_limit — 256 MB is plenty.',
             },
         ];
     }
@@ -425,7 +425,7 @@ class Capability
         return match ($this->resolveTier($bytes)) {
             self::FULL => 'Everything works on this host. Updates replace one package at a time, which is safe and reversible.',
             self::TARGETED => 'You can update extensions one at a time here. Updating Flarum itself needs a little more memory than this host allows.',
-            self::NONE => 'This host does not have enough memory for Composer to work out what an update involves. Everything else is ready — ask your host to raise memory_limit to 256 MB.',
+            default => 'This host does not have enough memory for Composer to work out what an update involves. Everything else is ready — ask your host to raise memory_limit to 256 MB.',
         };
     }
 

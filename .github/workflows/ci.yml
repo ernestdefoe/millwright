@@ -42,6 +42,11 @@ jobs:
       - name: Test
         run: vendor/bin/phpunit
 
+      # The same bar as Flarum's own monorepo: level 6 with flarum/phpstan, so
+      # moving this into the Flarum org is a move, not a clean-up project.
+      - name: Static analysis
+        run: vendor/bin/phpstan analyse --memory-limit=2G --no-progress
+
   js:
     name: JS tests
     runs-on: ubuntu-latest

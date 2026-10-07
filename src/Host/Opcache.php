@@ -60,7 +60,7 @@ class Opcache
 
         $config = @opcache_get_configuration();
 
-        return $this->situationFrom(is_array($config) ? (array) ($config['directives'] ?? []) : []);
+        return $this->situationFrom(is_array($config) ? $config['directives'] : []);
     }
 
     /**
