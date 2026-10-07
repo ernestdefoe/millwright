@@ -14,6 +14,9 @@ import CorePanel from './CorePanel';
 import SourcesTab from './SourcesTab';
 import HistoryTab from './HistoryTab';
 
+/** This extension's own package: updating it means this page's code is out of date. */
+const SELF_PACKAGE = 'ernestdefoe/millwright';
+
 declare const m: any;
 
 interface Installed {
@@ -276,6 +279,27 @@ export default class MillwrightPage extends ExtensionPage {
     return hidesPage(this.run, this.dismissed);
   }
 
+  /**
+   * 🚨 Millwright updating ITSELF leaves this page running the old version's
+   * code: the header still said v1.15.0 under a finished v1.16.1 update
+   * (ClaudiusH, 2026-10-07). So the page reloads, once per run and outcome.
+   * The finished panel comes straight back, because the run is on disk.
+   */
+  private reloadIfSelf(run: any) {
+    if (!run || !['done', 'rolled-back'].includes(run.state) || !(run.packages || []).includes(SELF_PACKAGE)) return;
+
+    const key = 'millwright.reloaded.' + run.id + '.' + run.state;
+
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, '1');
+    } catch (e) {
+      return; // No way to remember it: better a stale page than a reload loop.
+    }
+
+    window.location.reload();
+  }
+
   runPanel() {
     return (
       <RunPanel
@@ -298,11 +322,13 @@ export default class MillwrightPage extends ExtensionPage {
           this.run = run;
           // Versions on the cards are stale the moment an update lands.
           this.load();
+          this.reloadIfSelf(run);
         }}
         onrollback={(data: any) => {
           this.run = data.run;
           this.rollbackNote = data.next || null;
           this.load();
+          this.reloadIfSelf(data.run);
         }}
         onerror={(message: string) => (this.notice = message)}
       />

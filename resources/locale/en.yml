@@ -86,6 +86,8 @@ ernestdefoe-millwright:
       The rollback itself failed. Nothing was deleted at any point, so the old
       files are still under storage/millwright/trash.
     dismiss: Dismiss
+    reload_page: Reload the page
+    reload_page_why: This page still has the previous versions' code and version numbers until it reloads.
 
     # 🚨 Each of these says what IS happening, not just that something is wrong.
     # A message that only signals trouble is how somebody ends up refreshing a

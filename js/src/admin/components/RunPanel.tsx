@@ -204,6 +204,13 @@ export default class RunPanel extends Component<RunPanelAttrs> {
             <button className="Button" onclick={() => this.attrs.ondismiss()}>
               {t('dismiss')}
             </button>
+            {/* The page still holds each changed extension's old admin code and
+                version until it reloads (ClaudiusH). */}
+            {done || rolled ? (
+              <button className="Button Button--link Millwright-undo" title={t('reload_page_why')} onclick={() => window.location.reload()}>
+                {t('reload_page')}
+              </button>
+            ) : null}
             {done ? (
               <button
                 className="Button Button--link Millwright-undo"
