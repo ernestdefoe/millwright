@@ -43,6 +43,7 @@ class SiteHealth
              */
             $last = $this->once($this->url . (str_contains($this->url, '?') ? '&' : '?')
                 . 'millwright-health=' . bin2hex(random_bytes(6)));
+            unset($last['body']);   // read for the loopback check, never passed on
 
             if ($last['ok']) {
                 return $last;
@@ -67,6 +68,54 @@ class SiteHealth
      */
     private function once(string $url): array
     {
+        $direct = $this->request($url);
+
+        if ($direct['status'] !== null || ! function_exists('curl_init')) {
+            return $direct;
+        }
+
+        /*
+         * 🚨 Unreachable at its own address: ask the web server on this
+         * machine directly, naming the site in the Host header.
+         *
+         * Inside a container the forum's address is the HOST's — localhost:8080
+         * on Flarum-in-a-box, 127.0.0.1:8299 behind a port mapping — and from in
+         * here nothing listens there, while the web server answering the
+         * forum's requests is on port 80 of this very container. Every Docker
+         * install measured on 2026-10-07 had the check switched off this way,
+         * and with it the automatic rollback.
+         *
+         * Only when the direct request could not CONNECT, so a site that
+         * answers normally is never second-guessed. And a loopback answer only
+         * counts as healthy when it names this forum, since port 80 here may
+         * belong to another site entirely.
+         */
+        $host = (string) parse_url($url, PHP_URL_HOST);
+        $port = parse_url($url, PHP_URL_PORT);
+        $path = (string) (parse_url($url, PHP_URL_PATH) ?: '/') . (($q = parse_url($url, PHP_URL_QUERY)) ? '?' . $q : '');
+
+        if ($host === '') {
+            return $direct;
+        }
+
+        $local = $this->request('http://127.0.0.1' . $path, $host . ($port ? ':' . $port : ''));
+
+        if ($local['status'] === null) {
+            return $direct;
+        }
+
+        if ($local['ok'] && ! str_contains($local['body'], $host)) {
+            return $direct;
+        }
+
+        return ['ok' => $local['ok'], 'status' => $local['status'], 'why' => $local['why'] . ' (asked this server directly; its own address is not reachable from here)'];
+    }
+
+    /**
+     * @return array{ok:bool, status:int|null, why:string, body?:string}
+     */
+    private function request(string $url, ?string $hostHeader = null): array
+    {
         if (! function_exists('curl_init')) {
             /*
              * 🚨 Reported as UNUSABLE, never as healthy. A check that cannot run
@@ -86,7 +135,7 @@ class SiteHealth
             // A redirect is a working site, and following one only adds ways to fail.
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_USERAGENT      => 'Millwright health check',
-            CURLOPT_HTTPHEADER     => ['Cache-Control: no-cache', 'Pragma: no-cache'],
+            CURLOPT_HTTPHEADER     => array_merge(['Cache-Control: no-cache', 'Pragma: no-cache'], $hostHeader !== null ? ['Host: ' . $hostHeader] : []),
         ]);
 
         $body = curl_exec($ch);
@@ -114,6 +163,6 @@ class SiteHealth
             return ['ok' => false, 'status' => $status, 'why' => 'The site answered ' . $status . '.'];
         }
 
-        return ['ok' => true, 'status' => $status, 'why' => 'The site answered ' . $status . '.'];
+        return ['ok' => true, 'status' => $status, 'why' => 'The site answered ' . $status . '.', 'body' => (string) $body];
     }
 }
