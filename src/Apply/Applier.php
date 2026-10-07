@@ -14,7 +14,7 @@ use RuntimeException;
  *     vendor/<pkg>   → trash/<pkg>@<version>     (the old one is kept)
  *     staging/<pkg>  → vendor/<pkg>              (the new one arrives)
  *
- * Both are `rename()`, so each is atomic and effectively instantaneous. The
+ * Both are `rename()` (Tree::move), so each is atomic and effectively instantaneous. The
  * package is absent between them, and only between them — microseconds, for one
  * package, against Extension Manager's window of deleting 1.3 GB and moving it
  * back. Nothing is deleted at all during an apply: the old tree waits in the
@@ -206,6 +206,11 @@ class Applier
 
         $target = $this->path($this->trashDir, $change->trashName());
 
+        // A copy-move killed mid-delete: the stash is whole, finish it.
+        if (Tree::finishMove($live, $target)) {
+            return;
+        }
+
         if (is_dir($target)) {
             // Left by an earlier attempt at this same change. The live copy is
             // the newer truth, so the stale stash goes.
@@ -214,7 +219,7 @@ class Applier
 
         $this->ensureDir(dirname($target));
 
-        if (! @rename($live, $target)) {
+        if (! Tree::move($live, $target)) {
             throw new RuntimeException("Could not move $live aside to $target");
         }
     }
@@ -241,12 +246,12 @@ class Applier
              */
             $orphan = $this->path($this->trashDir, $change->trashName() . '.superseded');
             Tree::delete($orphan);
-            @rename($live, $orphan);
+            Tree::move($live, $orphan);
         }
 
         $this->ensureDir(dirname($live));
 
-        if (! @rename($staged, $live)) {
+        if (! Tree::move($staged, $live)) {
             throw new RuntimeException("Could not move $staged into place at $live");
         }
     }

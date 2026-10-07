@@ -148,14 +148,14 @@ class Rollback
             $aside = $this->path($this->trashDir, $change->trashName() . '.rolledback');
             Tree::delete($aside);
 
-            if (! @rename($live, $aside)) {
+            if (! Tree::move($live, $aside)) {
                 throw new RuntimeException("Could not move $live aside during rollback");
             }
         }
 
         $this->ensureDir(dirname($live));
 
-        if (! @rename($stash, $live)) {
+        if (! Tree::move($stash, $live)) {
             throw new RuntimeException("Could not restore $stash to $live");
         }
     }
@@ -174,7 +174,7 @@ class Rollback
         Tree::delete($aside);
         $this->ensureDir(dirname($aside));
 
-        if (! @rename($live, $aside)) {
+        if (! Tree::move($live, $aside)) {
             throw new RuntimeException("Could not remove $live during rollback");
         }
 
