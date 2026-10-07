@@ -2,6 +2,9 @@ import app from 'flarum/admin/app';
 import Component from 'flarum/common/Component';
 import t from '../t';
 
+// Flarum ships dayjs (with LLL formats) as a global.
+declare const dayjs: any;
+
 /**
  * What changed on this forum, and when — the "recently updated" list an app
  * store keeps. Read from storage/millwright/history.json (see History.php).
