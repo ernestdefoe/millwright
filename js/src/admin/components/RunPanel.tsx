@@ -1,4 +1,5 @@
 import app from 'flarum/admin/app';
+import t from '../t';
 import extractText from 'flarum/common/utils/extractText';
 import apiUrl from '../apiUrl';
 import { pollOutcome, runIsOver, shouldPoll } from '../runState';
@@ -6,7 +7,6 @@ import Component from 'flarum/common/Component';
 
 declare const m: any;
 
-const t = (k: string, p?: any) => app.translator.trans('ernestdefoe-millwright.admin.' + k, p);
 
 const PHASES = ['plan', 'fetch', 'apply', 'finalise'];
 

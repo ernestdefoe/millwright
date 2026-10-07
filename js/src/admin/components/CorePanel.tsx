@@ -1,10 +1,10 @@
 import app from 'flarum/admin/app';
+import t from '../t';
 import apiUrl from '../apiUrl';
 import Component from 'flarum/common/Component';
 
 declare const m: any;
 
-const t = (k: string, p?: any) => app.translator.trans('ernestdefoe-millwright.admin.' + k, p);
 
 interface Row {
   package: string;
@@ -185,7 +185,7 @@ export default class CorePanel extends Component<CoreAttrs> {
       })
       .catch(() => {
         this.loading = false;
-        this.error = t('core_failed') as unknown as string;
+        this.error = t('core_failed');
         m.redraw();
       });
   }
@@ -201,7 +201,7 @@ export default class CorePanel extends Component<CoreAttrs> {
         if (pending.length) this.resolve(pending, target);
       })
       .catch(() => {
-        this.error = t('core_failed') as unknown as string;
+        this.error = t('core_failed');
         m.redraw();
       });
   }

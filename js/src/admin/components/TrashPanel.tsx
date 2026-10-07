@@ -1,4 +1,5 @@
 import app from 'flarum/admin/app';
+import t from '../t';
 import Component from 'flarum/common/Component';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import extractText from 'flarum/common/utils/extractText';
@@ -6,7 +7,6 @@ import apiUrl from '../apiUrl';
 
 declare const m: any;
 
-const t = (k: string, p?: any) => app.translator.trans('ernestdefoe-millwright.admin.' + k, p);
 
 function human(bytes: number): string {
   const units: [string, number][] = [
@@ -169,7 +169,7 @@ export default class TrashPanel extends Component {
         this.done = null;
 
         if (data.pruned) {
-          this.done = t('trash_done', { count: data.pruned.removed, size: human(data.pruned.freed || 0) }) as unknown as string;
+          this.done = t('trash_done', { count: data.pruned.removed, size: human(data.pruned.freed || 0) });
         } else if (doneText) {
           this.done = doneText as unknown as string;
         }
@@ -180,7 +180,7 @@ export default class TrashPanel extends Component {
         // 🚨 The server's own words: a refusal here names the run it is protecting.
         this.loading = false;
         this.busy = false;
-        this.error = e?.response?.error || (t('trash_failed') as unknown as string);
+        this.error = e?.response?.error || t('trash_failed');
         m.redraw();
       });
   }

@@ -1,10 +1,10 @@
 import app from 'flarum/admin/app';
+import t from '../t';
 import Component from 'flarum/common/Component';
 import apiUrl from '../apiUrl';
 
 declare const m: any;
 
-const t = (k: string, p?: any) => app.translator.trans('ernestdefoe-millwright.admin.' + k, p);
 
 interface Line { key: string; params?: Record<string, string> }
 interface Check {

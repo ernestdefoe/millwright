@@ -1,4 +1,5 @@
 import app from 'flarum/admin/app';
+import t from '../t';
 import apiUrl from '../apiUrl';
 import { liveSearchPlan, submittedSearchPlan } from '../searchPolicy';
 import Component from 'flarum/common/Component';
@@ -6,7 +7,6 @@ import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 
 declare const m: any;
 
-const t = (k: string, p?: any) => app.translator.trans('ernestdefoe-millwright.admin.' + k, p);
 
 interface Found {
   name: string;
@@ -102,7 +102,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
           <input
             className="FormControl"
             type="search"
-            placeholder={t('discover_placeholder') as unknown as string}
+            placeholder={t('discover_placeholder')}
             value={this.query}
             oninput={(e: any) => {
               this.query = e.target.value;
@@ -211,11 +211,11 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
               * beside the button read like a verdict on the wrong question.
               */}
             {this.replacement(r, v) ? (
-              <span className="Millwright-tag Millwright-tag--warn" title={t('replaced_why') as unknown as string}>
+              <span className="Millwright-tag Millwright-tag--warn" title={t('replaced_why')}>
                 {t('replaced_by', { replacement: this.replacement(r, v) })}
               </span>
             ) : v?.replaced ? (
-              <span className="Millwright-tag Millwright-tag--warn" title={t('replaced_why') as unknown as string}>
+              <span className="Millwright-tag Millwright-tag--warn" title={t('replaced_why')}>
                 {t('replaced')}
               </span>
             ) : r.abandoned ? (
@@ -247,7 +247,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
 
     if (!v.compatible) {
       return (
-        <span className="Millwright-tag Millwright-tag--muted" title={t('compat_no_why', { requires: v.requires || '?' }) as unknown as string}>
+        <span className="Millwright-tag Millwright-tag--muted" title={t('compat_no_why', { requires: v.requires || '?' })}>
           {t('compat_no')}
         </span>
       );
@@ -269,8 +269,8 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
    */
   abandonedTitle(r: Found): string {
     return typeof r.abandoned === 'string' && r.abandoned
-      ? (t('abandoned_for', { replacement: r.abandoned }) as unknown as string)
-      : (t('abandoned_why') as unknown as string);
+      ? t('abandoned_for', { replacement: r.abandoned })
+      : t('abandoned_why');
   }
 
   /**
@@ -379,7 +379,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
          * short of changing it — will retry.
          */
         this.lastSearched = null;
-        this.error = t('discover_failed') as unknown as string;
+        this.error = t('discover_failed');
         m.redraw();
       });
   }

@@ -1,4 +1,5 @@
 import app from 'flarum/admin/app';
+import t from '../t';
 import extractText from 'flarum/common/utils/extractText';
 import apiUrl from '../apiUrl';
 import { cardOffers, dismissalApplies, hidesPage, runIsLive, showingRun, sortForGrid } from '../runState';
@@ -27,7 +28,6 @@ interface Installed {
   pathInstall: boolean;
 }
 
-const t = (k: string, p?: any) => app.translator.trans('ernestdefoe-millwright.admin.' + k, p);
 
 export default class MillwrightPage extends ExtensionPage {
   /*
@@ -98,7 +98,7 @@ export default class MillwrightPage extends ExtensionPage {
      */
     setTimeout(() => {
       if (this.firstLoad) {
-        this.loadError = t('load_timeout') as unknown as string;
+        this.loadError = t('load_timeout');
         this.firstLoad = false;
         m.redraw();
       }
@@ -113,7 +113,7 @@ export default class MillwrightPage extends ExtensionPage {
     try {
       this.load();
     } catch (e: any) {
-      this.loadError = e?.message ? String(e.message) : (t('load_failed') as unknown as string);
+      this.loadError = e?.message ? String(e.message) : t('load_failed');
       this.firstLoad = false;
     }
   }
@@ -152,7 +152,7 @@ export default class MillwrightPage extends ExtensionPage {
          * is how somebody ends up staring at a screen that looks broken with
          * nowhere to look next.
          */
-        this.loadError = e?.response?.error || e?.message || (t('load_failed') as unknown as string);
+        this.loadError = e?.response?.error || e?.message || t('load_failed');
         this.firstLoad = false;
         m.redraw();
       });
@@ -500,11 +500,11 @@ export default class MillwrightPage extends ExtensionPage {
 
   ago(unix: number): string {
     const mins = Math.max(1, Math.round(Date.now() / 1000 - unix) / 60);
-    if (mins < 60) return t('ago_minutes', { count: Math.round(mins) }) as unknown as string;
+    if (mins < 60) return t('ago_minutes', { count: Math.round(mins) });
     const hours = Math.round(mins / 60);
     return hours < 48
-      ? (t('ago_hours', { count: hours }) as unknown as string)
-      : (t('ago_days', { count: Math.round(hours / 24) }) as unknown as string);
+      ? t('ago_hours', { count: hours })
+      : t('ago_days', { count: Math.round(hours / 24) });
   }
 
   /** Anything with a newer version first — that is what somebody came to see. */
@@ -569,7 +569,7 @@ export default class MillwrightPage extends ExtensionPage {
                   </span>
                 )}
                 {e.pathInstall ? (
-                  <span className="Millwright-tag Millwright-tag--muted" title={t('path_install_why') as unknown as string}>
+                  <span className="Millwright-tag Millwright-tag--muted" title={t('path_install_why')}>
                     {t('path_install')}
                   </span>
                 ) : null}

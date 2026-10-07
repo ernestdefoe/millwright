@@ -1,4 +1,5 @@
 import app from 'flarum/admin/app';
+import t from '../t';
 import apiUrl from '../apiUrl';
 import Component from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
@@ -6,7 +7,6 @@ import LinkButton from 'flarum/common/components/LinkButton';
 
 declare const m: any;
 
-const t = (k: string, p?: any) => app.translator.trans('ernestdefoe-millwright.admin.' + k, p);
 
 interface Pending {
   package: string;
@@ -180,12 +180,12 @@ export default class UpdateBanner extends Component {
   private ago(unix: number): string {
     const mins = Math.max(1, Math.round((Date.now() / 1000 - unix) / 60));
 
-    if (mins < 60) return t('ago_minutes', { count: mins }) as unknown as string;
+    if (mins < 60) return t('ago_minutes', { count: mins });
 
     const hours = Math.round(mins / 60);
 
     return hours < 48
-      ? (t('ago_hours', { count: hours }) as unknown as string)
-      : (t('ago_days', { count: Math.round(hours / 24) }) as unknown as string);
+      ? t('ago_hours', { count: hours })
+      : t('ago_days', { count: Math.round(hours / 24) });
   }
 }
