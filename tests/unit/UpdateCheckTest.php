@@ -215,4 +215,31 @@ class UpdateCheckTest extends TestCase
         @rmdir($dir . '/millwright');
         @rmdir($dir);
     }
+
+    /**
+     * 🚨 ClaudiusH, 2026-10-07: straight after updating Mobile Tab to 2.0.1 its
+     * card still offered "2.0.0 → 2.0.1", from the check saved before it.
+     */
+    public function test_an_update_already_installed_is_no_longer_offered(): void
+    {
+        file_put_contents($this->cache, json_encode(['checkedAt' => time(), 'updates' => [
+            'acpl/mobile-tab'        => ['from' => '2.0.0', 'to' => '2.0.1'],
+            'ernestdefoe/millwright' => ['from' => 'v1.13.0', 'to' => 'v1.14.0'],
+            'fof/upload'             => ['from' => '2.0.0-beta.7', 'to' => '2.0.2'],
+            'acme/gone'              => ['from' => '1.0.0', 'to' => '1.1.0'],
+        ]]));
+        $lock = $this->cache . '.lock';
+        file_put_contents($lock, json_encode(['packages' => [
+            ['name' => 'acpl/mobile-tab', 'type' => 'flarum-extension', 'version' => '2.0.1'],
+            ['name' => 'ernestdefoe/millwright', 'type' => 'flarum-extension', 'version' => 'v1.14.0'],
+            ['name' => 'fof/upload', 'type' => 'flarum-extension', 'version' => '2.0.0'],
+        ]]));
+
+        $updates = $this->check()->current($lock)['updates'];
+        @unlink($lock);
+
+        $this->assertSame(['fof/upload', 'acme/gone'], array_keys($updates));
+        // Part of the way there: still offered, from where it really is now.
+        $this->assertSame(['from' => '2.0.0', 'to' => '2.0.2'], $updates['fof/upload']);
+    }
 }

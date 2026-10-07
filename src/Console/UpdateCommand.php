@@ -99,7 +99,7 @@ class UpdateCommand extends AbstractCommand
         }
 
         if ($all) {
-            $named = array_keys((array) ($this->check()->cached()['updates'] ?? []));
+            $named = array_keys((array) ($this->check()->current($this->paths->base . '/composer.lock')['updates'] ?? []));
 
             if ($named === []) {
                 /*

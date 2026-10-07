@@ -158,6 +158,39 @@ class UpdateCheck
         return (array) json_decode((string) file_get_contents($this->cachePath), true);
     }
 
+    /**
+     * The cached check, minus what has been installed since.
+     *
+     * 🚨 The check is saved when it runs and an update does not re-run it, so
+     * straight after updating Mobile Tab to 2.0.1 its card still offered
+     * "2.0.0 → 2.0.1" (ClaudiusH, 2026-10-07), and Millwright offered itself the
+     * version it was already running. Each entry is measured against what
+     * composer.lock says now: dropped once reached, and its "from" kept true
+     * when only part of the way.
+     *
+     * @return array<string,mixed>
+     */
+    public function current(string $lockPath): array
+    {
+        $cached = $this->cached();
+        $lock = (array) json_decode((string) @file_get_contents($lockPath), true);
+        $now = $this->interesting(array_merge((array) ($lock['packages'] ?? []), (array) ($lock['packages-dev'] ?? [])));
+
+        $updates = [];
+
+        foreach ((array) ($cached['updates'] ?? []) as $name => $update) {
+            $installed = $now[$name] ?? null;
+
+            if ($installed === null || self::tracksABranch($installed)) {
+                $updates[$name] = $update;
+            } elseif ($this->isNewer((string) ($update['to'] ?? ''), $installed)) {
+                $updates[$name] = ['from' => $installed] + $update;
+            }
+        }
+
+        return ['updates' => $updates] + $cached;
+    }
+
     public function isStale(): bool
     {
         $at = $this->cached()['checkedAt'] ?? null;

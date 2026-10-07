@@ -38,7 +38,7 @@ class StateController implements RequestHandlerInterface
         $run = $this->runs->latest();
 
         $check = new UpdateCheck($this->paths->storage . '/millwright/updates.json');
-        $cached = $check->cached();
+        $cached = $check->current($this->paths->base . '/composer.lock');
 
         return new JsonResponse([
             'host'       => (new Capability($this->paths->base, PhpBinary::forStorage($this->paths->storage), $this->paths->storage . '/.composer'))->report(),
