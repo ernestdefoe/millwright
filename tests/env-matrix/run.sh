@@ -8,7 +8,8 @@
 #             volume, Redis (Valkey) cache, Horizon
 #   zip       the official installation zip in plain PHP + Apache, shared-hosting
 #             settings: proc_open/exec disabled, driven ONLY through the web API
-#   composer  `composer create-project`, driven from the CLI and then the web API
+#   composer  `composer create-project`, once driven from the CLI and once from
+#             the web API (composer-cli, composer-web), each on a fresh forum
 #
 # Every run starts with root-owned cache files, made the way a real forum gets
 # them (`docker exec … php flarum cache:clear` runs as root), and checks the
@@ -27,7 +28,7 @@ set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 P=mwmatrix                       # every container, network and volume starts with this
-ONLY="fiab,docker,zip,composer"
+ONLY="fiab,docker,zip,composer-cli,composer-web"
 KEEP=0
 PKG=acpl/mobile-tab
 FROM=2.0.0-beta.12
@@ -112,6 +113,16 @@ version() {
   x "php -r '\$j=json_decode(file_get_contents(\"vendor/composer/installed.json\"),true); foreach(\$j[\"packages\"] ?? \$j as \$p) if(\$p[\"name\"]===\"$PKG\") echo \$p[\"version\"];'"
 }
 
+ext_id() { echo "$PKG" | tr '/' '-'; }
+
+migrations_ran() { # how many of the extension's migrations Flarum's log holds
+  x "php -r '\$a=(require \"site.php\")->bootApp(); echo \$a->getContainer()->make(\"db\")->table(\"migrations\")->where(\"extension\", \"$(ext_id)\")->count();'" 2>/dev/null
+}
+
+recorded() { # database changes the latest run wrote down for undo
+  x "f=\$(ls -t storage/millwright/runs/*/migrations.json 2>/dev/null | head -1); [ -n \"\$f\" ] && php -r 'echo count(json_decode(file_get_contents(\$argv[1]),true));' \"\$f\" || echo 0"
+}
+
 put() { # local-file → container path, readable by everyone
   docker cp "$1" "$C:$2" && docker exec "$C" chmod 644 "$2"
 }
@@ -144,8 +155,9 @@ install_millwright() { # composer command prefix
   sleep 3; wait_for "$URL/" 90 >/dev/null
 }
 
-roll_back() { # env label
-  local key=$1 n before after state
+roll_back() { # api key
+  local key=$1 n before after state m0
+  m0=$(migrations_ran)
   n=$(plant_root_cache)
   state=$(curl -s -m 300 -X POST -H "Authorization: Token $key" -H 'Content-Type: application/json' -d '{}' "$URL/api/millwright/rollback" \
     | php -r '$j=json_decode(stream_get_contents(STDIN),true); echo $j["run"]["state"] ?? ("error: " . substr(json_encode($j), 0, 160));')
@@ -153,10 +165,12 @@ roll_back() { # env label
   check "$ENV" "undo: run state ($n root-owned)" "$([ "$state" = rolled-back ] && echo 1)" "$state"
   check "$ENV" "undo: version restored" "$([ "$after" = "$FROM" ] && echo 1)" "$after"
   check "$ENV" "undo: site answers" "$([ "$(code /)" = 200 ] && echo 1)" "home $(code /)"
+  check "$ENV" "undo: db changes reversed" "$([ "$(( m0 - $(migrations_ran) ))" = "${MIGRATED:-0}" ] && echo 1)" "${MIGRATED:-0} to reverse, $(( m0 - $(migrations_ran) )) reversed"
 }
 
 update_cli() {
-  local n out v
+  local n out v m0 m1
+  m0=$(migrations_ran)
   n=$(plant_root_cache)
   check "$ENV" "root-owned cache planted" "$([ "${n:-0}" -gt 0 ] && echo 1)" "$n file(s)"
   out=$(x "timeout 600 php flarum millwright:update $PKG 2>&1")
@@ -165,10 +179,13 @@ update_cli() {
   check "$ENV" "update (cli): health check ran" "$(echo "$out" | grep -q 'answering normally after the update' && echo 1)" "$(echo "$out" | grep -iE 'answering|not answering' | tail -1 | cut -c1-90)"
   check "$ENV" "update (cli): version moved" "$([ -n "$v" ] && [ "$v" != "$FROM" ] && echo 1)" "$FROM → $v"
   check "$ENV" "update (cli): site answers" "$([ "$(code /)" = 200 ] && echo 1)" "home $(code /)"
+  m1=$(migrations_ran); MIGRATED=$((m1 - m0))
+  check "$ENV" "update (cli): db changes recorded" "$([ "$(recorded)" = "$MIGRATED" ] && echo 1)" "$MIGRATED ran, $(recorded) recorded"
 }
 
 update_web() { # api key
-  local key=$1 n start r i=0 state log v
+  local key=$1 n start r i=0 state log v m0 m1
+  m0=$(migrations_ran)
   n=$(plant_root_cache)
   check "$ENV" "root-owned cache planted" "$([ "${n:-0}" -gt 0 ] && echo 1)" "$n file(s)"
   start=$(curl -s -m 60 -X POST -H "Authorization: Token $key" -H 'Content-Type: application/json' -d "{\"packages\":[\"$PKG\"]}" "$URL/api/millwright/update")
@@ -184,6 +201,8 @@ update_web() { # api key
   check "$ENV" "update (web): health check ran" "$(echo "$log" | grep -q 'answering normally after the update' && echo 1)" "$(echo "$log" | grep -iE 'answering' | tail -1 | cut -c1-90)"
   check "$ENV" "update (web): version moved" "$([ -n "$v" ] && [ "$v" != "$FROM" ] && echo 1)" "$FROM → $v"
   check "$ENV" "update (web): site answers" "$([ "$(code /)" = 200 ] && echo 1)" "home $(code /)"
+  m1=$(migrations_ran); MIGRATED=$((m1 - m0))
+  check "$ENV" "update (web): db changes recorded" "$([ "$(recorded)" = "$MIGRATED" ] && echo 1)" "$MIGRATED ran, $(recorded) recorded"
 }
 
 need_db() {
@@ -312,32 +331,36 @@ env_zip() {
   roll_back "$key"
 }
 
-env_composer() {
-  ENV=composer C=${P}_composer U=application D=/app URL=http://127.0.0.1:18104
-  say "composer create-project (CLI, then the web)"
-  need_db flarum_cp
+env_composer() { # mode: cli | web
+  local mode=${1:-cli} port=18104 db=flarum_cp
+  [ "$mode" = web ] && { port=18105; db=flarum_cpw; }
+  ENV=composer-$mode C=${P}_composer_$mode U=application D=/app URL=http://127.0.0.1:$port
+  say "composer create-project, driven from the $mode"
+  need_db $db
   mkdir -p "$WORK/$C"; chown 1000:1000 "$WORK/$C"
-  php_apache $C 18104 /app/public
+  php_apache $C $port /app/public
   x "COMPOSER_MEMORY_LIMIT=-1 composer create-project 'flarum/flarum:^2.0@rc' . -q --no-interaction" >/dev/null 2>&1
-  flarum_install flarum_cp "$URL"
+  flarum_install $db "$URL"
   install_millwright composer
   local key; key=$(api_key)
-  update_cli
-  roll_back "$key"
-  update_web "$key"
+  # Each mode gets its own forum: a second update over the same database after
+  # an undo would test the extension's own down step, not Millwright. (Mobile
+  # Tab 2.0.1's down leaves the permission row its up inserted.)
+  if [ "$mode" = web ]; then update_web "$key"; else update_cli; fi
   roll_back "$key"
 }
 
 for e in ${ONLY//,/ }; do
   case "$e" in
-    fiab|docker|zip|composer) "env_$e" ;;
+    fiab|docker|zip) "env_$e" ;;
+    composer-cli|composer-web) env_composer "${e#composer-}" ;;
     *) echo "Unknown environment: $e" >&2; FAILED=1 ;;
   esac
 done
 
 say "Summary"
-printf '  %-9s %-34s %s\n' ENV CHECK RESULT
-for r in "${RESULTS[@]}"; do IFS='|' read -r e w m d <<<"$r"; printf '  %-9s %-34s %s\n' "$e" "$w" "$m"; done
+printf '  %-13s %-34s %s\n' ENV CHECK RESULT
+for r in "${RESULTS[@]}"; do IFS='|' read -r e w m d <<<"$r"; printf '  %-13s %-34s %s\n' "$e" "$w" "$m"; done
 [ "$KEEP" = 1 ] && echo && echo "Kept: containers ${P}_*; work dir $WORK. Remove with: docker rm -f \$(docker ps -aq --filter name=^${P}_)"
 echo
 if [ "$FAILED" = 0 ]; then echo "All checks passed."; else echo "Some checks FAILED."; fi

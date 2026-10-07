@@ -9,7 +9,7 @@ undoes the update, checking at every step that the forum still answers.
 | `fiab` | [Flarum-in-a-box](https://discuss.flarum.org/d/39191): Flarum baked **into** the Docker image, on overlayfs. Folders that came from the image cannot be renamed. |
 | `docker` | A standard Composer-built Flarum 2 image ([linkrobins/flarum-docker](https://github.com/linkrobins/flarum-docker)): the app on a volume, Redis (Valkey) cache, Horizon. |
 | `zip` | The [official installation zip](https://docs.flarum.org/2.x/install) in plain PHP + Apache, as on shared hosting: one non-root account, `proc_open`/`exec` disabled, and **only** the web API used, never a shell. |
-| `composer` | `composer create-project`, the recommended route, driven from the CLI and then from the web API. |
+| `composer-cli`, `composer-web` | `composer create-project`, the recommended route: one forum driven from the CLI, a fresh one driven from the web API. |
 
 Each run starts with **root-owned cache files**, made the way a real forum gets
 them: `docker exec … php flarum cache:clear` runs as root. The checks:
@@ -18,7 +18,8 @@ them: `docker exec … php flarum cache:clear` runs as root. The checks:
 - the **after-update health check actually ran**. Inside a container the
   forum's own address is the host's, so this is the check that quietly switches
   itself off;
-- **Undo this update** restores the old version, and the site answers;
+- the database changes the update ran are **recorded**, and **Undo this update**
+  reverses exactly those, restores the old version, and the site answers;
 - on `zip`, that `proc_open` really is disabled for the web.
 
 ## Running it
@@ -48,7 +49,7 @@ table.
 ## Safe on a shared host
 
 Everything it creates is named `mwmatrix_*` and published only on
-`127.0.0.1:18101`–`18104`. It removes all of it at the end, and leftovers from
+`127.0.0.1:18101`–`18105`. It removes all of it at the end, and leftovers from
 an interrupted run at the start. It never touches another container. That's
 why the `docker` environment uses its own compose file: the project's own names
 its container `flarum_app` and publishes port 80, which a real forum on the
@@ -66,5 +67,12 @@ Written after these, which all shipped before it existed (2026-10-07):
 - the health check unable to reach the forum from inside its container, which
   disabled the automatic rollback in every Docker install.
 
-Run it before releasing anything that touches how files are moved, cached or
-checked.
+And since: undo leaving the database as the newer version changed it, now
+reversed through each migration's own `down` step. The same run showed why each
+setup needs a fresh forum per cycle: Mobile Tab 2.0.1's `down` leaves behind a
+permission row its `up` inserts, so a second update over the same database fails
+on the extension's migration. Millwright stopped, undid it and kept the site up,
+but that tests the extension, not Millwright.
+
+Run it before releasing anything that touches how files are moved, cached,
+migrated or checked.
