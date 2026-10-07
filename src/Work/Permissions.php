@@ -4,6 +4,7 @@ namespace ErnestDefoe\Millwright\Work;
 
 use ErnestDefoe\Millwright\Plan\Change;
 use FilesystemIterator;
+use RecursiveCallbackFilterIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use Throwable;
@@ -110,8 +111,12 @@ class Permissions
         $this->need($root, $blocked);
 
         try {
+            // What StaleCache set aside is never read again, so it blocks nothing.
             $items = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS),
+                new RecursiveCallbackFilterIterator(
+                    new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS),
+                    fn ($item) => ! StaleCache::isSetAside($item->getFilename())
+                ),
                 RecursiveIteratorIterator::SELF_FIRST
             );
 

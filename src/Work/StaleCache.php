@@ -19,21 +19,25 @@ namespace ErnestDefoe\Millwright\Work;
  * together and never disagree. The old directory is left for root to delete:
  * this process cannot.
  *
- * When the rename is not possible (storage/ not writable, a mount point),
- * nothing moves and Permissions refuses exactly as before.
+ * When storage/ is not writable, or the directory is a mount point, the
+ * offending entries are renamed hidden inside it instead (see setAside).
+ * Only when neither is possible does Permissions refuse, as before.
  */
 final class StaleCache
 {
     private const DIRS = ['cache', 'formatter'];
 
+    private const HIDDEN = '.root-owned-';
+
     /** @return string[] the directories moved aside */
     public static function setAside(string $storagePath): array
     {
-        if ($storagePath === '' || ! is_writable($storagePath)) {
+        if ($storagePath === '') {
             return [];
         }
 
         $moved = [];
+        $stamp = date('YmdHis');
 
         foreach (self::DIRS as $name) {
             $dir = $storagePath . '/' . $name;
@@ -42,15 +46,60 @@ final class StaleCache
                 continue;
             }
 
-            $aside = $dir . '.root-owned-' . date('YmdHis');
-
-            if (@rename($dir, $aside)) {
+            // The whole directory, when storage/ lets us.
+            if (is_writable($storagePath) && @rename($dir, $dir . '.root-owned-' . $stamp)) {
                 @mkdir($dir, 0775);
-                $moved[] = $aside;
+                $moved[] = $dir . '.root-owned-' . $stamp;
+                continue;
+            }
+
+            /*
+             * 🚨 Otherwise each offending entry, renamed hidden inside it.
+             *
+             * ClaudiusH's container, 2026-10-07, on 1.13.0: storage/ itself was
+             * not writable (or the cache is a mounted volume), so the rename
+             * above failed and the refusal came back unchanged. The cache
+             * directory WAS writable, and renaming within one directory needs
+             * nothing more. A hidden name is never read again — entries live
+             * at hashed paths — and both cache:clear's flush (Symfony Finder)
+             * and its formatter glob skip dot-entries, so it no longer fails.
+             */
+            if (! is_writable($dir)) {
+                continue;
+            }
+
+            foreach (scandir($dir) ?: [] as $entry) {
+                $path = $dir . '/' . $entry;
+
+                if ($entry[0] === '.' || ! self::blocks($path)) {
+                    continue;
+                }
+
+                $aside = $dir . '/' . self::HIDDEN . $entry . '-' . $stamp;
+
+                if (@rename($path, $aside)) {
+                    $moved[] = $aside;
+                }
             }
         }
 
         return $moved;
+    }
+
+    /** A hidden entry this class put aside: Permissions does not count it. */
+    public static function isSetAside(string $name): bool
+    {
+        return str_starts_with($name, self::HIDDEN);
+    }
+
+    /** This entry, or anything under it, cannot be changed by this process. */
+    private static function blocks(string $path): bool
+    {
+        if (! is_writable($path)) {
+            return true;
+        }
+
+        return is_dir($path) && ! is_link($path) && self::hasUnwritable($path);
     }
 
     /** One line for a step result, or '' when nothing moved. */

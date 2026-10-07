@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Console;
 
+use ErnestDefoe\Millwright\Work\StaleCache;
 use Flarum\Console\AbstractCommand;
 use Flarum\Foundation\Paths;
 use Flarum\Formatter\Formatter;
@@ -50,6 +51,10 @@ class RepairFormatterCommand extends AbstractCommand
 
     protected function fire(): int
     {
+        // A root-owned cache is moved aside first where it can be (see
+        // StaleCache), so the flush below can actually clear it.
+        StaleCache::setAside(resolve(Paths::class)->storage);
+
         $formatter = resolve(Formatter::class);
 
         $formatter->flush();
@@ -124,7 +129,10 @@ class RepairFormatterCommand extends AbstractCommand
         $stranded = [];
 
         $files = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS),
+            new \RecursiveCallbackFilterIterator(
+                new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS),
+                fn ($item) => ! StaleCache::isSetAside($item->getFilename())
+            ),
             \RecursiveIteratorIterator::SELF_FIRST
         );
 

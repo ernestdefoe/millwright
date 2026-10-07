@@ -143,13 +143,16 @@ class PermissionsTest extends TestCase
         $this->assertFileExists($this->dir . '/storage/cache/77/e1/entry');
     }
 
-    public function test_without_a_writable_storage_directory_the_run_still_refuses(): void
+    public function test_with_nothing_writable_the_run_still_refuses(): void
     {
         chmod($this->dir . '/storage/cache/77/e1/entry', 0444);
+        chmod($this->dir . '/storage/cache/77/e1', 0555);
+        chmod($this->dir . '/storage/cache/77', 0555);
+        chmod($this->dir . '/storage/cache', 0555);
         chmod($this->dir . '/storage', 0555);
 
         $this->assertSame([], StaleCache::setAside($this->dir . '/storage'));
-        $this->assertSame([$this->dir . '/storage/cache/77/e1/entry'], $this->permissions()->blocked([]));
+        $this->assertContains($this->dir . '/storage/cache/77/e1/entry', $this->permissions()->blocked([]));
     }
 
     /** The wiring: a real run's permission step sets the cache aside and passes. */
@@ -173,5 +176,43 @@ class PermissionsTest extends TestCase
 
         $this->assertStringContainsString('Set aside a cache', (string) $result);
         $this->assertStringContainsString('rm -rf', (string) $result);
+    }
+
+    /**
+     * 🚨 ClaudiusH, 2026-10-07, on 1.13.0: storage/ not writable, so the whole
+     * cache could not be renamed and the refusal came back. The cache
+     * directory itself was writable, so each offending entry is renamed
+     * hidden inside it, where Flarum never reads it and cache:clear skips it.
+     */
+    public function test_without_a_writable_storage_directory_the_offending_entries_are_hidden(): void
+    {
+        mkdir($this->dir . '/storage/cache/ab/cd', 0775, true);
+        touch($this->dir . '/storage/cache/ab/cd/fine');
+        chmod($this->dir . '/storage/cache/77/e1', 0555);
+        chmod($this->dir . '/storage', 0555);
+
+        $moved = StaleCache::setAside($this->dir . '/storage');
+
+        $this->assertCount(1, $moved);
+        $this->assertStringStartsWith($this->dir . '/storage/cache/.root-owned-77-', $moved[0]);
+        $this->assertFileExists($moved[0] . '/e1/entry');
+        $this->assertFileExists($this->dir . '/storage/cache/ab/cd/fine');
+        $this->assertSame([], $this->permissions()->blocked([]));
+    }
+
+    /** A root-owned file straight in the directory (the formatter's Renderer_*.php). */
+    public function test_an_unwritable_file_in_a_writable_directory_is_hidden(): void
+    {
+        mkdir($this->dir . '/storage/formatter');
+        touch($this->dir . '/storage/formatter/Renderer_abc.php');
+        chmod($this->dir . '/storage/formatter/Renderer_abc.php', 0444);
+        chmod($this->dir . '/storage', 0555);
+
+        $moved = StaleCache::setAside($this->dir . '/storage');
+
+        $this->assertCount(1, $moved);
+        $this->assertStringStartsWith($this->dir . '/storage/formatter/.root-owned-Renderer_abc.php-', $moved[0]);
+        $this->assertSame([], glob($this->dir . '/storage/formatter/*'), 'cache:clear globs formatter/* and must not see it');
+        $this->assertSame([], $this->permissions()->blocked([]));
     }
 }
