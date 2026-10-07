@@ -28,7 +28,7 @@ set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 P=mwmatrix                       # every container, network and volume starts with this
-ONLY="fiab,docker,zip,composer-cli,composer-web"
+ONLY="fiab,docker,zip,composer-cli,composer-web,core-nightly,core-nightly-zip"
 KEEP=0
 PKG=acpl/mobile-tab
 FROM=2.0.0-beta.12
@@ -161,7 +161,11 @@ roll_back() { # api key
   n=$(plant_root_cache)
   state=$(curl -s -m 300 -X POST -H "Authorization: Token $key" -H 'Content-Type: application/json' -d '{}' "$URL/api/millwright/rollback" \
     | php -r '$j=json_decode(stream_get_contents(STDIN),true); echo $j["run"]["state"] ?? ("error: " . substr(json_encode($j), 0, 160));')
+  # The database half of an undo runs on the next request, booted from the
+  # restored code — the admin page asks for its state straight away.
+  undo_error=$(curl -s -m 300 -H "Authorization: Token $key" "$URL/api/millwright/state" | php -r '$j=json_decode(stream_get_contents(STDIN),true); echo $j["undoError"] ?? "";')
   after=$(version)
+  check "$ENV" "undo: database half finished" "$([ -z "$undo_error" ] && echo 1)" "${undo_error:-ok}"
   check "$ENV" "undo: run state ($n root-owned)" "$([ "$state" = rolled-back ] && echo 1)" "$state"
   check "$ENV" "undo: version restored" "$([ "$after" = "$FROM" ] && echo 1)" "$after"
   check "$ENV" "undo: site answers" "$([ "$(code /)" = 200 ] && echo 1)" "home $(code /)"
@@ -350,10 +354,66 @@ env_composer() { # mode: cli | web
   roll_back "$key"
 }
 
+core_version() { x "php flarum info 2>/dev/null | sed -n 's/^Flarum core: //p'"; }
+db_version() { x "php -r '\$a=(require \"site.php\")->bootApp(); echo \$a->getContainer()->make(\"db\")->table(\"settings\")->where(\"key\",\"version\")->value(\"value\");'" 2>/dev/null; }
+all_migrations() { x "php -r '\$a=(require \"site.php\")->bootApp(); echo \$a->getContainer()->make(\"db\")->table(\"migrations\")->count();'" 2>/dev/null; }
+
+# Flarum itself: the release this forum is on → the nightly build, through the
+# web API as the admin screen does it, then undo back to the release.
+env_core_nightly() { # host: composer (can start processes) | zip (shared hosting, cannot)
+  local host=${1:-composer} port=18106 db=flarum_core
+  [ "$host" = zip ] && { port=18107; db=flarum_corezip; }
+  ENV=core-nightly-$host C=${P}_core_$host U=application D=/app URL=http://127.0.0.1:$port
+  say "Flarum core: release → nightly → undo (web, $host install)"
+  need_db $db
+  mkdir -p "$WORK/$C"; chown 1000:1000 "$WORK/$C"
+  if [ "$host" = zip ]; then
+    local url=${ZIP_URL:-$(latest_zip)}
+    curl -sL -o "$WORK/core.zip" "$url" && (cd "$WORK/$C" && unzip -q ../core.zip) || { check "$ENV" "zip downloaded" 0 "$url"; return; }
+    chown -R 1000:1000 "$WORK/$C"
+    php_apache $C $port /app
+    flarum_install $db "$URL"
+    install_millwright "php -d disable_functions= \$(command -v composer)"
+    docker exec $C sh -c 'echo "disable_functions=proc_open,exec,shell_exec,system,passthru,popen" > /usr/local/etc/php/conf.d/zz-shared-host.ini; supervisorctl restart php-fpm:php-fpmd >/dev/null'
+    sleep 2
+  else
+    php_apache $C $port /app/public
+    x "COMPOSER_MEMORY_LIMIT=-1 composer create-project 'flarum/flarum:^2.0@rc' . -q --no-interaction" >/dev/null 2>&1
+    flarum_install $db "$URL"
+    install_millwright composer
+  fi
+  local key v0 m0 dv0 start r i=0 state v1 m1 dv1 undo_state undo_error v2 m2 dv2
+  key=$(api_key); v0=$(core_version); m0=$(all_migrations); dv0=$(db_version)
+  plant_root_cache >/dev/null
+  start=$(curl -s -m 120 -X POST -H "Authorization: Token $key" -H 'Content-Type: application/json' -d '{"packages":["flarum/core"],"nightly":true}' "$URL/api/millwright/update")
+  while [ $i -lt 400 ]; do
+    i=$((i+1))
+    r=$(curl -s -m 300 -X POST -H "Authorization: Token $key" -H 'Content-Type: application/json' -d '{}' "$URL/api/millwright/step")
+    echo "$r" | grep -q '"idle":true' && break
+  done
+  state=$(echo "$r" | php -r '$j=json_decode(stream_get_contents(STDIN),true); echo $j["run"]["state"] ?? "?";')
+  v1=$(core_version); m1=$(all_migrations); dv1=$(db_version)
+  check "$ENV" "nightly: update finished ($i steps)" "$([ "$state" = done ] && echo 1)" "$state $(echo "$start" | grep -o '"error":"[^"]*' | cut -c1-120)"
+  check "$ENV" "nightly: core moved" "$([ -n "$v1" ] && [ "$v1" != "$v0" ] && echo 1)" "$v0 → $v1 (database says $dv1)"
+  check "$ENV" "nightly: site answers" "$([ "$(code /)" = 200 ] && [ "$(code /api)" = 200 ] && echo 1)" "home $(code /), api $(code /api)"
+  plant_root_cache >/dev/null
+  undo_state=$(curl -s -m 600 -X POST -H "Authorization: Token $key" -H 'Content-Type: application/json' -d '{}' "$URL/api/millwright/rollback" | php -r '$j=json_decode(stream_get_contents(STDIN),true); echo $j["run"]["state"] ?? ("error: " . substr(json_encode($j), 0, 160));')
+  undo_error=$(curl -s -m 300 -H "Authorization: Token $key" "$URL/api/millwright/state" | php -r '$j=json_decode(stream_get_contents(STDIN),true); echo $j["undoError"] ?? "";')
+  v2=$(core_version); m2=$(all_migrations); dv2=$(db_version)
+  check "$ENV" "undo: request answered" "$([ "$undo_state" = rolled-back ] && echo 1)" "$undo_state"
+  check "$ENV" "undo: database half finished" "$([ -z "$undo_error" ] && echo 1)" "${undo_error:-ok}"
+  check "$ENV" "undo: core back on the release" "$([ "$v2" = "$v0" ] && echo 1)" "$v2"
+  check "$ENV" "undo: Flarum's recorded version back" "$([ "$dv2" = "$dv0" ] && echo 1)" "$dv2"
+  check "$ENV" "undo: db changes reversed" "$([ "$m2" = "$m0" ] && echo 1)" "$m0 before, $m1 on nightly, $m2 after"
+  check "$ENV" "undo: site answers" "$([ "$(code /)" = 200 ] && [ "$(code /api)" = 200 ] && echo 1)" "home $(code /), api $(code /api)"
+}
+
 for e in ${ONLY//,/ }; do
   case "$e" in
     fiab|docker|zip) "env_$e" ;;
     composer-cli|composer-web) env_composer "${e#composer-}" ;;
+    core-nightly|core-nightly-composer) env_core_nightly composer ;;
+    core-nightly-zip) env_core_nightly zip ;;
     *) echo "Unknown environment: $e" >&2; FAILED=1 ;;
   esac
 done
