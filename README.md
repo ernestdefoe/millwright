@@ -262,6 +262,26 @@ an item and recording it. That item is then redone on resume, and the test
 asserts the repeat rather than pretending it cannot happen. Everything in the
 applier is built so a repeat is a no-op.
 
+### Every kind of install
+
+`tests/env-matrix/run.sh` installs Flarum 2 the four ways people actually do,
+then on each one updates an extension and undoes it, starting from root-owned
+cache files, and checks the site and the health check at every step:
+
+| Install | Update | Undo | Health check |
+|---|---|---|---|
+| Flarum-in-a-box (Flarum inside the image) | ✅ | ✅ | ✅ |
+| A standard Flarum 2 Docker image (volume, Redis cache) | ✅ | ✅ | ✅ |
+| The official zip on shared-hosting settings (`proc_open`/`exec` off, web only) | ✅ | ✅ | ✅ |
+| `composer create-project` (CLI and web) | ✅ | ✅ | ✅ |
+
+```bash
+tests/env-matrix/run.sh --remote root@your-docker-host
+```
+
+See [tests/env-matrix/README.md](tests/env-matrix/README.md) for what each check
+means and what it has caught.
+
 ## Support
 
 - **Support forum:** [Millwright on ernestdefoe.online](https://ernestdefoe.online/d/83)
