@@ -471,7 +471,9 @@ export default class MillwrightPage extends ExtensionPage {
           {uncheckable > 0 ? ' ' + t('uncheckable', { count: uncheckable }) : ''}
           {tracking > 0 ? ' ' + t('tracking', { count: tracking }) : ''}
         </span>
-        <button className="Button Button--link" disabled={this.checking} onclick={() => this.checkNow()}>
+        <button className="Button Button--link Millwright-checkNow" disabled={this.checking} onclick={() => this.checkNow()}>
+          {/* A spinner as well as the words: "Checking…" alone reads as a label. */}
+          {this.checking ? <i className="fas fa-circle-notch fa-spin" aria-hidden="true" /> : null}
           {this.checking ? t('checking') : t('check_now')}
         </button>
       </div>
