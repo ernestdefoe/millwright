@@ -231,7 +231,10 @@ export default class RunPanel extends Component<RunPanelAttrs> {
     return (
       <ol className="Millwright-phases">
         {PHASES.map((p, i) => (
+          // A check on what is behind, a spinner on what is happening: a row of
+          // pills with one highlighted read to a tester as tabs (ClaudiusH).
           <li key={p} className={'Millwright-phase' + (i < at ? ' is-done' : i === at ? ' is-now' : '')}>
+            {i < at ? <i className="fas fa-check" aria-hidden="true" /> : i === at ? <i className="fas fa-circle-notch fa-spin" aria-hidden="true" /> : null}
             {t('phase_' + p)}
           </li>
         ))}
