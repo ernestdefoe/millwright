@@ -44,6 +44,7 @@ class StateController implements RequestHandlerInterface
             'host'       => (new Capability($this->paths->base, PhpBinary::forStorage($this->paths->storage), $this->paths->storage . '/.composer'))->report(),
             'installed'  => $this->installed($cached['updates'] ?? []),
             'run'        => $this->runs->present($run),
+            'history'    => $this->runs->history(),
             'runIsStale' => $run !== null && $run->isStale(time()),
             /*
              * 🚨 Sent with its age and its blind spots, never as a bare count.

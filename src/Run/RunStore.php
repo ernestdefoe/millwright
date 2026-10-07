@@ -50,6 +50,15 @@ class RunStore
             @unlink($temp);
             throw new RuntimeException("Cannot move the run state into place at $path");
         }
+
+        // Every run that reaches an end is in the history, from this one place.
+        (new History(dirname(rtrim($this->dir, '/'))))->record($run);
+    }
+
+    /** @return list<array<string,mixed>> what changed recently, newest first */
+    public function history(): array
+    {
+        return (new History(dirname(rtrim($this->dir, '/'))))->all();
     }
 
     public function load(string $id): ?Run
@@ -112,9 +121,13 @@ class RunStore
         $this->path($run->id);   // validates the id before it reaches a path
         $manifest = json_decode((string) @file_get_contents(rtrim($this->dir, '/') . '/' . $run->id . '/requested.json'), true);
 
+        $migrations = json_decode((string) @file_get_contents(rtrim($this->dir, '/') . '/' . $run->id . '/migrations.json'), true);
+
         return $run->toArray() + [
-            'packages' => array_values(array_filter((array) ($manifest['packages'] ?? []), 'is_string')),
-            'mode'     => (string) ($manifest['mode'] ?? 'update'),
+            'packages'   => array_values(array_filter((array) ($manifest['packages'] ?? []), 'is_string')),
+            'mode'       => (string) ($manifest['mode'] ?? 'update'),
+            // The database changes undoing would reverse; see MigrationLedger.
+            'migrations' => array_values(array_map(fn ($m) => (string) ($m['migration'] ?? ''), (array) $migrations)),
         ];
     }
 
