@@ -43,13 +43,13 @@ class StepController implements RequestHandlerInterface
         }
 
         if ($run->isFinished()) {
-            return new JsonResponse(['run' => $run->toArray(), 'idle' => true]);
+            return new JsonResponse(['run' => $this->runs->present($run), 'idle' => true]);
         }
 
         $run = $this->runner->step($run->id);
 
         return new JsonResponse([
-            'run'       => $run->toArray(),
+            'run'       => $this->runs->present($run),
             'idle'      => $run->isFinished(),
             // Not an error. Another driver has it; keep polling.
             'busy'      => $this->runner->wasBusy(),

@@ -89,6 +89,13 @@ export default class RunPanel extends Component<RunPanelAttrs> {
     this.polling = false;
   }
 
+  /** Which extensions this run is for: the names, or the first few and a count. */
+  target(packages: string[]): string {
+    if (packages.length <= 3) return packages.join(', ');
+
+    return t('run_target_more', { shown: packages.slice(0, 2).join(', '), count: packages.length - 2 }).toString();
+  }
+
   view() {
     const run = this.attrs.run;
     if (!run) return null;
@@ -96,11 +103,16 @@ export default class RunPanel extends Component<RunPanelAttrs> {
     const failed = run.state === 'failed';
     const done = run.state === 'done';
     const rolled = run.state === 'rolled-back';
+    const mode = ['install', 'remove'].includes(run.mode) ? run.mode : 'update';
+    const target = this.target(run.packages || []);
 
     return (
       <div className={'Millwright-run' + (failed ? ' Millwright-run--failed' : '')}>
         <div className="Millwright-runHead">
-          <h3>{done ? t('run_done') : rolled ? t('run_rolled_back') : failed ? t('run_failed') : t('run_working')}</h3>
+          <div>
+            <h3>{done ? t('run_done') : rolled ? t('run_rolled_back') : failed ? t('run_failed') : target ? t('run_target_' + mode, { packages: target }) : t('run_working')}</h3>
+            {target && (done || failed || rolled) ? <div className="Millwright-runTarget">{t('run_target_' + mode, { packages: target })}</div> : null}
+          </div>
           {this.attrs.driver ? <span className="Millwright-driver">{this.attrs.driver}</span> : null}
         </div>
 

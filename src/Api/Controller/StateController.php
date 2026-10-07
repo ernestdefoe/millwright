@@ -43,7 +43,7 @@ class StateController implements RequestHandlerInterface
         return new JsonResponse([
             'host'       => (new Capability($this->paths->base, PhpBinary::forStorage($this->paths->storage), $this->paths->storage . '/.composer'))->report(),
             'installed'  => $this->installed($cached['updates'] ?? []),
-            'run'        => $run?->toArray(),
+            'run'        => $this->runs->present($run),
             'runIsStale' => $run !== null && $run->isStale(time()),
             /*
              * 🚨 Sent with its age and its blind spots, never as a bare count.

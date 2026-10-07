@@ -4,6 +4,7 @@ import apiUrl from '../apiUrl';
 import { cardOffers, dismissalApplies, hidesPage, runIsLive, showingRun, sortForGrid } from '../runState';
 import ExtensionPage from 'flarum/admin/components/ExtensionPage';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
+import Link from 'flarum/common/components/Link';
 import HostPanel from './HostPanel';
 import TrashPanel from './TrashPanel';
 import RunPanel from './RunPanel';
@@ -514,7 +515,8 @@ export default class MillwrightPage extends ExtensionPage {
       <div className="Millwright-grid">
         {this.sorted().map((e) => (
           <div className={'Millwright-card' + (cardOffers(e).badge ? ' Millwright-card--update' : '')} key={e.id}>
-            <div className="Millwright-cardTop">
+            {/* The extension's own settings page, the way the Extensions list opens it. */}
+            <Link className="Millwright-cardTop" href={app.route('extension', { id: e.id })} title={t('open_settings', { name: e.name })}>
               <div
                 className="Millwright-icon"
                 style={{ background: e.icon?.backgroundColor || 'var(--primary-color)' }}
@@ -540,7 +542,7 @@ export default class MillwrightPage extends ExtensionPage {
                   {t('update_available')}
                 </span>
               ) : null}
-            </div>
+            </Link>
 
             <div className="Millwright-meta">
               <span>{e.version || t('version_unknown')}</span>

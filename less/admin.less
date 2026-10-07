@@ -273,6 +273,15 @@
   gap: 12px;
   align-items: center;
   padding: 14px @mw-pad 0;
+  color: inherit;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: none;
+
+    .Millwright-name { color: var(--link-color); }
+  }
 }
 
 .Millwright-icon {
@@ -492,6 +501,7 @@
 }
 
 .Millwright-driver { color: var(--muted-color); font-size: 12px; max-width: 52ch; }
+.Millwright-runTarget { color: var(--muted-color); font-size: 13px; overflow-wrap: anywhere; }
 
 .Millwright-phases {
   display: flex;

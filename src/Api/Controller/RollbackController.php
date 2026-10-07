@@ -100,7 +100,7 @@ class RollbackController implements RequestHandlerInterface
 
         return new JsonResponse([
             'undone' => $undone,
-            'run'    => $this->runs->latest()?->toArray(),
+            'run'    => $this->runs->present($this->runs->latest()),
             'next'   => $note,
         ]);
     }

@@ -95,6 +95,29 @@ class RunStore
         return $runs;
     }
 
+    /**
+     * The run as the admin page sees it: its own state, plus what it was asked
+     * to do, so the screen can say WHICH extension is being updated rather
+     * than only how far along it is. Read from the run's work directory, which
+     * sits beside its record.
+     *
+     * @return array<string,mixed>|null
+     */
+    public function present(?Run $run): ?array
+    {
+        if ($run === null) {
+            return null;
+        }
+
+        $this->path($run->id);   // validates the id before it reaches a path
+        $manifest = json_decode((string) @file_get_contents(rtrim($this->dir, '/') . '/' . $run->id . '/requested.json'), true);
+
+        return $run->toArray() + [
+            'packages' => array_values(array_filter((array) ($manifest['packages'] ?? []), 'is_string')),
+            'mode'     => (string) ($manifest['mode'] ?? 'update'),
+        ];
+    }
+
     public function forget(string $id): void
     {
         @unlink($this->path($id));

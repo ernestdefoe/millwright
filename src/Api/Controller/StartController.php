@@ -168,7 +168,7 @@ class StartController implements RequestHandlerInterface
             return new JsonResponse([
                 'error' => 'An update is already in progress'
                     . ($age > 120 ? ", though nothing has moved for " . round($age / 60) . " minutes." : '.'),
-                'run'   => $existing->toArray(),
+                'run'   => $this->runs->present($existing),
                 'stale' => $existing->isStale(time()),
             ], 409);
         }
@@ -183,7 +183,7 @@ class StartController implements RequestHandlerInterface
         $queued = $this->drivers->nudge($id);
 
         return new JsonResponse([
-            'run'    => $run->toArray(),
+            'run'    => $this->runs->present($run),
             'queued' => $queued,
             'driver' => $this->drivers->describe(),
         ]);

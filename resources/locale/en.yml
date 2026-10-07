@@ -52,10 +52,16 @@ ernestdefoe-millwright:
       probably one you are working on. Millwright will not replace it — update it
       with git instead.
 
+    open_settings: Open the {name} settings
+
     run_working: Updating
     run_done: Update finished
     run_failed: The update stopped
     run_rolled_back: Put back the way it was
+    run_target_update: Updating {packages}
+    run_target_install: Installing {packages}
+    run_target_remove: Removing {packages}
+    run_target_more: "{shown} and {count} more"
 
     phase_plan: Working out what changes
     phase_fetch: Downloading

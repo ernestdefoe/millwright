@@ -221,7 +221,9 @@ class ComposerSteps implements Steps
             };
         }
 
-        $note = count($changes) . ' package(s) will change';
+        $shown = array_map(fn (Change $c) => $c->describe(), array_slice($changes, 0, 5));
+        $note = count($changes) . ' package(s) will change: ' . implode(', ', $shown)
+            . (count($changes) > 5 ? ', and ' . (count($changes) - 5) . ' more' : '');
 
         return $raised === [] ? $note : implode('; ', $raised) . '. ' . $note;
     }
