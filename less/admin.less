@@ -1649,3 +1649,38 @@
 }
 
 .Millwright-checkNow .fa-spin { margin-right: 6px; }
+
+// ── recent updates ───────────────────────────────────────────────────────────
+
+.Millwright-history { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+
+.Millwright-historyItem {
+  border: 1px solid var(--control-bg);
+  border-radius: 10px;
+  padding: 12px @mw-pad;
+  background: var(--body-bg);
+}
+
+.Millwright-historyHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+
+  time { color: var(--muted-color); font-size: 13px; }
+}
+
+.Millwright-historyChanges {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+
+  li { overflow-wrap: anywhere; }
+  .Millwright-pkg { margin: 0 6px 0 4px; }
+}
+
+.Millwright-historyVersions { color: var(--muted-color); white-space: nowrap; }
+.Millwright-historyNote { margin-top: 6px; color: var(--muted-color); font-size: 12px; }

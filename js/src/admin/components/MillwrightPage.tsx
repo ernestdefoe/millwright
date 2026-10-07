@@ -12,6 +12,7 @@ import RunPanel from './RunPanel';
 import DiscoverTab from './DiscoverTab';
 import CorePanel from './CorePanel';
 import SourcesTab from './SourcesTab';
+import HistoryTab from './HistoryTab';
 
 declare const m: any;
 
@@ -44,7 +45,8 @@ export default class MillwrightPage extends ExtensionPage {
   installed: Installed[] = [];
   updates: any = { available: {}, checkedAt: null, stale: true, uncheckable: [], tracking: [] };
   checking = false;
-  tab: 'installed' | 'discover' | 'sources' | 'host' = 'installed';
+  tab: 'installed' | 'history' | 'discover' | 'sources' | 'host' = 'installed';
+  history: any[] = [];
   run: any = null;
   driver: string | null = null;
   busy = false;
@@ -126,6 +128,7 @@ export default class MillwrightPage extends ExtensionPage {
       .then((data: any) => {
         this.host = data.host;
         this.installed = data.installed || [];
+        this.history = data.history || [];
         this.updates = data.updates || this.updates;
         /*
          * 🚨 An unfinished run found on load is picked straight back up. Closing
@@ -206,6 +209,7 @@ export default class MillwrightPage extends ExtensionPage {
           <div className="Millwright-tabs" role="tablist">
             {[
               { id: 'installed', label: t('tab_installed', { count: this.installed.length }), badge: this.updateCount() },
+              { id: 'history', label: t('tab_history'), badge: 0 },
               { id: 'discover', label: t('tab_discover'), badge: 0 },
               { id: 'sources', label: t('tab_sources'), badge: 0 },
               { id: 'host', label: t('tab_host'), badge: 0 },
@@ -235,6 +239,8 @@ export default class MillwrightPage extends ExtensionPage {
               )
               : this.tab === 'sources'
                 ? <SourcesTab />
+                : this.tab === 'history'
+                ? <HistoryTab history={this.history} installed={this.installed} />
                 : this.tab === 'discover'
                 ? <DiscoverTab starting={this.starting} oninstall={(name: string) => this.start([name], 'install')} />
                 : this.installedTab()}
@@ -488,9 +494,12 @@ export default class MillwrightPage extends ExtensionPage {
       .request({ method: 'POST', url: apiUrl() + '/millwright/check' })
       .then((data: any) => {
         this.updates = data.updates || this.updates;
-        this.installed = data.installed || this.installed;
         this.checking = false;
-        m.redraw();
+        // 🚨 The cards carry their own copy of each update, and the check
+        // returns only the list: a new update was counted in the line above
+        // and missing from every card until a reload (ClaudiusH). Reload the
+        // state the cards are built from.
+        this.load();
       })
       .catch(() => {
         this.checking = false;

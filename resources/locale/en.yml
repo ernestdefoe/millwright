@@ -76,8 +76,12 @@ ernestdefoe-millwright:
     rolling_back: Undoing…
     roll_back_confirm: >-
       Put the extensions this update changed back to the versions they were
-      before it, along with composer.json and composer.lock? Database migrations
-      the update ran are not undone.
+      before it, along with composer.json and composer.lock?
+    roll_back_confirm_db: >-
+      Put the extensions this update changed back to the versions they were
+      before it, along with composer.json and composer.lock? This update also
+      changed the database ({count} change(s)). Undoing reverses those too,
+      which removes anything stored in what they added.
     rollback_failed: >-
       The rollback itself failed. Nothing was deleted at any point, so the old
       files are still under storage/millwright/trash.
@@ -103,6 +107,17 @@ ernestdefoe-millwright:
       trying.
 
     tab_discover: Find extensions
+    tab_history: Recent updates
+    history_empty: Nothing has been updated, installed or removed with Millwright on this forum yet.
+    history_updated: Updated
+    history_installed: Installed
+    history_removed: Removed
+    history_undone: Undone
+    history_failed: Stopped
+    history_new: "{version} (new)"
+    history_removed_from: "{version} (removed)"
+    history_nothing: Nothing changed
+    history_migrations: "Changed the database ({count} change(s))."
 
     search: Search
     searching: Searching…

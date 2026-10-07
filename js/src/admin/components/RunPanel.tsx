@@ -208,7 +208,10 @@ export default class RunPanel extends Component<RunPanelAttrs> {
               <button
                 className="Button Button--link Millwright-undo"
                 disabled={this.rollingBack}
-                onclick={() => confirm(t('roll_back_confirm')) && this.rollback()}
+                onclick={() =>
+                  confirm(run.migrations?.length ? t('roll_back_confirm_db', { count: run.migrations.length }) : t('roll_back_confirm')) &&
+                  this.rollback()
+                }
               >
                 {this.rollingBack ? t('rolling_back') : t('roll_back')}
               </button>
