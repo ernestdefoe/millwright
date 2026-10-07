@@ -188,26 +188,32 @@ export default class RunPanel extends Component<RunPanelAttrs> {
         ) : null}
 
         {/*
-          * 🚨 A FINISHED update can be put back too, and the screen used to
+          * 🚨 A FINISHED update can be undone too, and the screen used to
           * offer that only on a failure. The endpoint, the journal and the
           * trash all exist for exactly this — "it worked, and I wish it had
           * not" is the rollback people actually need — so a button that only
           * appears when something broke left the feature unreachable.
+          *
+          * But on a finished run it is the last resort, not the next step:
+          * Dismiss leads, and Undo is a quiet link after it. "Put everything
+          * back" sat first, as a full button, and read to a tester like a
+          * cleanup of leftover files (ClaudiusH, 2026-10-07).
           */}
-        {done ? (
-          <button
-            className="Button"
-            disabled={this.rollingBack}
-            onclick={() => confirm(String(t('roll_back_confirm'))) && this.rollback()}
-          >
-            {this.rollingBack ? t('rolling_back') : t('roll_back')}
-          </button>
-        ) : null}
-
         {done || rolled || failed ? (
-          <button className="Button Button--link Millwright-dismiss" onclick={() => this.attrs.ondismiss()}>
-            {t('dismiss')}
-          </button>
+          <div className="Millwright-runActions">
+            <button className="Button" onclick={() => this.attrs.ondismiss()}>
+              {t('dismiss')}
+            </button>
+            {done ? (
+              <button
+                className="Button Button--link Millwright-undo"
+                disabled={this.rollingBack}
+                onclick={() => confirm(t('roll_back_confirm')) && this.rollback()}
+              >
+                {this.rollingBack ? t('rolling_back') : t('roll_back')}
+              </button>
+            ) : null}
+          </div>
         ) : null}
 
         <ol className="Millwright-log">

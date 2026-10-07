@@ -57,7 +57,7 @@ ernestdefoe-millwright:
     run_working: Updating
     run_done: Update finished
     run_failed: The update stopped
-    run_rolled_back: Put back the way it was
+    run_rolled_back: Update undone
     run_target_update: Updating {packages}
     run_target_install: Installing {packages}
     run_target_remove: Removing {packages}
@@ -72,8 +72,8 @@ ernestdefoe-millwright:
     working_on: "{item} — {index} of {total}"
 
     failed_at: "It stopped during: {step}"
-    roll_back: Put everything back
-    rolling_back: Putting everything back…
+    roll_back: Undo this update
+    rolling_back: Undoing…
     roll_back_confirm: >-
       Put the extensions this update changed back to the versions they were
       before it, along with composer.json and composer.lock? Database migrations

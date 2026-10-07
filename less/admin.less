@@ -587,7 +587,19 @@
   li:last-child { color: var(--text-color); font-weight: 600; }
 }
 
-.Millwright-dismiss { margin: 14px @mw-pad; padding-left: 0; }
+.Millwright-runActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 14px @mw-pad;
+}
+
+.Millwright-undo {
+  color: var(--muted-color);
+  padding-left: 0;
+  padding-right: 0;
+}
 
 // ── this host ────────────────────────────────────────────────────────────────
 
