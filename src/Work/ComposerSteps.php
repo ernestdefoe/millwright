@@ -785,7 +785,8 @@ class ComposerSteps implements Steps
             $this->workDir,
             $this->storagePath . '/millwright/trash',
             $this->journal,
-            $this->composer
+            $this->composer,
+            $this->storagePath
         );
     }
 
@@ -901,6 +902,9 @@ class ComposerSteps implements Steps
             return 'file permissions not checked on this host';
         }
 
+        // A root-owned cache is moved aside rather than refused; see StaleCache.
+        $setAside = StaleCache::describe(StaleCache::setAside($this->storagePath));
+
         $permissions = new Permissions($this->installPath, $this->vendorPath, $this->storagePath);
         $blocked = $permissions->blocked($this->plan());
 
@@ -917,7 +921,7 @@ class ComposerSteps implements Steps
             throw new RuntimeException($permissions->explain($blocked));
         }
 
-        return 'every file this update changes is writable';
+        return 'every file this update changes is writable' . ($setAside !== '' ? '. ' . $setAside : '');
     }
 
     /**

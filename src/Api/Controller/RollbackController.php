@@ -88,7 +88,8 @@ class RollbackController implements RequestHandlerInterface
             $workDir->root(),
             $workDir->trash(),
             $journal,
-            $this->composer()
+            $this->composer(),
+            $this->paths->storage
         );
 
         $result = $restore->run();

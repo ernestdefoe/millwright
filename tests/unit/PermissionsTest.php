@@ -5,6 +5,7 @@ namespace ErnestDefoe\Millwright\Tests\Unit;
 use ErnestDefoe\Millwright\Plan\Change;
 use ErnestDefoe\Millwright\Work\ComposerStepsFactory;
 use ErnestDefoe\Millwright\Work\Permissions;
+use ErnestDefoe\Millwright\Work\StaleCache;
 use ErnestDefoe\Millwright\Run\Run;
 use Flarum\Foundation\Config;
 use Flarum\Foundation\Paths;
@@ -115,5 +116,62 @@ class PermissionsTest extends TestCase
 
         $this->assertSame('OLD-JSON', file_get_contents($this->dir . '/composer.json'));
         $this->assertSame('OLD-LOCK', file_get_contents($this->dir . '/composer.lock'));
+    }
+
+    /**
+     * 🚨 Flarum-in-a-box, 2026-10-07: root-owned cache entries refused every
+     * update. A cache is disposable, so when storage/ is writable it is moved
+     * aside and the run goes ahead. chmod on the parent directory stands in
+     * for root owning it: nothing inside can then be deleted by this user.
+     */
+    public function test_a_root_owned_cache_is_set_aside_and_the_run_goes_ahead(): void
+    {
+        chmod($this->dir . '/storage/cache/77/e1', 0555);
+
+        $moved = StaleCache::setAside($this->dir . '/storage');
+
+        $this->assertCount(1, $moved);
+        $this->assertStringStartsWith($this->dir . '/storage/cache.root-owned-', $moved[0]);
+        $this->assertFileExists($moved[0] . '/77/e1/entry');
+        $this->assertDirectoryExists($this->dir . '/storage/cache');
+        $this->assertSame([], $this->permissions()->blocked([]));
+    }
+
+    public function test_a_writable_cache_is_left_where_it_is(): void
+    {
+        $this->assertSame([], StaleCache::setAside($this->dir . '/storage'));
+        $this->assertFileExists($this->dir . '/storage/cache/77/e1/entry');
+    }
+
+    public function test_without_a_writable_storage_directory_the_run_still_refuses(): void
+    {
+        chmod($this->dir . '/storage/cache/77/e1/entry', 0444);
+        chmod($this->dir . '/storage', 0555);
+
+        $this->assertSame([], StaleCache::setAside($this->dir . '/storage'));
+        $this->assertSame([$this->dir . '/storage/cache/77/e1/entry'], $this->permissions()->blocked([]));
+    }
+
+    /** The wiring: a real run's permission step sets the cache aside and passes. */
+    public function test_a_real_run_passes_the_permission_step_with_a_root_owned_cache(): void
+    {
+        chmod($this->dir . '/storage/cache/77/e1', 0555);
+
+        $runDir = $this->dir . '/storage/millwright/runs/r1';
+        mkdir($runDir, 0775, true);
+        file_put_contents($runDir . '/plan.json', json_encode(['changes' => [
+            ['op' => 'replace', 'package' => 'acme/widget', 'from' => '1.0.0', 'to' => '2.0.0'],
+        ]]));
+
+        $paths = new Paths([
+            'base' => $this->dir, 'public' => $this->dir . '/public',
+            'storage' => $this->dir . '/storage', 'vendor' => $this->dir . '/vendor',
+        ]);
+        $steps = (new ComposerStepsFactory($paths, new Config(['url' => 'https://example.test'])))->for('r1');
+
+        $result = $steps->doItem('plan', 'check file permissions', Run::start('r1', time()));
+
+        $this->assertStringContainsString('Set aside a cache', (string) $result);
+        $this->assertStringContainsString('rm -rf', (string) $result);
     }
 }

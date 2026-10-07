@@ -5,6 +5,7 @@ namespace ErnestDefoe\Millwright\Apply;
 use ErnestDefoe\Millwright\Work\ComposerRunner;
 use ErnestDefoe\Millwright\Work\InstalledRecord;
 use ErnestDefoe\Millwright\Work\FlarumCommand;
+use ErnestDefoe\Millwright\Work\StaleCache;
 use Throwable;
 
 /**
@@ -27,6 +28,7 @@ class Restore
         private string $trashPath,
         private Journal $journal,
         private ComposerRunner $composer,
+        private string $storagePath = '',
     ) {
     }
 
@@ -120,6 +122,12 @@ class Restore
          * restored code — builds it from the right ones. Publishing assets and
          * clearing caches only copy and delete files, so they are safe here.
          */
+        // A root-owned cache would fail cache:clear below; see StaleCache.
+        $setAside = StaleCache::describe(StaleCache::setAside($this->storagePath));
+        if ($setAside !== '') {
+            $undone[] = $setAside;
+        }
+
         $flarum = new FlarumCommand($this->basePath, $this->composer);
         $inProcess = ! $this->composer->processes();
         $commands = [

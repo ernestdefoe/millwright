@@ -69,8 +69,8 @@ class Permissions
             $this->need(dirname($dir), $blocked);
         }
 
-        $this->walk($this->storagePath . '/cache', $blocked);
-        $this->walk($this->storagePath . '/formatter', $blocked);
+        $this->walkInto($this->storagePath . '/cache', $blocked);
+        $this->walkInto($this->storagePath . '/formatter', $blocked);
 
         return array_values(array_unique($blocked));
     }
@@ -100,7 +100,8 @@ class Permissions
         }
     }
 
-    private function walk(string $root, array &$blocked): void
+    /** Every entry under $root this process cannot change, appended to $blocked. */
+    public function walkInto(string $root, array &$blocked): void
     {
         if (! is_dir($root)) {
             return;
