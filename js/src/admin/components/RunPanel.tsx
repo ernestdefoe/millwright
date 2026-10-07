@@ -1,4 +1,5 @@
 import app from 'flarum/admin/app';
+import extractText from 'flarum/common/utils/extractText';
 import apiUrl from '../apiUrl';
 import { pollOutcome, runIsOver, shouldPoll } from '../runState';
 import Component from 'flarum/common/Component';
@@ -93,7 +94,7 @@ export default class RunPanel extends Component<RunPanelAttrs> {
   target(packages: string[]): string {
     if (packages.length <= 3) return packages.join(', ');
 
-    return t('run_target_more', { shown: packages.slice(0, 2).join(', '), count: packages.length - 2 }).toString();
+    return extractText(t('run_target_more', { shown: packages.slice(0, 2).join(', '), count: packages.length - 2 }));
   }
 
   view() {
@@ -111,7 +112,7 @@ export default class RunPanel extends Component<RunPanelAttrs> {
         <div className="Millwright-runHead">
           <div>
             <h3>{done ? t('run_done') : rolled ? t('run_rolled_back') : failed ? t('run_failed') : target ? t('run_target_' + mode, { packages: target }) : t('run_working')}</h3>
-            {target && (done || failed || rolled) ? <div className="Millwright-runTarget">{t('run_target_' + mode, { packages: target })}</div> : null}
+            {target && (done || failed || rolled) ? <div className="Millwright-runTarget">{target}</div> : null}
           </div>
           {this.attrs.driver ? <span className="Millwright-driver">{this.attrs.driver}</span> : null}
         </div>

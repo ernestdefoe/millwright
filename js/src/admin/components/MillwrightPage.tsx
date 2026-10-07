@@ -516,7 +516,7 @@ export default class MillwrightPage extends ExtensionPage {
         {this.sorted().map((e) => (
           <div className={'Millwright-card' + (cardOffers(e).badge ? ' Millwright-card--update' : '')} key={e.id}>
             {/* The extension's own settings page, the way the Extensions list opens it. */}
-            <Link className="Millwright-cardTop" href={app.route('extension', { id: e.id })} title={t('open_settings', { name: e.name })}>
+            <Link className="Millwright-cardTop" href={app.route('extension', { id: e.id })} title={extractText(t('open_settings', { name: e.name }))}>
               <div
                 className="Millwright-icon"
                 style={{ background: e.icon?.backgroundColor || 'var(--primary-color)' }}
