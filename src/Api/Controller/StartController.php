@@ -10,6 +10,7 @@ use ErnestDefoe\Millwright\Plan\Repin;
 use ErnestDefoe\Millwright\Run\Drivers;
 use ErnestDefoe\Millwright\Run\RunStore;
 use ErnestDefoe\Millwright\Run\StepRunner;
+use ErnestDefoe\Millwright\Plan\Nightly;
 use ErnestDefoe\Millwright\Work\WorkDir;
 use Flarum\Extension\ExtensionManager;
 use Flarum\Foundation\Application;
@@ -123,6 +124,22 @@ class StartController implements RequestHandlerInterface
 
         $body = (array) $request->getParsedBody();
         $packages = array_values(array_filter((array) Arr::get($body, 'packages', [])));
+
+        /*
+         * The nightly build: the server, not the browser, decides what moves
+         * and to which branch. See Plan\Nightly.
+         */
+        $nightly = filter_var(Arr::get($body, 'nightly', false), FILTER_VALIDATE_BOOL)
+            ? (new Nightly($this->paths->base . '/composer.json', $this->paths->base . '/composer.lock'))->targets()
+            : null;
+
+        if ($nightly === []) {
+            return new JsonResponse(['error' => 'There is no nightly build to move to: Packagist has no development branch for this Flarum, or could not be reached. Nothing was started.'], 422);
+        }
+
+        if ($nightly !== null) {
+            $packages = array_keys($nightly);
+        }
         $mode = in_array(Arr::get($body, 'mode'), ['install', 'remove'], true)
             ? (string) Arr::get($body, 'mode')
             : 'update';
@@ -175,7 +192,7 @@ class StartController implements RequestHandlerInterface
 
         $id = 'r' . date('Ymd-His') . '-' . bin2hex(random_bytes(3));
 
-        (new WorkDir($this->paths->storage, $id))->create()->remember($packages, $mode, $this->repinFor($packages, $body, $mode));
+        (new WorkDir($this->paths->storage, $id))->create()->remember($packages, $nightly !== null ? 'update' : $mode, $nightly ?? $this->repinFor($packages, $body, $mode));
 
         $run = $this->runner->begin($id);
 

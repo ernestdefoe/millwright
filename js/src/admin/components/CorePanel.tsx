@@ -24,6 +24,7 @@ interface CoreAttrs {
    * `onremove` are all spoken for; a callback attr must avoid the whole set.
    */
   onbegin: (packages: string[]) => void;
+  onnightly: () => void;
 }
 
 /** Asked in batches, because each one can cost an outbound call. */
@@ -96,6 +97,25 @@ export default class CorePanel extends Component<CoreAttrs> {
            */
           [this.summary(), this.rows()].filter(Boolean)
         )}
+
+        {/*
+          * The nightly build: Flarum and its bundled extensions moved to the
+          * development branch together, for testing what the next release
+          * will be. The server works out which packages and which branch;
+          * undo returns the forum to the release it was on.
+          */}
+        <div className="Millwright-coreNightly">
+          <div>
+            <b>{t('core_nightly_title')}</b> {t('core_nightly_help')}
+          </div>
+          <button
+            className="Button"
+            disabled={this.attrs.starting}
+            onclick={() => confirm(t('core_nightly_confirm')) && this.attrs.onnightly()}
+          >
+            {t('core_nightly_button')}
+          </button>
+        </div>
       </div>
     );
   }

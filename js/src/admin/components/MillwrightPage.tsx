@@ -132,6 +132,8 @@ export default class MillwrightPage extends ExtensionPage {
         this.host = data.host;
         this.installed = data.installed || [];
         this.history = data.history || [];
+        // The second half of an undo runs on this request; say if it could not.
+        if (data.undoError) this.notice = data.undoError;
         this.updates = data.updates || this.updates;
         /*
          * 🚨 An unfinished run found on load is picked straight back up. Closing
@@ -286,7 +288,9 @@ export default class MillwrightPage extends ExtensionPage {
    * The finished panel comes straight back, because the run is on disk.
    */
   private reloadIfSelf(run: any) {
-    if (!run || !['done', 'rolled-back'].includes(run.state) || !(run.packages || []).includes(SELF_PACKAGE)) return;
+    // Flarum core too: the page's own JavaScript and version are core's.
+    const reloads = (run?.packages || []).some((p: string) => p === SELF_PACKAGE || p === 'flarum/core');
+    if (!run || !['done', 'rolled-back'].includes(run.state) || !reloads) return;
 
     const key = 'millwright.reloaded.' + run.id + '.' + run.state;
 
@@ -408,7 +412,7 @@ export default class MillwrightPage extends ExtensionPage {
    *        and exits 0, so a run in the wrong mode would pass every phase,
    *        change nothing, and report success.
    */
-  start(packages: string[], mode: 'update' | 'install' | 'remove' = 'update', repin = false) {
+  start(packages: string[], mode: 'update' | 'install' | 'remove' = 'update', repin = false, nightly = false) {
     this.starting = true;
     this.notice = null;
     this.rollbackNote = null;
@@ -418,7 +422,7 @@ export default class MillwrightPage extends ExtensionPage {
       .request({
         method: 'POST',
         url: apiUrl() + '/millwright/update',
-        body: { packages, mode, repin },
+        body: { packages, mode, repin, nightly },
       })
       .then((data: any) => {
         this.starting = false;
@@ -473,7 +477,11 @@ export default class MillwrightPage extends ExtensionPage {
        * a core update with blocked extensions would be refused by Composer at
        * the end of a long wait, and knowing that in advance is the point.
        */
-      <CorePanel starting={this.starting} onbegin={(pkgs: string[]) => this.start(pkgs)} />,
+      <CorePanel
+        starting={this.starting}
+        onbegin={(pkgs: string[]) => this.start(pkgs)}
+        onnightly={() => this.start(['flarum/core'], 'update', false, true)}
+      />,
       this.updateAll(),
       this.checkLine(),
       this.grid(),

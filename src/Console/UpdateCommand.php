@@ -3,6 +3,7 @@
 namespace ErnestDefoe\Millwright\Console;
 
 use ErnestDefoe\Millwright\Host\Capability;
+use ErnestDefoe\Millwright\Plan\Nightly;
 use ErnestDefoe\Millwright\Plan\Repin;
 use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Run\RunStore;
@@ -79,6 +80,7 @@ class UpdateCommand extends AbstractCommand
                 InputOption::VALUE_NONE,
                 'Allow raising a requirement this site pins to an exact version. Without it, a pinned package is refused rather than silently skipped.'
             )
+            ->addOption('nightly', null, InputOption::VALUE_NONE, 'Move Flarum and its bundled extensions to the nightly build ({major}.x-dev). Undo returns them to the release they were on.')
             ->addOption('resume', null, InputOption::VALUE_NONE, 'Drive the run already in progress instead of starting a new one.')
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Stop waiting after this many seconds.', '3600');
     }
@@ -91,6 +93,10 @@ class UpdateCommand extends AbstractCommand
 
         $named = array_values(array_filter(array_map('strval', (array) $this->input->getArgument('packages'))));
         $all   = (bool) $this->input->getOption('all');
+
+        if ($this->input->getOption('nightly')) {
+            return $this->nightly();
+        }
 
         if ($all && $named !== []) {
             $this->error('Name the packages, or pass --all. Both together is ambiguous, so nothing was started.');
@@ -335,6 +341,33 @@ class UpdateCommand extends AbstractCommand
 
         return implode(', ', $missing) . ' is not installed, so there is nothing to update. '
             . 'Install it from the Millwright screen first. Nothing was started.';
+    }
+
+    /** See Plan\Nightly: the server works out what moves, and to which branch. */
+    private function nightly(): int
+    {
+        $existing = $this->runs->latest();
+
+        if ($existing !== null && ! $existing->isFinished()) {
+            $this->error('An update is already in progress. Drive it with --resume, or abandon it on the Millwright screen. Nothing was started.');
+
+            return 1;
+        }
+
+        $targets = (new Nightly($this->paths->base . '/composer.json', $this->paths->base . '/composer.lock'))->targets();
+
+        if ($targets === []) {
+            $this->error('There is no nightly build to move to: Packagist has no development branch for this Flarum, or could not be reached. Nothing was started.');
+
+            return 1;
+        }
+
+        $id = 'r' . date('Ymd-His') . '-' . bin2hex(random_bytes(3));
+        (new WorkDir($this->paths->storage, $id))->create()->remember(array_keys($targets), 'update', $targets);
+
+        $this->info('Moving ' . count($targets) . ' Flarum package(s) to ' . reset($targets) . ': ' . implode(', ', array_keys($targets)));
+
+        return $this->pump($this->runner->begin($id));
     }
 
     private function check(): UpdateCheck

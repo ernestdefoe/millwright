@@ -201,7 +201,8 @@ class RepinTest extends TestCase
         $source = file_get_contents(dirname(__DIR__, 2) . '/src/Api/Controller/StartController.php');
 
         $this->assertIsString($source);
-        $this->assertMatchesRegularExpression('/remember\(\$packages, \$mode, \$this->repinFor\(/', (string) $source);
+        // Nightly targets come from Plan\Nightly; every other run still asks repinFor().
+        $this->assertMatchesRegularExpression('/remember\(\$packages, .*\$mode, \$nightly \?\? \$this->repinFor\(/', (string) $source);
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────

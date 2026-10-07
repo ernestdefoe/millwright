@@ -158,6 +158,15 @@ ernestdefoe-millwright:
     installed_as: "installed as {replacement}"
 
     core_title: Flarum itself
+    core_nightly_title: Nightly build.
+    core_nightly_help: >-
+      For testing what the next release will be: Flarum and its bundled
+      extensions move to the development branch together. Not for a live forum.
+    core_nightly_button: Try the nightly build
+    core_nightly_confirm: >-
+      Move Flarum and its bundled extensions to the nightly development build?
+      Its database changes are recorded, and "Undo this update" returns the
+      forum to the release it is on now.
     core_loading: Checking Flarum…
     core_running: "This forum runs Flarum {version}."
     core_current: No newer Flarum has been published since the last check.
