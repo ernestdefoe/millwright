@@ -5,8 +5,12 @@ namespace ErnestDefoe\Millwright\Apply;
 use ErnestDefoe\Millwright\Host\Opcache;
 use ErnestDefoe\Millwright\Work\ComposerRunner;
 use ErnestDefoe\Millwright\Work\InstalledRecord;
+use ErnestDefoe\Millwright\Work\MigrationLedger;
 use ErnestDefoe\Millwright\Work\FlarumCommand;
 use ErnestDefoe\Millwright\Work\StaleCache;
+use Flarum\Database\Migrator;
+use Flarum\Extension\ExtensionManager;
+use Illuminate\Database\ConnectionInterface;
 use Throwable;
 
 /**
@@ -44,13 +48,26 @@ class Restore
      */
     public function run(): array
     {
-        $undone = (new Rollback(
+        /*
+         * The database first, while the new version's files — which hold the
+         * migrations' down steps — are still in place. Refuses, changing
+         * nothing, when any of them cannot be reversed. See MigrationLedger.
+         */
+        $ledger = new MigrationLedger($this->workDirRoot);
+        $reversed = $ledger->ran() === [] ? [] : $ledger->undo(
+            resolve(ConnectionInterface::class),
+            resolve(Migrator::class),
+            resolve(ExtensionManager::class),
+            $this->vendorPath
+        );
+
+        $undone = array_merge($reversed, (new Rollback(
             $this->vendorPath,
             $this->trashPath,
             $this->journal,
             $this->basePath,
             $this->workDirRoot
-        ))->run();
+        ))->run());
 
         $note = null;
 

@@ -11,6 +11,7 @@ use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
+use RuntimeException;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
@@ -92,7 +93,13 @@ class RollbackController implements RequestHandlerInterface
             $this->paths->storage
         );
 
-        $result = $restore->run();
+        try {
+            $result = $restore->run();
+        } catch (RuntimeException $e) {
+            // A refusal (a database change that cannot be reversed) changed nothing.
+            return new JsonResponse(['error' => $e->getMessage()], 422);
+        }
+
         $undone = $result['undone'];
         $note = $result['note'];
 

@@ -8,6 +8,7 @@ use ErnestDefoe\Millwright\Apply\Applier;
 use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Apply\Restore;
 use ErnestDefoe\Millwright\Plan\Change;
+use Illuminate\Database\ConnectionInterface;
 use ErnestDefoe\Millwright\Plan\LockDiff;
 use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Host\Opcache;
@@ -595,7 +596,7 @@ class ComposerSteps implements Steps
     {
         return match ($item) {
             'register'   => $this->register(),
-            'migrations' => $this->flarum('migrate', 'migrations run'),
+            'migrations' => $this->migrate(),
             'assets'     => $this->flarum('assets:publish', 'assets published'),
             'caches'     => $this->clearCaches(),
             'check the site again' => $this->verify($run),
@@ -1048,6 +1049,19 @@ class ComposerSteps implements Steps
         }
 
         return $note;
+    }
+
+    /** `flarum migrate`, writing down what it ran so undo can reverse it. See MigrationLedger. */
+    private function migrate(): string
+    {
+        $ledger = new MigrationLedger($this->workDir);
+        $db = resolve(ConnectionInterface::class);
+
+        $ledger->before($db);
+        $this->flarum('migrate', 'migrations run');
+        $added = $ledger->after($db);
+
+        return $added === [] ? 'migrations run (no database changes)' : 'migrations run: ' . count($added) . ' database change(s), which undoing this update reverses';
     }
 
     private function flarum(string $command, string $note): string
