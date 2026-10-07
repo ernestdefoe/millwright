@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Apply;
 
+use ErnestDefoe\Millwright\Host\Opcache;
 use ErnestDefoe\Millwright\Work\ComposerRunner;
 use ErnestDefoe\Millwright\Work\InstalledRecord;
 use ErnestDefoe\Millwright\Work\FlarumCommand;
@@ -151,6 +152,15 @@ class Restore
         }
 
         $undone[] = 'assets and caches rebuilt';
+
+        /*
+         * 🚨 And the web server's compiled-code cache, as an update's finish
+         * does. Without it, Flarum-in-a-box (2026-10-07) kept serving the
+         * newer version's extend.php after the files were put back: every page
+         * 500'd on a class the restored version never had, until PHP-FPM was
+         * restarted by hand.
+         */
+        $undone[] = (new Opcache())->clear()['why'];
 
         return null;
     }
