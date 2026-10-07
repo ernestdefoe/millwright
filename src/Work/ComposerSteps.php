@@ -8,10 +8,13 @@ use ErnestDefoe\Millwright\Apply\Applier;
 use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Apply\Restore;
 use ErnestDefoe\Millwright\Plan\Change;
+use Flarum\Extension\ExtensionManager;
 use Illuminate\Database\ConnectionInterface;
 use ErnestDefoe\Millwright\Plan\LockDiff;
 use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Host\Opcache;
+use Flarum\Foundation\Config;
+use ErnestDefoe\Millwright\Host\FlarumUpdater;
 use ErnestDefoe\Millwright\Host\SiteHealth;
 use ErnestDefoe\Millwright\Host\Verdict;
 use ErnestDefoe\Millwright\Host\ErrorLog;
@@ -76,7 +79,7 @@ class ComposerSteps implements Steps
         return match ($phase) {
             'plan'     => ['check the site', 'work out what changes', 'check file permissions'],
             'fetch'    => array_map(fn (Change $c) => $c->package, $this->downloadable()),
-            'apply'    => array_map(fn (Change $c) => $c->package, $this->plan()),
+            'apply'    => array_map(fn (Change $c) => $c->package, $this->applyOrder()),
             /*
              * 🚨 'tidy the trash' is LAST, after the site has been checked: an
              * update that is about to be undone automatically must not have its
@@ -544,15 +547,107 @@ class ComposerSteps implements Steps
         return "downloaded $package";
     }
 
+    /**
+     * The plan in the order it is applied: Flarum core LAST.
+     *
+     * 🚨 A host without processes applies one package per request, and the
+     * moment core's files land every later request gets "Update Flarum".
+     * Alphabetically core was 4th of 27 on rc.8 → nightly, so the other 23
+     * swaps — and the database update after them — could never run. Last, it
+     * is swapped in the same request that brings the database up to date.
+     *
+     * @return list<Change>
+     */
+    private function applyOrder(): array
+    {
+        $plan = $this->plan();
+        usort($plan, fn (Change $a, Change $b) => (int) ($a->package === 'flarum/core') <=> (int) ($b->package === 'flarum/core'));
+
+        return $plan;
+    }
+
     private function applyOne(string $package): string
     {
-        foreach ($this->plan() as $change) {
+        $plan = $this->applyOrder();
+
+        foreach ($plan as $change) {
             if ($change->package === $package) {
-                return $this->applier->applyOne($change);
+                $done = $this->applier->applyOne($change);
+
+                // The last swap of an update that moved Flarum itself.
+                if ($package === end($plan)->package && $this->movesCore($plan)) {
+                    $done .= '. ' . $this->bridgeCore();
+                }
+
+                return $done;
             }
         }
 
         throw new RuntimeException("$package is not in the plan.");
+    }
+
+    /** @param list<Change> $plan */
+    private function movesCore(array $plan): bool
+    {
+        foreach ($plan as $change) {
+            if ($change->package === 'flarum/core' && $change->op === Change::REPLACE) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Bring the database up to date in the SAME request that swapped core.
+     *
+     * 🚨 Once Flarum's files are newer than its database, every request gets
+     * the "Update Flarum" page — Millwright's own step endpoint included — so
+     * the finalise phase could never be reached from the web, and neither
+     * could the undo button. Where a process can be started, `php flarum
+     * migrate` runs fresh, on the new code; where it cannot, Flarum's own
+     * updater is asked to (see FlarumUpdater). If neither works, this request
+     * undoes the update before it ends, because no later one could.
+     */
+    private function bridgeCore(): string
+    {
+        $db = resolve(ConnectionInterface::class);
+        $ledger = new MigrationLedger($this->workDir);
+        $ledger->before($db);
+        $was = $db->table('settings')->where('key', 'version')->value('value');
+
+        try {
+            (new Opcache())->clear();
+
+            if ($this->composer->canSpawn()) {
+                $this->registerWith(null);
+                $this->flarum('migrate', '');
+            } else {
+                (new FlarumUpdater($this->siteUrl, (array) (resolve(Config::class)['database'] ?? [])))->migrate();
+            }
+
+            $now = $db->table('settings')->where('key', 'version')->value('value');
+
+            if ($now === $was) {
+                throw new RuntimeException('the database still records Flarum ' . $was . ' after migrating.');
+            }
+
+            return 'Flarum moved from ' . $was . ' to ' . $now . ', so its database was brought up to date straight away';
+        } catch (\Throwable $e) {
+            $restore = $this->restore();
+
+            if ($restore === null || ! $restore->possible()) {
+                throw new RuntimeException('Flarum\'s files were updated but its database could not be: ' . $e->getMessage());
+            }
+
+            $done = $restore->run();
+
+            throw new Reverted(
+                'Flarum\'s files were updated but its database could not be (' . $e->getMessage() . '), so the update was undone '
+                . 'before the site could be left showing "Update Flarum".' . ($done['note'] !== null ? ' ' . $done['note'] : ''),
+                $done['undone']
+            );
+        }
     }
 
     /**
@@ -1061,7 +1156,7 @@ class ComposerSteps implements Steps
 
         $ledger->before($db);
         $this->flarum('migrate', 'migrations run');
-        $added = $ledger->after($db);
+        $added = $ledger->after($db, resolve(ExtensionManager::class), $this->vendorPath);
 
         return $added === [] ? 'migrations run (no database changes)' : 'migrations run: ' . count($added) . ' database change(s), which undoing this update reverses';
     }

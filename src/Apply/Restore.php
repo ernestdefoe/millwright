@@ -49,19 +49,20 @@ class Restore
     public function run(): array
     {
         /*
-         * The database first, while the new version's files — which hold the
-         * migrations' down steps — are still in place. Refuses, changing
-         * nothing, when any of them cannot be reversed. See MigrationLedger.
+         * The database is checked first — refusing, changing nothing, when any
+         * migration cannot be reversed — and the version Flarum records goes
+         * back. The reversal itself waits for the next request, booted from
+         * the restored code. See MigrationLedger.
          */
         $ledger = new MigrationLedger($this->workDirRoot);
-        $reversed = $ledger->ran() === [] ? [] : $ledger->undo(
+        $pending = $ledger->prepare(
             resolve(ConnectionInterface::class),
             resolve(Migrator::class),
             resolve(ExtensionManager::class),
             $this->vendorPath
         );
 
-        $undone = array_merge($reversed, (new Rollback(
+        $undone = array_merge($pending ? ['database changes queued to be reversed on the next request'] : [], (new Rollback(
             $this->vendorPath,
             $this->trashPath,
             $this->journal,

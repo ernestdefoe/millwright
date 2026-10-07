@@ -7,6 +7,7 @@ use ErnestDefoe\Millwright\Host\PhpBinary;
 use ErnestDefoe\Millwright\Run\RunStore;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 use Flarum\Extension\ExtensionManager;
+use ErnestDefoe\Millwright\Work\PendingUndo;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
 use Laminas\Diactoros\Response\JsonResponse;
@@ -36,6 +37,7 @@ class StateController implements RequestHandlerInterface
         RequestUtil::getActor($request)->assertAdmin();
 
         $run = $this->runs->latest();
+        $undoError = PendingUndo::finish($run, $this->paths);
 
         $check = new UpdateCheck($this->paths->storage . '/millwright/updates.json');
         $cached = $check->current($this->paths->base . '/composer.lock');
@@ -44,6 +46,7 @@ class StateController implements RequestHandlerInterface
             'host'       => (new Capability($this->paths->base, PhpBinary::forStorage($this->paths->storage), $this->paths->storage . '/.composer'))->report(),
             'installed'  => $this->installed($cached['updates'] ?? []),
             'run'        => $this->runs->present($run),
+            'undoError'  => $undoError,
             'history'    => $this->runs->history(),
             'runIsStale' => $run !== null && $run->isStale(time()),
             /*
