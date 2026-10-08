@@ -393,7 +393,12 @@ env_core_nightly() { # host: composer (can start processes) | zip (shared hostin
   done
   state=$(echo "$r" | php -r '$j=json_decode(stream_get_contents(STDIN),true); echo $j["run"]["state"] ?? "?";')
   v1=$(core_version); m1=$(all_migrations); dv1=$(db_version)
-  check "$ENV" "nightly: update finished ($i steps)" "$([ "$state" = done ] && echo 1)" "$state $(echo "$start" | grep -o '"error":"[^"]*' | cut -c1-120)"
+  # When it didn't finish, say where and why: the run records the step that
+  # failed and its error, and "failed" alone can't be diagnosed after the
+  # containers are gone.
+  local why
+  why=$(echo "$r" | php -r '$j=json_decode(stream_get_contents(STDIN),true); $run=$j["run"]??[]; if (!empty($run["error"])) echo "at ", $run["errorStep"] ?? "?", ": ", substr($run["error"], 0, 400);')
+  check "$ENV" "nightly: update finished ($i steps)" "$([ "$state" = done ] && echo 1)" "$state $why $(echo "$start" | grep -o '"error":"[^"]*' | cut -c1-200)"
   check "$ENV" "nightly: core moved" "$([ -n "$v1" ] && [ "$v1" != "$v0" ] && echo 1)" "$v0 → $v1 (database says $dv1)"
   check "$ENV" "nightly: site answers" "$([ "$(code /)" = 200 ] && [ "$(code /api)" = 200 ] && echo 1)" "home $(code /), api $(code /api)"
   plant_root_cache >/dev/null
