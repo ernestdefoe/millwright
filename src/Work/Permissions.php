@@ -50,12 +50,12 @@ class Permissions
         $blocked = [];
 
         foreach (['composer.json', 'composer.lock'] as $file) {
-            $this->need($this->basePath . '/' . $file, $blocked);
+            $this->need($this->basePath.'/'.$file, $blocked);
         }
-        $this->need($this->vendorPath . '/composer', $blocked);
+        $this->need($this->vendorPath.'/composer', $blocked);
 
         foreach ($changes as $change) {
-            $dir = $this->vendorPath . '/' . $change->relativePath();
+            $dir = $this->vendorPath.'/'.$change->relativePath();
 
             if ($change->op === Change::ADD && ! file_exists($dir)) {
                 // Created inside its vendor directory, or vendor/ when that
@@ -70,8 +70,8 @@ class Permissions
             $this->need(dirname($dir), $blocked);
         }
 
-        $this->walkInto($this->storagePath . '/cache', $blocked);
-        $this->walkInto($this->storagePath . '/formatter', $blocked);
+        $this->walkInto($this->storagePath.'/cache', $blocked);
+        $this->walkInto($this->storagePath.'/formatter', $blocked);
 
         return array_values(array_unique($blocked));
     }
@@ -86,12 +86,12 @@ class Permissions
         $shown = array_slice($blocked, 0, self::SHOWN);
         $more = count($blocked) - count($shown);
 
-        return 'Nothing was changed: ' . count($blocked) . " path(s) this update needs to change are not writable by $user, "
-            . 'usually because a command was run as root. Give them back to the web server user and run the update again, '
-            . "for example as root:\n  chown -R $user " . escapeshellarg($this->vendorPath) . ' '
-            . escapeshellarg($this->storagePath) . "\n"
-            . implode("\n", array_map(fn ($p) => '  ' . $p, $shown))
-            . ($more > 0 ? "\n  … and $more more" : '');
+        return 'Nothing was changed: '.count($blocked)." path(s) this update needs to change are not writable by $user, "
+            .'usually because a command was run as root. Give them back to the web server user and run the update again, '
+            ."for example as root:\n  chown -R $user ".escapeshellarg($this->vendorPath).' '
+            .escapeshellarg($this->storagePath)."\n"
+            .implode("\n", array_map(fn ($p) => '  '.$p, $shown))
+            .($more > 0 ? "\n  … and $more more" : '');
     }
 
     private function need(string $path, array &$blocked): void

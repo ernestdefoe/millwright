@@ -112,7 +112,7 @@ class Contained
             throw new RuntimeException("Refusing to delete '$name': it is not a single name inside {$this->base}.");
         }
 
-        return $this->base . DIRECTORY_SEPARATOR . $name;
+        return $this->base.DIRECTORY_SEPARATOR.$name;
     }
 
     private function removePath(string $path): int
@@ -147,7 +147,7 @@ class Contained
                 continue;
             }
 
-            $path = $dir . DIRECTORY_SEPARATOR . $name;
+            $path = $dir.DIRECTORY_SEPARATOR.$name;
             $stat = @lstat($path);
 
             if ($stat === false) {
@@ -191,7 +191,7 @@ class Contained
 
         foreach (@scandir($path) ?: [] as $name) {
             if ($name !== '.' && $name !== '..') {
-                $bytes += $this->measure($path . DIRECTORY_SEPARATOR . $name);
+                $bytes += $this->measure($path.DIRECTORY_SEPARATOR.$name);
             }
         }
 
@@ -208,7 +208,7 @@ class Contained
     {
         $real = realpath($dir);
 
-        if ($real === false || ! str_starts_with($real, $this->base . DIRECTORY_SEPARATOR)) {
+        if ($real === false || ! str_starts_with($real, $this->base.DIRECTORY_SEPARATOR)) {
             throw new RuntimeException("Refusing to delete $dir: it resolves outside {$this->base}.");
         }
     }

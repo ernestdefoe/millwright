@@ -13,7 +13,7 @@
  * idempotency is actually load-bearing. Killing after a step returns proves
  * cross-process resumption but never touches it.
  */
-require __DIR__ . '/../../vendor/autoload.php';
+require __DIR__.'/../../vendor/autoload.php';
 
 use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Run\RunStore;
@@ -26,7 +26,9 @@ $killInside = $argv[6] ?? '';
 $plan = json_decode($itemsJson, true, 512, JSON_THROW_ON_ERROR);
 
 $steps = new class($plan, $logPath, $killInside) implements Steps {
-    public function __construct(private array $plan, private string $log, private string $killInside) {}
+    public function __construct(private array $plan, private string $log, private string $killInside)
+    {
+    }
 
     public function itemsFor(string $phase, Run $run): array
     {
@@ -53,8 +55,8 @@ $steps = new class($plan, $logPath, $killInside) implements Steps {
     }
 };
 
-$store  = new RunStore($dir);
-$runner = new StepRunner($store, $steps, fn () => time(), $dir . '/locks');
+$store = new RunStore($dir);
+$runner = new StepRunner($store, $steps, fn () => time(), $dir.'/locks');
 
 if ($store->load($runId) === null) {
     $runner->begin($runId);

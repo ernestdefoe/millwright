@@ -17,10 +17,10 @@ namespace ErnestDefoe\Millwright\Run;
  */
 final class Run
 {
-    public const PENDING  = 'pending';
-    public const RUNNING  = 'running';
-    public const DONE     = 'done';
-    public const FAILED   = 'failed';
+    public const PENDING = 'pending';
+    public const RUNNING = 'running';
+    public const DONE = 'done';
+    public const FAILED = 'failed';
     public const ROLLBACK = 'rolled-back';
 
     /** In the order they happen. The driver never skips one. */
@@ -97,9 +97,9 @@ final class Run
     public function advanced(int $now, ?string $note = null): self
     {
         return $this->copy([
-            'index'   => $this->index + 1,
+            'index' => $this->index + 1,
             'movedAt' => $now,
-            'log'     => $note === null ? $this->log : [...$this->log, $note],
+            'log' => $note === null ? $this->log : [...$this->log, $note],
         ]);
     }
 
@@ -126,11 +126,11 @@ final class Run
     public function enteredPhase(string $phase, int $now, ?string $note = null): self
     {
         return $this->copy([
-            'phase'   => $phase,
-            'items'   => [],
-            'index'   => 0,
+            'phase' => $phase,
+            'items' => [],
+            'index' => 0,
             'movedAt' => $now,
-            'log'     => $note === null ? $this->log : [...$this->log, $note],
+            'log' => $note === null ? $this->log : [...$this->log, $note],
         ]);
     }
 
@@ -142,29 +142,29 @@ final class Run
     public function failed(string $error, string $step, int $now): self
     {
         return $this->copy([
-            'state'     => self::FAILED,
-            'error'     => $error,
+            'state' => self::FAILED,
+            'error' => $error,
             'errorStep' => $step,
-            'movedAt'   => $now,
-            'log'       => [...$this->log, "Failed during $step: $error"],
+            'movedAt' => $now,
+            'log' => [...$this->log, "Failed during $step: $error"],
         ]);
     }
 
     public function finished(int $now): self
     {
         return $this->copy([
-            'state'   => self::DONE,
+            'state' => self::DONE,
             'movedAt' => $now,
-            'log'     => [...$this->log, 'Finished'],
+            'log' => [...$this->log, 'Finished'],
         ]);
     }
 
     public function rolledBack(int $now, array $undone): self
     {
         return $this->copy([
-            'state'   => self::ROLLBACK,
+            'state' => self::ROLLBACK,
             'movedAt' => $now,
-            'log'     => [...$this->log, 'Rolled back: ' . (implode(', ', $undone) ?: 'nothing to undo')],
+            'log' => [...$this->log, 'Rolled back: '.(implode(', ', $undone) ?: 'nothing to undo')],
         ]);
     }
 
@@ -181,14 +181,14 @@ final class Run
     public function revertedAfter(string $why, string $step, array $undone, int $now): self
     {
         return $this->copy([
-            'state'     => self::ROLLBACK,
-            'error'     => $why,
+            'state' => self::ROLLBACK,
+            'error' => $why,
             'errorStep' => $step,
-            'movedAt'   => $now,
-            'log'       => [
+            'movedAt' => $now,
+            'log' => [
                 ...$this->log,
                 "Failed during $step: $why",
-                'Put back automatically: ' . (implode(', ', $undone) ?: 'nothing to undo'),
+                'Put back automatically: '.(implode(', ', $undone) ?: 'nothing to undo'),
             ],
         ]);
     }

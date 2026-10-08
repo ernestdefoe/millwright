@@ -49,11 +49,11 @@ class StepController implements RequestHandlerInterface
         $run = $this->runner->step($run->id);
 
         return new JsonResponse([
-            'run'       => $this->runs->present($run),
-            'idle'      => $run->isFinished(),
+            'run' => $this->runs->present($run),
+            'idle' => $run->isFinished(),
             // Not an error. Another driver has it; keep polling.
-            'busy'      => $this->runner->wasBusy(),
-            'stale'     => $run->isStale(time()),
+            'busy' => $this->runner->wasBusy(),
+            'stale' => $run->isStale(time()),
             'hasWorker' => $this->drivers->hasWorker(),
         ]);
     }

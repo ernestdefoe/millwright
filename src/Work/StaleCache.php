@@ -40,16 +40,16 @@ final class StaleCache
         $stamp = date('YmdHis');
 
         foreach (self::DIRS as $name) {
-            $dir = $storagePath . '/' . $name;
+            $dir = $storagePath.'/'.$name;
 
             if (! is_dir($dir) || ! self::hasUnwritable($dir)) {
                 continue;
             }
 
             // The whole directory, when storage/ lets us.
-            if (is_writable($storagePath) && @rename($dir, $dir . '.root-owned-' . $stamp)) {
+            if (is_writable($storagePath) && @rename($dir, $dir.'.root-owned-'.$stamp)) {
                 @mkdir($dir, 0775);
-                $moved[] = $dir . '.root-owned-' . $stamp;
+                $moved[] = $dir.'.root-owned-'.$stamp;
                 continue;
             }
 
@@ -69,13 +69,13 @@ final class StaleCache
             }
 
             foreach (scandir($dir) ?: [] as $entry) {
-                $path = $dir . '/' . $entry;
+                $path = $dir.'/'.$entry;
 
                 if ($entry[0] === '.' || ! self::blocks($path)) {
                     continue;
                 }
 
-                $aside = $dir . '/' . self::HIDDEN . $entry . '-' . $stamp;
+                $aside = $dir.'/'.self::HIDDEN.$entry.'-'.$stamp;
 
                 if (@rename($path, $aside)) {
                     $moved[] = $aside;
@@ -106,7 +106,7 @@ final class StaleCache
     public static function describe(array $moved): string
     {
         return $moved === [] ? '' : 'Set aside a cache owned by another user, which Flarum rebuilds; delete it as root when convenient: rm -rf '
-            . implode(' ', array_map('escapeshellarg', $moved));
+            .implode(' ', array_map('escapeshellarg', $moved));
     }
 
     private static function hasUnwritable(string $root): bool

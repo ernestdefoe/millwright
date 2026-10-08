@@ -21,13 +21,13 @@ class PrivateIndexTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->dir = sys_get_temp_dir() . '/mw-private-' . bin2hex(random_bytes(6));
+        $this->dir = sys_get_temp_dir().'/mw-private-'.bin2hex(random_bytes(6));
         mkdir($this->dir, 0775, true);
     }
 
     protected function tearDown(): void
     {
-        foreach (glob($this->dir . '/*') ?: [] as $f) {
+        foreach (glob($this->dir.'/*') ?: [] as $f) {
             @unlink($f);
         }
         @rmdir($this->dir);
@@ -35,12 +35,12 @@ class PrivateIndexTest extends TestCase
 
     private function index(array $composer, array $auth = []): PrivateIndex
     {
-        file_put_contents($this->dir . '/composer.json', json_encode($composer));
-        file_put_contents($this->dir . '/auth.json', json_encode($auth));
+        file_put_contents($this->dir.'/composer.json', json_encode($composer));
+        file_put_contents($this->dir.'/auth.json', json_encode($auth));
 
         return new PrivateIndex(
-            new Repositories(new JsonFile($this->dir . '/composer.json')),
-            new AuthTokens(new JsonFile($this->dir . '/auth.json'))
+            new Repositories(new JsonFile($this->dir.'/composer.json')),
+            new AuthTokens(new JsonFile($this->dir.'/auth.json'))
         );
     }
 
@@ -94,9 +94,9 @@ class PrivateIndexTest extends TestCase
         $method = (new ReflectionClass($index))->getMethod('fetchIndex');
         $parsed = $this->parse($index, [
             'packages' => [
-                'vendor/paid'   => ['1.0.0' => ['version' => '1.0.0'], '1.1.0' => ['version' => '1.1.0']],
+                'vendor/paid' => ['1.0.0' => ['version' => '1.0.0'], '1.1.0' => ['version' => '1.1.0']],
                 'vendor/sparse' => ['2.0.0' => []],
-                'vendor/empty'  => [],
+                'vendor/empty' => [],
                 'vendor/broken' => 'not an array',
             ],
         ]);
@@ -130,12 +130,12 @@ class PrivateIndexTest extends TestCase
      */
     public function test_stored_secrets_are_never_reported(): void
     {
-        file_put_contents($this->dir . '/auth.json', json_encode([
+        file_put_contents($this->dir.'/auth.json', json_encode([
             'http-basic' => ['example.test' => ['username' => 'token', 'password' => 'sup3r-secret']],
-            'bearer'     => ['other.test' => 'another-secret'],
+            'bearer' => ['other.test' => 'another-secret'],
         ]));
 
-        $auth = new AuthTokens(new JsonFile($this->dir . '/auth.json'));
+        $auth = new AuthTokens(new JsonFile($this->dir.'/auth.json'));
 
         $reported = json_encode($auth->all());
 
@@ -146,22 +146,22 @@ class PrivateIndexTest extends TestCase
 
     public function test_http_basic_becomes_a_basic_header(): void
     {
-        file_put_contents($this->dir . '/auth.json', json_encode([
+        file_put_contents($this->dir.'/auth.json', json_encode([
             'http-basic' => ['example.test' => ['username' => 'token', 'password' => 'shh']],
         ]));
 
-        $auth = new AuthTokens(new JsonFile($this->dir . '/auth.json'));
+        $auth = new AuthTokens(new JsonFile($this->dir.'/auth.json'));
 
-        $this->assertSame('Authorization: Basic ' . base64_encode('token:shh'), $auth->headerFor('example.test'));
+        $this->assertSame('Authorization: Basic '.base64_encode('token:shh'), $auth->headerFor('example.test'));
     }
 
     public function test_a_bearer_token_becomes_a_bearer_header(): void
     {
-        file_put_contents($this->dir . '/auth.json', json_encode([
+        file_put_contents($this->dir.'/auth.json', json_encode([
             'bearer' => ['example.test' => 'shh'],
         ]));
 
-        $auth = new AuthTokens(new JsonFile($this->dir . '/auth.json'));
+        $auth = new AuthTokens(new JsonFile($this->dir.'/auth.json'));
 
         $this->assertSame('Authorization: Bearer shh', $auth->headerFor('example.test'));
     }
@@ -173,11 +173,11 @@ class PrivateIndexTest extends TestCase
      */
     public function test_a_credential_is_found_by_host_not_by_url(): void
     {
-        file_put_contents($this->dir . '/auth.json', json_encode([
+        file_put_contents($this->dir.'/auth.json', json_encode([
             'http-basic' => ['example.test' => ['username' => 'token', 'password' => 'shh']],
         ]));
 
-        $auth = new AuthTokens(new JsonFile($this->dir . '/auth.json'));
+        $auth = new AuthTokens(new JsonFile($this->dir.'/auth.json'));
 
         $this->assertNotNull($auth->headerFor('EXAMPLE.TEST'));
         $this->assertNull($auth->headerFor('https://example.test/composer'));
@@ -187,7 +187,7 @@ class PrivateIndexTest extends TestCase
     /** A repository with no credential is a normal state, not an error. */
     public function test_no_credential_is_not_an_error(): void
     {
-        $auth = new AuthTokens(new JsonFile($this->dir . '/auth.json'));
+        $auth = new AuthTokens(new JsonFile($this->dir.'/auth.json'));
 
         $this->assertNull($auth->headerFor('example.test'));
     }
@@ -253,15 +253,15 @@ class PrivateIndexTest extends TestCase
         $method = $reflection->getMethod('fetchIndex');
 
         // Serve the payload from a local file so no network is involved.
-        $file = $this->dir . '/packages-src.json';
+        $file = $this->dir.'/packages-src.json';
         file_put_contents($file, json_encode($payload));
 
         // fetchIndex appends /packages.json, so hand it the directory.
         $property = $reflection->getProperty('indexes');
         $property->setValue($index, []);
 
-        file_put_contents($this->dir . '/packages.json', json_encode($payload));
+        file_put_contents($this->dir.'/packages.json', json_encode($payload));
 
-        return $method->invoke($index, 'file://' . $this->dir) ?? [];
+        return $method->invoke($index, 'file://'.$this->dir) ?? [];
     }
 }

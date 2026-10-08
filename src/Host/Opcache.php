@@ -76,7 +76,6 @@ class Opcache
      */
     public function situationFrom(array $directives): array
     {
-
         /*
          * 🚨 `opcache.enable` is per-SAPI, and this must be answered for the SAPI
          * that will SERVE the pages — not for whichever process happens to ask.
@@ -96,11 +95,11 @@ class Opcache
              * longer matches the files, and the cost of clearing is a recompile
              * that was going to happen anyway.
              */
-            'state'     => $enabled ? self::STALE_RISK : self::FINE,
-            'enabled'   => $enabled,
+            'state' => $enabled ? self::STALE_RISK : self::FINE,
+            'enabled' => $enabled,
             'validates' => $validates,
-            'freq'      => (int) ($directives['opcache.revalidate_freq'] ?? 0),
-            'canReset'  => function_exists('opcache_reset'),
+            'freq' => (int) ($directives['opcache.revalidate_freq'] ?? 0),
+            'canReset' => function_exists('opcache_reset'),
         ];
     }
 
@@ -132,13 +131,13 @@ class Opcache
              */
             return [
                 'done' => false,
-                'why'  => $situation['validates']
+                'why' => $situation['validates']
                     ? 'This step ran from the command line, which cannot clear the web server\'s compiled-code cache. '
-                        . 'The files are updated and PHP will pick them up within '
-                        . max(1, $situation['freq']) . ' second(s) on its own.'
+                        .'The files are updated and PHP will pick them up within '
+                        .max(1, $situation['freq']).' second(s) on its own.'
                     : 'This step ran from the command line, which cannot clear the web server\'s compiled-code cache. '
-                        . 'The files are updated, but PHP on this host is set never to re-read them '
-                        . '(opcache.validate_timestamps is off), so restart PHP-FPM to make the update take effect.',
+                        .'The files are updated, but PHP on this host is set never to re-read them '
+                        .'(opcache.validate_timestamps is off), so restart PHP-FPM to make the update take effect.',
             ];
         }
 
@@ -157,11 +156,11 @@ class Opcache
 
             return [
                 'done' => false,
-                'why'  => $situation['validates']
+                'why' => $situation['validates']
                     ? 'The files are updated. PHP\'s compiled-code cache could not be cleared from here, so the '
-                        . 'change becomes live within ' . max(1, $situation['freq']) . ' second(s).'
+                        .'change becomes live within '.max(1, $situation['freq']).' second(s).'
                     : 'The files are updated, but PHP\'s compiled-code cache could not be cleared from here and '
-                        . 'this host is set never to re-read files. Restart PHP-FPM to make the update take effect.',
+                        .'this host is set never to re-read files. Restart PHP-FPM to make the update take effect.',
             ];
         }
 

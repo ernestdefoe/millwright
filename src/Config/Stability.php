@@ -31,14 +31,14 @@ class Stability
             'minimumStability' => (string) ($data['minimum-stability'] ?? 'stable'),
             // Composer's own default is false, but every Flarum install ships it
             // as true, and reporting the effective value beats reporting the spec.
-            'preferStable'     => (bool) ($data['prefer-stable'] ?? false),
+            'preferStable' => (bool) ($data['prefer-stable'] ?? false),
         ];
     }
 
     public function set(string $level, bool $preferStable): void
     {
         if (! in_array($level, self::LEVELS, true)) {
-            throw new RuntimeException('Minimum stability must be one of: ' . implode(', ', self::LEVELS) . '.');
+            throw new RuntimeException('Minimum stability must be one of: '.implode(', ', self::LEVELS).'.');
         }
 
         $data = $this->file->read();
@@ -59,11 +59,11 @@ class Stability
     {
         return match ($level) {
             'stable' => 'Only finished releases. On Flarum 2 this currently rules out Flarum itself, which is still a release candidate.',
-            'RC'     => 'Release candidates as well as finished releases. This is the minimum that can install Flarum 2 today.',
-            'beta'   => 'Betas too. Most Flarum 2 extensions are published as betas or release candidates, so this is the usual choice.',
-            'alpha'  => 'Alphas as well — early code that is expected to change.',
-            'dev'    => 'Unreleased code straight from a branch, which can change under you without a version number changing.',
-            default  => '',
+            'RC' => 'Release candidates as well as finished releases. This is the minimum that can install Flarum 2 today.',
+            'beta' => 'Betas too. Most Flarum 2 extensions are published as betas or release candidates, so this is the usual choice.',
+            'alpha' => 'Alphas as well — early code that is expected to change.',
+            'dev' => 'Unreleased code straight from a branch, which can change under you without a version number changing.',
+            default => '',
         };
     }
 }

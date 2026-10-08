@@ -33,7 +33,7 @@ namespace ErnestDefoe\Millwright\Host;
  */
 class PhpBinary
 {
-    public const PANEL_PLESK  = 'plesk';
+    public const PANEL_PLESK = 'plesk';
     public const PANEL_CPANEL = 'cpanel';
 
     private ?string $resolved = null;
@@ -148,7 +148,7 @@ class PhpBinary
             $err = trim($run['err']) !== '' ? trim($run['err']) : trim($run['out']);
             $result['error'] = $err !== ''
                 ? mb_substr(strtok($err, "\n") ?: $err, 0, 300)
-                : ($sapi !== null && $sapi !== 'cli' ? "reports SAPI \"$sapi\", not cli" : 'exit code ' . $run['code']);
+                : ($sapi !== null && $sapi !== 'cli' ? "reports SAPI \"$sapi\", not cli" : 'exit code '.$run['code']);
         }
 
         return $this->probes[$candidate] = $result;
@@ -176,17 +176,17 @@ class PhpBinary
         }
 
         $out = [
-            'spawn'       => $this->canSpawn(),
-            'found'       => $found,
-            'version'     => null,
-            'override'    => $this->override !== '' ? $this->override : null,
+            'spawn' => $this->canSpawn(),
+            'found' => $found,
+            'version' => null,
+            'override' => $this->override !== '' ? $this->override : null,
             'openBasedir' => $openBasedir,
-            'hiddenPath'  => null,
-            'failedPath'  => null,
+            'hiddenPath' => null,
+            'failedPath' => null,
             'failedError' => null,
-            'detected'    => null,
-            'panel'       => $this->panel(),
-            'ini'         => $this->iniFile(),
+            'detected' => null,
+            'panel' => $this->panel(),
+            'ini' => $this->iniFile(),
         ];
 
         if ($found !== null) {
@@ -315,34 +315,34 @@ class PhpBinary
         }
 
         $binary = $this->phpBinary();
-        $dir  = dirname($binary);
-        $me   = basename($binary);
-        $ver  = PHP_MAJOR_VERSION . PHP_MINOR_VERSION;
-        $dot  = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
+        $dir = dirname($binary);
+        $me = basename($binary);
+        $ver = PHP_MAJOR_VERSION.PHP_MINOR_VERSION;
+        $dot = PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;
 
         $candidates = [];
 
         // php85-fpm → php85, right beside it. The same build, so the same
         // extensions and the same php.ini as the request asking.
         if (str_ends_with($me, '-fpm')) {
-            $candidates[] = $dir . '/' . substr($me, 0, -4);
+            $candidates[] = $dir.'/'.substr($me, 0, -4);
         }
 
         // Plesk: /opt/plesk/php/8.5/sbin/php-fpm → /opt/plesk/php/8.5/bin/php.
         if (basename($dir) === 'sbin') {
-            $candidates[] = dirname($dir) . '/bin/' . preg_replace('/-fpm$/', '', $me);
+            $candidates[] = dirname($dir).'/bin/'.preg_replace('/-fpm$/', '', $me);
         }
 
         // Plesk and cPanel keep each version in its own tree, and their `php`
         // on the PATH is a selector that may point at a different version than
         // this forum runs on — so their own trees come before /usr/bin.
-        $candidates[] = '/opt/plesk/php/' . $dot . '/bin/php';
-        $candidates[] = '/opt/cpanel/ea-php' . $ver . '/root/usr/bin/php';
+        $candidates[] = '/opt/plesk/php/'.$dot.'/bin/php';
+        $candidates[] = '/opt/cpanel/ea-php'.$ver.'/root/usr/bin/php';
 
         foreach ([$dir, PHP_BINDIR, '/usr/local/bin', '/usr/bin'] as $where) {
-            $candidates[] = $where . '/php' . $ver;
-            $candidates[] = $where . '/php' . $dot;
-            $candidates[] = $where . '/php';
+            $candidates[] = $where.'/php'.$ver;
+            $candidates[] = $where.'/php'.$dot;
+            $candidates[] = $where.'/php';
         }
 
         return $this->candidates = array_values(array_unique($candidates));
@@ -352,7 +352,7 @@ class PhpBinary
     {
         return str_starts_with($path, '/opt/plesk/php/')
             || str_starts_with($path, '/opt/cpanel/')
-            || str_starts_with($path, dirname($this->phpBinary()) . '/');
+            || str_starts_with($path, dirname($this->phpBinary()).'/');
     }
 
     private function iniFile(): ?string

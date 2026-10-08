@@ -52,8 +52,8 @@ class NoOptionalCollaboratorsTest extends TestCase
                 }
 
                 if ($parameter->isDefaultValueAvailable() || $type->allowsNull()) {
-                    $offenders[] = $class . '::__construct($' . $parameter->getName() . ' : '
-                        . ($type->allowsNull() ? '?' : '') . $type->getName() . ')';
+                    $offenders[] = $class.'::__construct($'.$parameter->getName().' : '
+                        .($type->allowsNull() ? '?' : '').$type->getName().')';
                 }
             }
         }
@@ -68,7 +68,7 @@ class NoOptionalCollaboratorsTest extends TestCase
     /** @return list<class-string> */
     private function classes(): array
     {
-        $root = dirname(__DIR__, 2) . '/src';
+        $root = dirname(__DIR__, 2).'/src';
         $found = [];
 
         $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($root));
@@ -79,7 +79,7 @@ class NoOptionalCollaboratorsTest extends TestCase
             }
 
             $relative = substr($file->getPathname(), strlen($root) + 1, -4);
-            $class = 'ErnestDefoe\\Millwright\\' . str_replace('/', '\\', $relative);
+            $class = 'ErnestDefoe\\Millwright\\'.str_replace('/', '\\', $relative);
 
             if (class_exists($class)) {
                 $found[] = $class;

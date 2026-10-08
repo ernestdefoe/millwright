@@ -41,8 +41,8 @@ class SiteHealth
              * success is the one answer that would make this check worse than
              * not having it.
              */
-            $last = $this->once($this->url . (str_contains($this->url, '?') ? '&' : '?')
-                . 'millwright-health=' . bin2hex(random_bytes(6)));
+            $last = $this->once($this->url.(str_contains($this->url, '?') ? '&' : '?')
+                .'millwright-health='.bin2hex(random_bytes(6)));
             unset($last['body']);   // read for the loopback check, never passed on
 
             if ($last['ok']) {
@@ -92,13 +92,13 @@ class SiteHealth
          */
         $host = (string) parse_url($url, PHP_URL_HOST);
         $port = parse_url($url, PHP_URL_PORT);
-        $path = (string) (parse_url($url, PHP_URL_PATH) ?: '/') . (($q = parse_url($url, PHP_URL_QUERY)) ? '?' . $q : '');
+        $path = (string) (parse_url($url, PHP_URL_PATH) ?: '/').(($q = parse_url($url, PHP_URL_QUERY)) ? '?'.$q : '');
 
         if ($host === '') {
             return $direct;
         }
 
-        $local = $this->request('http://127.0.0.1' . $path, $host . ($port ? ':' . $port : ''));
+        $local = $this->request('http://127.0.0.1'.$path, $host.($port ? ':'.$port : ''));
 
         if ($local['status'] === null) {
             return $direct;
@@ -108,7 +108,7 @@ class SiteHealth
             return $direct;
         }
 
-        return ['ok' => $local['ok'], 'status' => $local['status'], 'why' => $local['why'] . ' (asked this server directly; its own address is not reachable from here)'];
+        return ['ok' => $local['ok'], 'status' => $local['status'], 'why' => $local['why'].' (asked this server directly; its own address is not reachable from here)'];
     }
 
     /**
@@ -129,13 +129,13 @@ class SiteHealth
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_NOBODY         => false,
-            CURLOPT_TIMEOUT        => self::TIMEOUT,
+            CURLOPT_NOBODY => false,
+            CURLOPT_TIMEOUT => self::TIMEOUT,
             CURLOPT_CONNECTTIMEOUT => 8,
             // A redirect is a working site, and following one only adds ways to fail.
             CURLOPT_FOLLOWLOCATION => false,
-            CURLOPT_USERAGENT      => 'Millwright health check',
-            CURLOPT_HTTPHEADER     => array_merge(['Cache-Control: no-cache', 'Pragma: no-cache'], $hostHeader !== null ? ['Host: ' . $hostHeader] : []),
+            CURLOPT_USERAGENT => 'Millwright health check',
+            CURLOPT_HTTPHEADER => array_merge(['Cache-Control: no-cache', 'Pragma: no-cache'], $hostHeader !== null ? ['Host: '.$hostHeader] : []),
         ]);
 
         $body = curl_exec($ch);
@@ -150,7 +150,7 @@ class SiteHealth
          */
 
         if ($body === false || $status === 0) {
-            return ['ok' => false, 'status' => null, 'why' => 'The site did not answer at all (' . ($error ?: 'no response') . ').'];
+            return ['ok' => false, 'status' => null, 'why' => 'The site did not answer at all ('.($error ?: 'no response').').'];
         }
 
         /*
@@ -160,9 +160,9 @@ class SiteHealth
          * forum working exactly as configured.
          */
         if ($status >= 500) {
-            return ['ok' => false, 'status' => $status, 'why' => 'The site answered ' . $status . '.'];
+            return ['ok' => false, 'status' => $status, 'why' => 'The site answered '.$status.'.'];
         }
 
-        return ['ok' => true, 'status' => $status, 'why' => 'The site answered ' . $status . '.', 'body' => (string) $body];
+        return ['ok' => true, 'status' => $status, 'why' => 'The site answered '.$status.'.', 'body' => (string) $body];
     }
 }

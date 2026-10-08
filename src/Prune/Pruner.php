@@ -61,12 +61,12 @@ class Pruner
 
     public function trashDir(): string
     {
-        return rtrim($this->millwrightDir, '/') . '/trash';
+        return rtrim($this->millwrightDir, '/').'/trash';
     }
 
     public function runsDir(): string
     {
-        return rtrim($this->millwrightDir, '/') . '/runs';
+        return rtrim($this->millwrightDir, '/').'/runs';
     }
 
     /**
@@ -171,12 +171,12 @@ class Pruner
         }, $rows));
 
         return [
-            'remove'        => $strip($remove),
-            'keep'          => $strip($keep),
+            'remove' => $strip($remove),
+            'keep' => $strip($keep),
             'protectedRuns' => $protected,
-            'settings'      => $settings,
-            'trashBytes'    => $trashBytes,
-            'removeBytes'   => $removeBytes,
+            'settings' => $settings,
+            'trashBytes' => $trashBytes,
+            'removeBytes' => $removeBytes,
         ];
     }
 
@@ -222,20 +222,20 @@ class Pruner
 
             try {
                 $freed += $where->remove($row['name']);
-                $removed[] = $row['kind'] . ':' . $row['name'];
+                $removed[] = $row['kind'].':'.$row['name'];
             } catch (Throwable $e) {
-                $failed[] = $row['kind'] . ':' . $row['name'] . ' — ' . $e->getMessage();
+                $failed[] = $row['kind'].':'.$row['name'].' — '.$e->getMessage();
             }
         }
 
         $summary = [
-            'at'       => ($this->clock)(),
-            'trigger'  => $trigger,
-            'removed'  => count($removed),
-            'freed'    => $freed,
+            'at' => ($this->clock)(),
+            'trigger' => $trigger,
+            'removed' => count($removed),
+            'freed' => $freed,
             'complete' => $complete,
-            'failed'   => $failed,
-            'names'    => $removed,
+            'failed' => $failed,
+            'names' => $removed,
         ];
 
         $this->retention->recordPrune($summary);
@@ -353,7 +353,7 @@ class Pruner
         $out = [];
 
         foreach ($dir->names() as $name) {
-            $path = $this->runsDir() . '/' . $name;
+            $path = $this->runsDir().'/'.$name;
 
             // Run directories only. The JSON summaries are kept, always.
             if (is_link($path) || ! is_dir($path) || ! preg_match('/^[A-Za-z0-9_-]{1,64}$/', $name)) {
@@ -391,7 +391,7 @@ class Pruner
         $runs = [];
         $unreadable = [];
 
-        foreach (glob($this->runsDir() . '/*.json') ?: [] as $file) {
+        foreach (glob($this->runsDir().'/*.json') ?: [] as $file) {
             $id = basename($file, '.json');
 
             if (! preg_match('/^[A-Za-z0-9_-]{1,64}$/', $id)) {
@@ -425,7 +425,7 @@ class Pruner
             return [];
         }
 
-        $path = $this->runsDir() . '/' . $id . '/journal.jsonl';
+        $path = $this->runsDir().'/'.$id.'/journal.jsonl';
 
         if (! is_file($path)) {
             return [];
@@ -471,10 +471,10 @@ class Pruner
     {
         foreach (['GB' => 1 << 30, 'MB' => 1 << 20, 'KB' => 1 << 10] as $unit => $size) {
             if ($bytes >= $size) {
-                return round($bytes / $size, 1) . ' ' . $unit;
+                return round($bytes / $size, 1).' '.$unit;
             }
         }
 
-        return $bytes . ' B';
+        return $bytes.' B';
     }
 }

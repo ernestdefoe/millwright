@@ -48,7 +48,7 @@ final class FreshCode
         if (($this->sapi ?? PHP_SAPI) === 'cli') {
             throw new NeedsWebRequest(
                 'Waiting for the Millwright admin page to run this step: this host cannot start separate '
-                . 'processes, and this long-running process still has the previous code loaded.'
+                .'processes, and this long-running process still has the previous code loaded.'
             );
         }
 
@@ -67,7 +67,7 @@ final class FreshCode
             return;
         }
 
-        $marker = $this->workDir . '/opcache.cleared';
+        $marker = $this->workDir.'/opcache.cleared';
         $cleared = is_file($marker) ? (float) @file_get_contents($marker) : 0.0;
 
         /*
@@ -92,7 +92,7 @@ final class FreshCode
         $left = (int) ceil($changed + max(1, $situation['freq']) + 2 - $start);
 
         if ($left > 0 && $left <= self::WAIT_CAP) {
-            throw new NotYet('Waiting ' . $left . ' more second(s) for the web server to re-read the new files.');
+            throw new NotYet('Waiting '.$left.' more second(s) for the web server to re-read the new files.');
         }
     }
 
@@ -102,9 +102,9 @@ final class FreshCode
         clearstatcache();
 
         $times = array_map(fn (string $path) => (int) @filemtime($path), [
-            $this->workDir . '/journal.jsonl',
-            $this->installPath . '/vendor/composer/autoload_static.php',
-            $this->installPath . '/vendor/composer/installed.php',
+            $this->workDir.'/journal.jsonl',
+            $this->installPath.'/vendor/composer/autoload_static.php',
+            $this->installPath.'/vendor/composer/installed.php',
         ]);
 
         return (float) max($times);

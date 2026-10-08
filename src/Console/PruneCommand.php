@@ -35,7 +35,7 @@ class PruneCommand extends AbstractCommand
 
     protected function fire(): int
     {
-        $dir = $this->paths->storage . '/millwright';
+        $dir = $this->paths->storage.'/millwright';
         $pruner = new Pruner($dir, new Retention($dir));
 
         try {
@@ -51,11 +51,11 @@ class PruneCommand extends AbstractCommand
         }
 
         foreach ($summary['names'] as $name) {
-            $this->output->writeln('  removed ' . $name);
+            $this->output->writeln('  removed '.$name);
         }
 
         foreach ($summary['failed'] as $line) {
-            $this->error('  could not remove ' . $line);
+            $this->error('  could not remove '.$line);
         }
 
         $this->info(sprintf('Removed %d, freed %s.', $summary['removed'], Pruner::human($summary['freed'])));

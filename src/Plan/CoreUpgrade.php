@@ -59,11 +59,11 @@ class CoreUpgrade
 
             if (is_string($constraint) && $compat->admitsCore($constraint)) {
                 $verdicts[$name] = [
-                    'package'   => $name,
+                    'package' => $name,
                     'installed' => $installed,
-                    'state'     => self::READY,
-                    'requires'  => $constraint,
-                    'to'        => null,
+                    'state' => self::READY,
+                    'requires' => $constraint,
+                    'to' => null,
                 ];
                 continue;
             }
@@ -75,21 +75,21 @@ class CoreUpgrade
              */
             $ask[] = $name;
             $verdicts[$name] = [
-                'package'   => $name,
+                'package' => $name,
                 'installed' => $installed,
-                'state'     => self::UNKNOWN,
-                'requires'  => is_string($constraint) ? $constraint : null,
-                'to'        => null,
+                'state' => self::UNKNOWN,
+                'requires' => is_string($constraint) ? $constraint : null,
+                'to' => null,
             ];
         }
 
         $rows = $this->worstFirst(array_values($verdicts));
 
         return [
-            'target'   => $target,
+            'target' => $target,
             'verdicts' => $rows,
-            'pending'  => $ask,
-            'blocked'  => count(array_filter($rows, fn ($r) => $r['state'] === self::BLOCKED)),
+            'pending' => $ask,
+            'blocked' => count(array_filter($rows, fn ($r) => $r['state'] === self::BLOCKED)),
             'updating' => count(array_filter($rows, fn ($r) => $r['state'] === self::NEEDS_UPDATE)),
         ];
     }
@@ -131,7 +131,7 @@ class CoreUpgrade
 
         return [
             'verdicts' => $rows,
-            'blocked'  => count(array_filter($rows, fn ($r) => $r['state'] === self::BLOCKED)),
+            'blocked' => count(array_filter($rows, fn ($r) => $r['state'] === self::BLOCKED)),
             'updating' => count(array_filter($rows, fn ($r) => $r['state'] === self::NEEDS_UPDATE)),
         ];
     }

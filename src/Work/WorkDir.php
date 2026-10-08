@@ -26,17 +26,17 @@ class WorkDir
 
     public function root(): string
     {
-        return $this->storagePath . '/millwright/runs/' . $this->runId;
+        return $this->storagePath.'/millwright/runs/'.$this->runId;
     }
 
     public function staging(): string
     {
-        return $this->root() . '/staging';
+        return $this->root().'/staging';
     }
 
     public function journalPath(): string
     {
-        return $this->root() . '/journal.jsonl';
+        return $this->root().'/journal.jsonl';
     }
 
     public function trash(): string
@@ -47,7 +47,7 @@ class WorkDir
          * gone — that is the whole difference between "reversible" and
          * "reversible for the next few minutes".
          */
-        return $this->storagePath . '/millwright/trash';
+        return $this->storagePath.'/millwright/trash';
     }
 
     public function create(): self
@@ -74,8 +74,8 @@ class WorkDir
      */
     public function remember(array $packages, string $mode = 'update', array $repin = []): void
     {
-        file_put_contents($this->root() . '/requested.json', json_encode([
-            'mode'     => in_array($mode, ['install', 'remove'], true) ? $mode : 'update',
+        file_put_contents($this->root().'/requested.json', json_encode([
+            'mode' => in_array($mode, ['install', 'remove'], true) ? $mode : 'update',
             'packages' => array_values($packages),
             /*
              * 🚨 Written down with everything else, for the same reason the
@@ -84,7 +84,7 @@ class WorkDir
              * admin was shown, not recompute it from a check that may have been
              * refreshed since.
              */
-            'repin'    => $repin,
+            'repin' => $repin,
         ]));
     }
 
@@ -140,7 +140,7 @@ class WorkDir
     /** @return array<string,mixed> */
     private function manifest(): array
     {
-        $path = $this->root() . '/requested.json';
+        $path = $this->root().'/requested.json';
 
         if (! is_file($path)) {
             return [];

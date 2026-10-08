@@ -30,9 +30,9 @@ class ErrorLog
      */
     public function latest(int $since): ?string
     {
-        $file = $this->storagePath . '/logs/flarum-' . gmdate('Y-m-d', $since) . '.log';
+        $file = $this->storagePath.'/logs/flarum-'.gmdate('Y-m-d', $since).'.log';
 
-        foreach ([$file, $this->storagePath . '/logs/flarum-' . gmdate('Y-m-d') . '.log'] as $candidate) {
+        foreach ([$file, $this->storagePath.'/logs/flarum-'.gmdate('Y-m-d').'.log'] as $candidate) {
             $line = $this->scan($candidate, $since);
 
             if ($line !== null) {

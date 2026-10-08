@@ -98,7 +98,7 @@ class ComposerRunner
         $cmd = array_merge(
             [$this->php->path(), $this->binary()],
             $args,
-            ['--no-interaction', '--working-dir=' . $this->installPath]
+            ['--no-interaction', '--working-dir='.$this->installPath]
         );
 
         return Process::run($cmd, $this->installPath, [
@@ -137,7 +137,7 @@ class ComposerRunner
             ['composer'],
             $args,
             array_values(array_diff(['--no-plugins', '--no-scripts'], $args)),
-            ['--no-interaction', '--working-dir=' . $this->installPath]
+            ['--no-interaction', '--working-dir='.$this->installPath]
         );
 
         // Composer's own console output, never the page's.
@@ -161,7 +161,7 @@ class ComposerRunner
             $said = trim($output->fetch());
 
             if ($code !== 0 && (! $limits['memory'] || ! $limits['time'])) {
-                $said .= "\n" . self::limitNote($limits);
+                $said .= "\n".self::limitNote($limits);
             }
 
             return ['code' => $code, 'output' => $said];
@@ -181,14 +181,14 @@ class ComposerRunner
     private function inProcessEnv(): array
     {
         $env = [
-            'COMPOSER_HOME'           => $this->composerHome(),
-            'COMPOSER_MEMORY_LIMIT'   => '-1',
+            'COMPOSER_HOME' => $this->composerHome(),
+            'COMPOSER_MEMORY_LIMIT' => '-1',
             'COMPOSER_NO_INTERACTION' => '1',
             // The security audit is more network calls on a clock that is already running.
-            'COMPOSER_NO_AUDIT'       => '1',
+            'COMPOSER_NO_AUDIT' => '1',
             // Symfony measures the terminal with `stty` when these are absent.
-            'COLUMNS'                 => '120',
-            'LINES'                   => '50',
+            'COLUMNS' => '120',
+            'LINES' => '50',
         ];
 
         if (getenv('COMPOSER_ROOT_VERSION') === false && ! isset($_SERVER['COMPOSER_ROOT_VERSION'])) {
@@ -205,7 +205,7 @@ class ComposerRunner
     /** Where Composer keeps its cache and global auth: under storage/, so it survives between requests. */
     public function composerHome(): string
     {
-        return $this->composerHome ?? ($this->installPath . '/storage/.composer');
+        return $this->composerHome ?? ($this->installPath.'/storage/.composer');
     }
 
     /**
@@ -218,9 +218,9 @@ class ComposerRunner
         for ($t = $e; $t !== null; $t = $t->getPrevious()) {
             if (str_contains($t->getMessage(), 'proc_open')) {
                 return 'Composer needed to run git (for a Git or path repository) and this host does not allow PHP '
-                    . 'to start other programs. For a GitHub or GitLab repository, add an access token under '
-                    . 'Millwright → Sources so Composer uses their API instead of git; otherwise install the '
-                    . 'package from a Composer repository (Packagist, Private Packagist or Satis).';
+                    .'to start other programs. For a GitHub or GitLab repository, add an access token under '
+                    .'Millwright → Sources so Composer uses their API instead of git; otherwise install the '
+                    .'package from a Composer repository (Packagist, Private Packagist or Satis).';
             }
         }
 
@@ -235,14 +235,14 @@ class ComposerRunner
         $parts = [];
 
         if (! $limits['memory']) {
-            $parts[] = 'this host does not let Millwright raise memory_limit (' . ini_get('memory_limit') . ')';
+            $parts[] = 'this host does not let Millwright raise memory_limit ('.ini_get('memory_limit').')';
         }
 
         if (! $limits['time']) {
-            $parts[] = 'this host does not let Millwright lift the ' . ini_get('max_execution_time') . '-second time limit';
+            $parts[] = 'this host does not let Millwright lift the '.ini_get('max_execution_time').'-second time limit';
         }
 
-        return 'Composer ran inside the web request, and ' . implode(', and ', $parts) . '.';
+        return 'Composer ran inside the web request, and '.implode(', and ', $parts).'.';
     }
 
     /**
@@ -266,9 +266,9 @@ class ComposerRunner
         }
 
         $candidates = [
-            $this->installPath . '/vendor/composer/composer/bin/composer',
-            $this->installPath . '/vendor/bin/composer',
-            $this->installPath . '/composer.phar',
+            $this->installPath.'/vendor/composer/composer/bin/composer',
+            $this->installPath.'/vendor/bin/composer',
+            $this->installPath.'/composer.phar',
             '/usr/local/bin/composer',
             '/usr/bin/composer',
         ];
@@ -289,6 +289,6 @@ class ComposerRunner
     private function whyNot(): string
     {
         return 'Composer itself could not be found. It ships with Millwright, so this usually means the '
-            . 'install is incomplete — reinstalling the extension should restore it.';
+            .'install is incomplete — reinstalling the extension should restore it.';
     }
 }

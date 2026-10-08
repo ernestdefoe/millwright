@@ -10,8 +10,8 @@ use ErnestDefoe\Millwright\Run\StepsFactory;
 use Flarum\Foundation\Config;
 use Flarum\Foundation\Paths;
 use Illuminate\Container\Container;
-use Illuminate\Contracts\Foundation\Application as ApplicationContract;
 use Illuminate\Contracts\Bus\Dispatcher;
+use Illuminate\Contracts\Foundation\Application as ApplicationContract;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -40,24 +40,24 @@ class WiringTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->dir = sys_get_temp_dir() . '/mw-wiring-' . bin2hex(random_bytes(6));
+        $this->dir = sys_get_temp_dir().'/mw-wiring-'.bin2hex(random_bytes(6));
 
         foreach (['', '/public', '/storage', '/vendor'] as $sub) {
-            mkdir($this->dir . $sub, 0775, true);
+            mkdir($this->dir.$sub, 0775, true);
         }
 
         $this->container = new Container();
 
         $this->container->instance(Paths::class, new Paths([
-            'base'    => $this->dir,
-            'public'  => $this->dir . '/public',
-            'storage' => $this->dir . '/storage',
-            'vendor'  => $this->dir . '/vendor',
+            'base' => $this->dir,
+            'public' => $this->dir.'/public',
+            'storage' => $this->dir.'/storage',
+            'vendor' => $this->dir.'/vendor',
         ]));
 
         $this->container->instance(Config::class, new Config([
             'debug' => false,
-            'url'   => 'https://example.test',
+            'url' => 'https://example.test',
         ]));
 
         /*
@@ -102,9 +102,9 @@ class WiringTest extends TestCase
     public static function services(): array
     {
         return [
-            RunStore::class    => [RunStore::class],
-            Drivers::class     => [Drivers::class],
-            StepRunner::class  => [StepRunner::class],
+            RunStore::class => [RunStore::class],
+            Drivers::class => [Drivers::class],
+            StepRunner::class => [StepRunner::class],
         ];
     }
 
@@ -151,7 +151,7 @@ class WiringTest extends TestCase
     {
         $this->container->instance(Config::class, new Config([
             'debug' => false,
-            'url'   => 'not-a-url',
+            'url' => 'not-a-url',
         ]));
 
         $factory = $this->container->make(StepsFactory::class);
@@ -172,7 +172,7 @@ class WiringTest extends TestCase
         }
 
         foreach (array_diff(scandir($path) ?: [], ['.', '..']) as $entry) {
-            $full = $path . '/' . $entry;
+            $full = $path.'/'.$entry;
             is_dir($full) ? $this->rmdir($full) : @unlink($full);
         }
 

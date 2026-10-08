@@ -89,14 +89,14 @@ class Tree
             return false;
         }
 
-        if (! self::copy($from, $to) || @file_put_contents($to . '/' . self::COPIED, '') === false) {
+        if (! self::copy($from, $to) || @file_put_contents($to.'/'.self::COPIED, '') === false) {
             self::delete($to);
 
             return false;
         }
 
         self::delete($from);
-        @unlink($to . '/' . self::COPIED);
+        @unlink($to.'/'.self::COPIED);
 
         return ! file_exists($from);
     }
@@ -107,12 +107,12 @@ class Tree
      */
     public static function finishMove(string $from, string $to): bool
     {
-        if (! is_file($to . '/' . self::COPIED)) {
+        if (! is_file($to.'/'.self::COPIED)) {
             return false;
         }
 
         self::delete($from);
-        @unlink($to . '/' . self::COPIED);
+        @unlink($to.'/'.self::COPIED);
 
         return true;
     }
@@ -137,7 +137,7 @@ class Tree
         }
 
         foreach (scandir($from) ?: [] as $entry) {
-            if ($entry !== '.' && $entry !== '..' && ! self::copy($from . '/' . $entry, $to . '/' . $entry)) {
+            if ($entry !== '.' && $entry !== '..' && ! self::copy($from.'/'.$entry, $to.'/'.$entry)) {
                 return false;
             }
         }

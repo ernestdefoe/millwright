@@ -158,7 +158,7 @@ class StepRunner
             return fopen('php://memory', 'r+') ?: null;
         }
 
-        $handle = fopen($dir . '/' . preg_replace('/[^A-Za-z0-9_-]/', '', $id) . '.lock', 'c');
+        $handle = fopen($dir.'/'.preg_replace('/[^A-Za-z0-9_-]/', '', $id).'.lock', 'c');
 
         if ($handle === false) {
             return null;
@@ -189,7 +189,7 @@ class StepRunner
         }
 
         $phase = $run->phase;
-        $item  = null;
+        $item = null;
         $steps = $this->stepsFor($id);
 
         try {
@@ -282,8 +282,8 @@ class StepRunner
     private function leavePhase(Run $run): Run
     {
         $order = Run::PHASES;
-        $at    = array_search($run->phase, $order, true);
-        $next  = $at === false ? null : ($order[$at + 1] ?? null);
+        $at = array_search($run->phase, $order, true);
+        $next = $at === false ? null : ($order[$at + 1] ?? null);
 
         $run = $next === null
             ? $run->finished($this->now())

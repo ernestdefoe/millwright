@@ -33,8 +33,8 @@ class UpdateCommandTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->dir = sys_get_temp_dir() . '/mw-update-' . bin2hex(random_bytes(6));
-        mkdir($this->dir . '/millwright', 0775, true);
+        $this->dir = sys_get_temp_dir().'/mw-update-'.bin2hex(random_bytes(6));
+        mkdir($this->dir.'/millwright', 0775, true);
 
         // Capability refuses to plan under 160 MB, which a bare CLI can be.
         ini_set('memory_limit', '512M');
@@ -244,7 +244,7 @@ class UpdateCommandTest extends TestCase
      */
     public function test_it_never_hands_the_run_to_a_queue_worker(): void
     {
-        $source = (string) file_get_contents(dirname(__DIR__, 2) . '/src/Console/UpdateCommand.php');
+        $source = (string) file_get_contents(dirname(__DIR__, 2).'/src/Console/UpdateCommand.php');
 
         $this->assertStringNotContainsString('nudge(', $source);
         $this->assertStringNotContainsString('Drivers', $source);
@@ -259,9 +259,9 @@ class UpdateCommandTest extends TestCase
      */
     private function site(array $require, array $installed, array $updates = []): void
     {
-        file_put_contents($this->dir . '/composer.json', json_encode(['require' => $require]));
+        file_put_contents($this->dir.'/composer.json', json_encode(['require' => $require]));
 
-        file_put_contents($this->dir . '/composer.lock', json_encode([
+        file_put_contents($this->dir.'/composer.lock', json_encode([
             'packages' => array_map(
                 fn (string $name, string $version): array => ['name' => $name, 'version' => $version],
                 array_keys($installed),
@@ -269,7 +269,7 @@ class UpdateCommandTest extends TestCase
             ),
         ]));
 
-        file_put_contents($this->dir . '/millwright/updates.json', json_encode([
+        file_put_contents($this->dir.'/millwright/updates.json', json_encode([
             'checkedAt' => time(), 'updates' => $updates, 'uncheckable' => [], 'tracking' => [],
         ]));
     }
@@ -296,7 +296,7 @@ class UpdateCommandTest extends TestCase
 
     private function store(): RunStore
     {
-        return new RunStore($this->dir . '/millwright/runs');
+        return new RunStore($this->dir.'/millwright/runs');
     }
 
     /** @param array<string,list<string>> $plan */
@@ -334,7 +334,7 @@ class UpdateCommandTest extends TestCase
 
         foreach (scandir($path) ?: [] as $entry) {
             if ($entry !== '.' && $entry !== '..') {
-                $this->delete($path . '/' . $entry);
+                $this->delete($path.'/'.$entry);
             }
         }
 

@@ -16,16 +16,16 @@ class AutoRollbackTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->dir = sys_get_temp_dir() . '/mw-health-' . bin2hex(random_bytes(6));
-        mkdir($this->dir . '/logs', 0775, true);
+        $this->dir = sys_get_temp_dir().'/mw-health-'.bin2hex(random_bytes(6));
+        mkdir($this->dir.'/logs', 0775, true);
     }
 
     protected function tearDown(): void
     {
-        foreach (glob($this->dir . '/logs/*') ?: [] as $f) {
+        foreach (glob($this->dir.'/logs/*') ?: [] as $f) {
             @unlink($f);
         }
-        @rmdir($this->dir . '/logs');
+        @rmdir($this->dir.'/logs');
         @rmdir($this->dir);
     }
 
@@ -70,11 +70,11 @@ class AutoRollbackTest extends TestCase
     {
         $now = time();
         file_put_contents($this->logFile(), implode("\n", [
-            '[' . gmdate('Y-m-d\TH:i:s.uP', $now - 5) . '] flarum.INFO: something ordinary',
-            '[' . gmdate('Y-m-d\TH:i:s.uP', $now - 2) . '] flarum.ERROR: TypeError: Flarum\Extend\Event::listen(): Argument #2 must be of type callable|string, array given in /var/www/html/vendor/ramon/classifieds/extend.php:87',
+            '['.gmdate('Y-m-d\TH:i:s.uP', $now - 5).'] flarum.INFO: something ordinary',
+            '['.gmdate('Y-m-d\TH:i:s.uP', $now - 2).'] flarum.ERROR: TypeError: Flarum\Extend\Event::listen(): Argument #2 must be of type callable|string, array given in /var/www/html/vendor/ramon/classifieds/extend.php:87',
             'Stack trace:',
             '#0 /var/www/html/vendor/flarum/core/src/Extension/Extension.php(347)',
-        ]) . "\n");
+        ])."\n");
 
         $why = (new ErrorLog($this->dir))->latest($now - 60);
 
@@ -90,8 +90,8 @@ class AutoRollbackTest extends TestCase
     public function test_an_error_from_before_the_update_is_not_offered_as_the_reason(): void
     {
         $now = time();
-        file_put_contents($this->logFile(), '[' . gmdate('Y-m-d\TH:i:s.uP', $now - 7200)
-            . "] flarum.ERROR: something that broke two hours ago\n");
+        file_put_contents($this->logFile(), '['.gmdate('Y-m-d\TH:i:s.uP', $now - 7200)
+            ."] flarum.ERROR: something that broke two hours ago\n");
 
         $this->assertNull((new ErrorLog($this->dir))->latest($now - 60));
     }
@@ -103,6 +103,6 @@ class AutoRollbackTest extends TestCase
 
     private function logFile(): string
     {
-        return $this->dir . '/logs/flarum-' . gmdate('Y-m-d') . '.log';
+        return $this->dir.'/logs/flarum-'.gmdate('Y-m-d').'.log';
     }
 }

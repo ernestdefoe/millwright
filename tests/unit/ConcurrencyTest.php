@@ -20,17 +20,17 @@ class ConcurrencyTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->dir = sys_get_temp_dir() . '/mw-conc-' . bin2hex(random_bytes(6));
+        $this->dir = sys_get_temp_dir().'/mw-conc-'.bin2hex(random_bytes(6));
         mkdir($this->dir, 0775, true);
-        $this->log = $this->dir . '/done.log';
+        $this->log = $this->dir.'/done.log';
     }
 
     protected function tearDown(): void
     {
-        foreach (glob($this->dir . '/{,locks/}*', GLOB_BRACE) ?: [] as $f) {
+        foreach (glob($this->dir.'/{,locks/}*', GLOB_BRACE) ?: [] as $f) {
             @unlink($f);
         }
-        @rmdir($this->dir . '/locks');
+        @rmdir($this->dir.'/locks');
         @rmdir($this->dir);
     }
 
@@ -79,8 +79,8 @@ class ConcurrencyTest extends TestCase
     {
         // The important half of "non-blocking": a second driver must not queue up
         // behind the lock and pile requests on a host that is already working.
-        mkdir($this->dir . '/locks', 0775, true);
-        $held = fopen($this->dir . '/locks/r1.lock', 'c');
+        mkdir($this->dir.'/locks', 0775, true);
+        $held = fopen($this->dir.'/locks/r1.lock', 'c');
         flock($held, LOCK_EX);
 
         $plan = ['plan' => [], 'fetch' => ['a', 'b'], 'apply' => [], 'finalise' => []];
@@ -100,7 +100,7 @@ class ConcurrencyTest extends TestCase
     {
         return sprintf(
             'exec php %s %s %s %s %s %d 2>/dev/null',
-            escapeshellarg(__DIR__ . '/../fixtures/step-run.php'),
+            escapeshellarg(__DIR__.'/../fixtures/step-run.php'),
             escapeshellarg($this->dir),
             escapeshellarg('r1'),
             escapeshellarg(json_encode($plan)),

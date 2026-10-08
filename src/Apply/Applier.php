@@ -97,16 +97,16 @@ class Applier
 
         $seq = $this->journal->begin([
             'change' => $change->toArray(),
-            'trash'  => $change->trashName(),
+            'trash' => $change->trashName(),
         ]);
 
         $this->observe('journalled', $change);
 
         match ($change->op) {
             Change::REPLACE => $this->replace($change),
-            Change::ADD     => $this->add($change),
-            Change::REMOVE  => $this->remove($change),
-            default         => throw new RuntimeException("Unknown change \"{$change->op}\" for {$change->package}"),
+            Change::ADD => $this->add($change),
+            Change::REMOVE => $this->remove($change),
+            default => throw new RuntimeException("Unknown change \"{$change->op}\" for {$change->package}"),
         };
 
         $this->journal->complete($seq);
@@ -136,8 +136,8 @@ class Applier
         if (is_link($live)) {
             throw new RuntimeException(
                 "{$change->package} is installed from a local path — vendor/{$change->relativePath()} is a symlink "
-                . 'into a checkout on this machine. Millwright will not replace it, because the copy you are editing '
-                . 'would stop being the copy the forum uses. Update it with git instead.'
+                .'into a checkout on this machine. Millwright will not replace it, because the copy you are editing '
+                .'would stop being the copy the forum uses. Update it with git instead.'
             );
         }
     }
@@ -183,7 +183,7 @@ class Applier
     {
         $vendor = rtrim($this->vendorDir, DIRECTORY_SEPARATOR);
 
-        if ($dir === $vendor || ! str_starts_with($dir, $vendor . DIRECTORY_SEPARATOR)) {
+        if ($dir === $vendor || ! str_starts_with($dir, $vendor.DIRECTORY_SEPARATOR)) {
             return;
         }
 
@@ -245,7 +245,7 @@ class Applier
              * Moving it aside rather than deleting keeps the no-deletes rule
              * intact even on the paths nobody expects to hit.
              */
-            $orphan = $this->path($this->trashDir, $change->trashName() . '.superseded');
+            $orphan = $this->path($this->trashDir, $change->trashName().'.superseded');
             Tree::delete($orphan);
             Tree::move($live, $orphan);
         }
@@ -264,7 +264,7 @@ class Applier
      */
     private function path(string $base, string $relative): string
     {
-        return rtrim($base, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $relative;
+        return rtrim($base, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.$relative;
     }
 
     private function ensureDir(string $dir): void

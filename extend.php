@@ -13,8 +13,8 @@ return [
         ->register(MillwrightServiceProvider::class),
 
     (new Extend\Frontend('admin'))
-        ->js(__DIR__ . '/js/dist/admin.js')
-        ->css(__DIR__ . '/less/admin.less'),
+        ->js(__DIR__.'/js/dist/admin.js')
+        ->css(__DIR__.'/less/admin.less'),
 
     (new Extend\Console())
         ->command(CheckCommand::class)
@@ -51,7 +51,7 @@ return [
         ->command(PruneCommand::class)
         ->schedule(PruneCommand::class, function ($event): void { $event->dailyAt('04:20'); }),
 
-    new Extend\Locales(__DIR__ . '/resources/locale'),
+    new Extend\Locales(__DIR__.'/resources/locale'),
 
     /*
      * 🚨 Two endpoints, and the split matters.

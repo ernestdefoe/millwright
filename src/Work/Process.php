@@ -35,7 +35,7 @@ class Process
         $process = @proc_open($command, $descriptors, $pipes, $cwd, $env ?: null);
 
         if (! is_resource($process)) {
-            throw new RuntimeException('Could not start ' . ($command[0] ?? 'the command') . '.');
+            throw new RuntimeException('Could not start '.($command[0] ?? 'the command').'.');
         }
 
         foreach ($pipes as $pipe) {
@@ -44,7 +44,7 @@ class Process
 
         // stderr folded into the output on purpose: most tools say what matters
         // there, and somebody reading a failure wants all of it, in order.
-        $output   = '';
+        $output = '';
         $deadline = time() + $timeout;
 
         while (true) {
@@ -59,7 +59,7 @@ class Process
             if (time() > $deadline) {
                 proc_terminate($process, 9);
 
-                throw new RuntimeException(($command[0] ?? 'The command') . " did not finish within {$timeout}s.");
+                throw new RuntimeException(($command[0] ?? 'The command')." did not finish within {$timeout}s.");
             }
 
             usleep(50000);

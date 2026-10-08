@@ -45,12 +45,12 @@ final class MigrationLedger
     /** Before `flarum migrate`: what has already run, and the version Flarum records. Saved once. */
     public function before(ConnectionInterface $db): void
     {
-        $path = $this->workDir . '/migrations.before.json';
+        $path = $this->workDir.'/migrations.before.json';
 
         if (! is_file($path)) {
             file_put_contents($path, json_encode([
                 'migrations' => $this->current($db),
-                'version'    => $db->table('settings')->where('key', 'version')->value('value'),
+                'version' => $db->table('settings')->where('key', 'version')->value('value'),
             ]));
         }
     }
@@ -62,22 +62,22 @@ final class MigrationLedger
     public function after(ConnectionInterface $db, ExtensionManager $extensions, string $vendorPath): array
     {
         $before = $this->beforeState();
-        $seen = array_flip(array_map(fn ($m) => $m['extension'] . '|' . $m['migration'], $before['migrations']));
+        $seen = array_flip(array_map(fn ($m) => $m['extension'].'|'.$m['migration'], $before['migrations']));
         $added = array_values(array_filter(
             $this->current($db),
-            fn ($m) => ! isset($seen[$m['extension'] . '|' . $m['migration']])
+            fn ($m) => ! isset($seen[$m['extension'].'|'.$m['migration']])
         ));
         // Flarum runs them in filename order, which starts with a timestamp.
         usort($added, fn ($a, $b) => strcmp($a['migration'], $b['migration']));
 
         foreach ($added as $m) {
-            $from = $this->liveDir($m['extension'], $extensions, $vendorPath) . '/' . $m['migration'] . '.php';
-            $to = $this->copyDir($m['extension']) . '/' . $m['migration'] . '.php';
+            $from = $this->liveDir($m['extension'], $extensions, $vendorPath).'/'.$m['migration'].'.php';
+            $to = $this->copyDir($m['extension']).'/'.$m['migration'].'.php';
             @mkdir(dirname($to), 0775, true);
             @copy($from, $to);
         }
 
-        file_put_contents($this->workDir . '/migrations.json', json_encode($added, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        file_put_contents($this->workDir.'/migrations.json', json_encode($added, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
         return $added;
     }
@@ -85,7 +85,7 @@ final class MigrationLedger
     /** @return list<array{migration:string, extension:?string}> what this update ran */
     public function ran(): array
     {
-        return array_values((array) json_decode((string) @file_get_contents($this->workDir . '/migrations.json'), true));
+        return array_values((array) json_decode((string) @file_get_contents($this->workDir.'/migrations.json'), true));
     }
 
     /**
@@ -107,14 +107,14 @@ final class MigrationLedger
 
         $this->downs($migrator, $extensions, $vendorPath);   // throws if any cannot be reversed
         $this->restoreVersion($db);
-        touch($this->workDir . '/migrations.pending');
+        touch($this->workDir.'/migrations.pending');
 
         return true;
     }
 
     public function pending(): bool
     {
-        return is_file($this->workDir . '/migrations.pending');
+        return is_file($this->workDir.'/migrations.pending');
     }
 
     /**
@@ -136,8 +136,8 @@ final class MigrationLedger
                 call_user_func($down, $db->getSchemaBuilder());
             } catch (Throwable $e) {
                 throw new RuntimeException(
-                    'Undoing stopped while reversing ' . $m['migration'] . ': ' . $e->getMessage()
-                    . ($done ? ' Already reversed: ' . implode(', ', $done) . '.' : ' Nothing had been reversed yet.')
+                    'Undoing stopped while reversing '.$m['migration'].': '.$e->getMessage()
+                    .($done ? ' Already reversed: '.implode(', ', $done).'.' : ' Nothing had been reversed yet.')
                 );
             }
 
@@ -146,8 +146,8 @@ final class MigrationLedger
         }
 
         // Reversed once; a second undo of the same run has nothing left to do.
-        @unlink($this->workDir . '/migrations.json');
-        @unlink($this->workDir . '/migrations.pending');
+        @unlink($this->workDir.'/migrations.json');
+        @unlink($this->workDir.'/migrations.pending');
 
         return array_map(fn ($name) => "reversed database change $name", $done);
     }
@@ -164,14 +164,14 @@ final class MigrationLedger
 
         foreach (array_reverse($this->ran()) as $m) {
             $copy = $this->copyDir($m['extension']);
-            $dir = is_file($copy . '/' . $m['migration'] . '.php') ? $copy : $this->liveDir($m['extension'], $extensions, $vendorPath);
+            $dir = is_file($copy.'/'.$m['migration'].'.php') ? $copy : $this->liveDir($m['extension'], $extensions, $vendorPath);
             $migration = $migrator->resolve($dir, $m['migration']);
 
             if (! isset($migration['down']) || ! is_callable($migration['down'])) {
                 throw new RuntimeException(
-                    'Nothing was undone: this update changed the database with ' . $m['migration']
-                    . ($m['extension'] ? ' (' . $m['extension'] . ')' : '') . ', which has no way to reverse itself. '
-                    . 'Putting the old version back would leave it running on a database it was not written for.'
+                    'Nothing was undone: this update changed the database with '.$m['migration']
+                    .($m['extension'] ? ' ('.$m['extension'].')' : '').', which has no way to reverse itself. '
+                    .'Putting the old version back would leave it running on a database it was not written for.'
                 );
             }
 
@@ -193,7 +193,7 @@ final class MigrationLedger
     /** @return array{migrations: list<array{migration:string, extension:?string}>, version: ?string} */
     private function beforeState(): array
     {
-        $raw = (array) json_decode((string) @file_get_contents($this->workDir . '/migrations.before.json'), true);
+        $raw = (array) json_decode((string) @file_get_contents($this->workDir.'/migrations.before.json'), true);
 
         // A run recorded before the version was kept stored the bare list.
         return array_is_list($raw)
@@ -204,13 +204,13 @@ final class MigrationLedger
     private function liveDir(?string $extension, ExtensionManager $extensions, string $vendorPath): string
     {
         return $extension === null
-            ? $vendorPath . '/flarum/core/migrations'
-            : $extensions->getExtension($extension)?->getPath() . '/migrations';
+            ? $vendorPath.'/flarum/core/migrations'
+            : $extensions->getExtension($extension)?->getPath().'/migrations';
     }
 
     private function copyDir(?string $extension): string
     {
-        return $this->workDir . '/migrations/' . ($extension ?? 'core');
+        return $this->workDir.'/migrations/'.($extension ?? 'core');
     }
 
     /** @return list<array{migration:string, extension:?string}> */

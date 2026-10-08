@@ -26,27 +26,27 @@ final class History
             return;
         }
 
-        $runDir = $this->millwrightDir . '/runs/' . $run->id;
-        $plan = (array) json_decode((string) @file_get_contents($runDir . '/plan.json'), true);
-        $requested = (array) json_decode((string) @file_get_contents($runDir . '/requested.json'), true);
-        $migrations = (array) json_decode((string) @file_get_contents($runDir . '/migrations.json'), true);
+        $runDir = $this->millwrightDir.'/runs/'.$run->id;
+        $plan = (array) json_decode((string) @file_get_contents($runDir.'/plan.json'), true);
+        $requested = (array) json_decode((string) @file_get_contents($runDir.'/requested.json'), true);
+        $migrations = (array) json_decode((string) @file_get_contents($runDir.'/migrations.json'), true);
 
         $entries = array_values(array_filter($this->all(), fn ($e) => ($e['id'] ?? null) !== $run->id));
         $previous = array_values(array_filter($this->all(), fn ($e) => ($e['id'] ?? null) === $run->id))[0] ?? [];
 
         array_unshift($entries, [
-            'id'         => $run->id,
-            'at'         => $run->movedAt,
-            'state'      => $run->state,
-            'mode'       => (string) ($requested['mode'] ?? 'update'),
+            'id' => $run->id,
+            'at' => $run->movedAt,
+            'state' => $run->state,
+            'mode' => (string) ($requested['mode'] ?? 'update'),
             // An undo loses nothing: what the update changed is kept from before.
-            'changes'    => (array) ($plan['changes'] ?? ($previous['changes'] ?? [])),
-            'requested'  => array_values(array_filter((array) ($requested['packages'] ?? ($previous['requested'] ?? [])), 'is_string')),
+            'changes' => (array) ($plan['changes'] ?? ($previous['changes'] ?? [])),
+            'requested' => array_values(array_filter((array) ($requested['packages'] ?? ($previous['requested'] ?? [])), 'is_string')),
             'migrations' => count($migrations) ?: (int) ($previous['migrations'] ?? 0),
         ]);
 
         $path = $this->path();
-        $tmp = $path . '.' . bin2hex(random_bytes(4)) . '.tmp';
+        $tmp = $path.'.'.bin2hex(random_bytes(4)).'.tmp';
         @mkdir(dirname($path), 0775, true);
 
         if (@file_put_contents($tmp, json_encode(array_slice($entries, 0, self::LIMIT), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) !== false) {
@@ -62,6 +62,6 @@ final class History
 
     private function path(): string
     {
-        return $this->millwrightDir . '/history.json';
+        return $this->millwrightDir.'/history.json';
     }
 }

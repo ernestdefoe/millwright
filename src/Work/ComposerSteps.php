@@ -2,26 +2,26 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
-use ErnestDefoe\Millwright\Prune\Pruner;
-use ErnestDefoe\Millwright\Prune\Retention;
 use ErnestDefoe\Millwright\Apply\Applier;
 use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Apply\Restore;
-use ErnestDefoe\Millwright\Plan\Change;
-use Flarum\Extension\ExtensionManager;
-use Illuminate\Database\ConnectionInterface;
-use ErnestDefoe\Millwright\Plan\LockDiff;
-use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Host\CoreVersion;
-use ErnestDefoe\Millwright\Host\Opcache;
-use Flarum\Foundation\Config;
+use ErnestDefoe\Millwright\Host\ErrorLog;
 use ErnestDefoe\Millwright\Host\FlarumUpdater;
+use ErnestDefoe\Millwright\Host\Opcache;
 use ErnestDefoe\Millwright\Host\SiteHealth;
 use ErnestDefoe\Millwright\Host\Verdict;
-use ErnestDefoe\Millwright\Host\ErrorLog;
+use ErnestDefoe\Millwright\Plan\Change;
+use ErnestDefoe\Millwright\Plan\LockDiff;
+use ErnestDefoe\Millwright\Prune\Pruner;
+use ErnestDefoe\Millwright\Prune\Retention;
 use ErnestDefoe\Millwright\Run\NotYet;
 use ErnestDefoe\Millwright\Run\Reverted;
+use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Run\Steps;
+use Flarum\Extension\ExtensionManager;
+use Flarum\Foundation\Config;
+use Illuminate\Database\ConnectionInterface;
 use RuntimeException;
 
 /**
@@ -78,9 +78,9 @@ class ComposerSteps implements Steps
     public function itemsFor(string $phase, Run $run): array
     {
         return match ($phase) {
-            'plan'     => ['check the site', 'work out what changes', 'check file permissions'],
-            'fetch'    => array_map(fn (Change $c) => $c->package, $this->downloadable()),
-            'apply'    => array_map(fn (Change $c) => $c->package, $this->applyOrder()),
+            'plan' => ['check the site', 'work out what changes', 'check file permissions'],
+            'fetch' => array_map(fn (Change $c) => $c->package, $this->downloadable()),
+            'apply' => array_map(fn (Change $c) => $c->package, $this->applyOrder()),
             /*
              * 🚨 'tidy the trash' is LAST, after the site has been checked: an
              * update that is about to be undone automatically must not have its
@@ -88,22 +88,22 @@ class ComposerSteps implements Steps
              * run is the newest — but there is no reason to find out.
              */
             'finalise' => ['register', 'migrations', 'assets', 'caches', 'code cache', 'check the site again', 'tidy the trash'],
-            default    => [],
+            default => [],
         };
     }
 
     public function doItem(string $phase, string $item, Run $run): ?string
     {
         return match ($phase) {
-            'plan'     => match ($item) {
-                'check the site'         => $this->baseline(),
+            'plan' => match ($item) {
+                'check the site' => $this->baseline(),
                 'check file permissions' => $this->checkPermissions(),
-                default                  => $this->resolve(),
+                default => $this->resolve(),
             },
-            'fetch'    => $this->fetchOne($item),
-            'apply'    => $this->applyOne($item),
+            'fetch' => $this->fetchOne($item),
+            'apply' => $this->applyOne($item),
             'finalise' => $this->finalise($item, $run),
-            default    => null,
+            default => null,
         };
     }
 
@@ -118,7 +118,7 @@ class ComposerSteps implements Steps
      */
     private function resolve(): string
     {
-        $lockPath = $this->installPath . '/composer.lock';
+        $lockPath = $this->installPath.'/composer.lock';
 
         /*
          * 🚨 Saved BEFORE Composer is allowed to rewrite them, and used by the
@@ -134,7 +134,7 @@ class ComposerSteps implements Steps
          * back the broken state; resolving on top of it would plan from it.
          */
         $this->startFromSaved();
-        $before = $this->readJson($this->workDir . '/composer.lock.before');
+        $before = $this->readJson($this->workDir.'/composer.lock.before');
 
         $inProcess = $this->composer->inProcess();
 
@@ -167,7 +167,7 @@ class ComposerSteps implements Steps
              * the files go to the trash rather than being deleted and an
              * uninstall is as reversible as an update.
              */
-            'remove'  => array_merge(['remove'], $this->requested, ['--no-install', '--no-scripts']),
+            'remove' => array_merge(['remove'], $this->requested, ['--no-install', '--no-scripts']),
             /*
              * 🚨 `-w`, NOT `-W`.
              *
@@ -186,19 +186,19 @@ class ComposerSteps implements Steps
              * a root requirement to move, Composer now says so and the admin
              * decides — which is the whole posture of this extension.
              */
-            default   => array_merge(['update'], $this->requested, ['--with-dependencies', '--no-install']),
+            default => array_merge(['update'], $this->requested, ['--with-dependencies', '--no-install']),
         };
 
         $raised = $this->raisePins();
 
         $result = $inProcess ? $this->resolveInProcess($args) : $this->composer->run($args);
-        $after  = $this->readJson($lockPath);
+        $after = $this->readJson($lockPath);
 
         if ($result['code'] !== 0 && ! $this->didWhatWasAsked($before, $after)) {
             // Composer's own words, not a summary of them: it is usually precise
             // about which constraint could not be satisfied, and paraphrasing
             // that loses the only part anyone can act on.
-            throw new RuntimeException("Composer could not work out an update:\n" . $result['output']);
+            throw new RuntimeException("Composer could not work out an update:\n".$result['output']);
         }
 
         /*
@@ -212,7 +212,7 @@ class ComposerSteps implements Steps
         $sources = (new LockDiff())->sources($after);
         $reasons = (new LockDiff())->reasons($changes, $after, $this->requested);
 
-        file_put_contents($this->workDir . '/plan.json', json_encode([
+        file_put_contents($this->workDir.'/plan.json', json_encode([
             'changes' => array_map(fn (Change $c) => $c->toArray(), $changes),
             'sources' => $sources,
             'reasons' => $reasons,
@@ -221,16 +221,16 @@ class ComposerSteps implements Steps
         if ($changes === []) {
             return match ($this->mode) {
                 'install' => 'Nothing changed — that package is already installed at this version.',
-                'remove'  => 'Nothing changed — that package was not a direct requirement of this site.',
-                default   => $this->whyNothingMoved(),
+                'remove' => 'Nothing changed — that package was not a direct requirement of this site.',
+                default => $this->whyNothingMoved(),
             };
         }
 
         $shown = array_map(fn (Change $c) => $c->describe(), array_slice($changes, 0, 5));
-        $note = count($changes) . ' package(s) will change: ' . implode(', ', $shown)
-            . (count($changes) > 5 ? ', and ' . (count($changes) - 5) . ' more' : '');
+        $note = count($changes).' package(s) will change: '.implode(', ', $shown)
+            .(count($changes) > 5 ? ', and '.(count($changes) - 5).' more' : '');
 
-        return $raised === [] ? $note : implode('; ', $raised) . '. ' . $note;
+        return $raised === [] ? $note : implode('; ', $raised).'. '.$note;
     }
 
     /**
@@ -251,8 +251,8 @@ class ComposerSteps implements Steps
     private function startFromSaved(): void
     {
         foreach (['composer.lock', 'composer.json'] as $file) {
-            $saved = $this->workDir . '/' . $file . '.before';
-            $live = $this->installPath . '/' . $file;
+            $saved = $this->workDir.'/'.$file.'.before';
+            $live = $this->installPath.'/'.$file;
 
             if (is_file($saved)) {
                 if (@file_get_contents($saved) !== @file_get_contents($live)) {
@@ -288,7 +288,7 @@ class ComposerSteps implements Steps
      */
     private function resolveInProcess(array $args): array
     {
-        $path = $this->workDir . '/resolve.attempt.json';
+        $path = $this->workDir.'/resolve.attempt.json';
         $prev = is_file($path) ? (array) json_decode((string) @file_get_contents($path), true) : [];
         $attempts = (int) ($prev['attempts'] ?? 0);
 
@@ -300,8 +300,8 @@ class ComposerSteps implements Steps
                 $this->startFromSaved();
 
                 throw new RuntimeException(
-                    'Nothing was changed. ' . $how . ' — ' . self::RESOLVE_ATTEMPTS . ' times in a row, before Composer '
-                    . 'finished working out this update. ' . $this->limitAdvice($prev)
+                    'Nothing was changed. '.$how.' — '.self::RESOLVE_ATTEMPTS.' times in a row, before Composer '
+                    .'finished working out this update. '.$this->limitAdvice($prev)
                 );
             }
 
@@ -310,9 +310,9 @@ class ComposerSteps implements Steps
                 @file_put_contents($path, json_encode($prev));
 
                 throw new NotYet(
-                    $how . ' before Composer finished. Nothing was changed. Trying again (attempt '
-                    . ($attempts + 1) . ' of ' . self::RESOLVE_ATTEMPTS . '); Composer kept what it had already '
-                    . 'downloaded, so this attempt starts further along.'
+                    $how.' before Composer finished. Nothing was changed. Trying again (attempt '
+                    .($attempts + 1).' of '.self::RESOLVE_ATTEMPTS.'); Composer kept what it had already '
+                    .'downloaded, so this attempt starts further along.'
                 );
             }
         }
@@ -364,11 +364,11 @@ class ComposerSteps implements Steps
         $seconds = (int) ($attempt['seconds'] ?? 0);
 
         return match ($attempt['stopped'] ?? null) {
-            'time'   => 'This host stopped the request after ' . (int) ($attempt['timeLimit'] ?? $seconds) . ' seconds',
+            'time' => 'This host stopped the request after '.(int) ($attempt['timeLimit'] ?? $seconds).' seconds',
             'memory' => 'This host stopped the request when it reached its memory limit ('
-                . (string) ($attempt['memoryLimit'] ?? '?') . ')',
-            'unknown' => 'The web server stopped the request after about ' . $seconds . ' seconds',
-            default  => 'The web server stopped the request',
+                .(string) ($attempt['memoryLimit'] ?? '?').')',
+            'unknown' => 'The web server stopped the request after about '.$seconds.' seconds',
+            default => 'The web server stopped the request',
         };
     }
 
@@ -377,17 +377,17 @@ class ComposerSteps implements Steps
     {
         return match ($attempt['stopped'] ?? null) {
             'memory' => 'Ask your host to raise memory_limit for this site (256 MB is plenty), or update fewer '
-                . 'extensions at once.',
-            default  => 'Composer keeps what it downloads, so pressing Update again later often gets further. If it '
-                . 'keeps stopping, ask your host to raise max_execution_time for this site (120 seconds is plenty), '
-                . 'or to allow proc_open so Composer can run in its own process.',
+                .'extensions at once.',
+            default => 'Composer keeps what it downloads, so pressing Update again later often gets further. If it '
+                .'keeps stopping, ask your host to raise max_execution_time for this site (120 seconds is plenty), '
+                .'or to allow proc_open so Composer can run in its own process.',
         };
     }
 
     /** Copy beside, then rename over: never a half-written file in place. */
     private static function replaceFile(string $from, string $to): bool
     {
-        $tmp = $to . '.millwright-' . bin2hex(random_bytes(3));
+        $tmp = $to.'.millwright-'.bin2hex(random_bytes(3));
 
         if (! @copy($from, $tmp) || ! @rename($tmp, $to)) {
             @unlink($tmp);
@@ -419,7 +419,7 @@ class ComposerSteps implements Steps
             return [];
         }
 
-        $path = $this->installPath . '/composer.json';
+        $path = $this->installPath.'/composer.json';
         $json = $this->readJson($path);
         $raised = [];
 
@@ -444,7 +444,7 @@ class ComposerSteps implements Steps
             return [];
         }
 
-        file_put_contents($path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
+        file_put_contents($path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n");
 
         return $raised;
     }
@@ -466,7 +466,7 @@ class ComposerSteps implements Steps
      */
     private function whyNothingMoved(): string
     {
-        $json = $this->readJson($this->installPath . '/composer.json');
+        $json = $this->readJson($this->installPath.'/composer.json');
         $pinned = [];
 
         foreach ($this->requested as $package) {
@@ -482,7 +482,7 @@ class ComposerSteps implements Steps
              * those genuinely can be "already newest".
              */
             if (preg_match('/^v?\d+\.\d+\.\d+/', $constraint) && ! preg_match('/[\^~*|]|\s-\s/', $constraint)) {
-                $pinned[] = $package . ' is pinned to ' . $constraint;
+                $pinned[] = $package.' is pinned to '.$constraint;
             }
         }
 
@@ -490,8 +490,8 @@ class ComposerSteps implements Steps
             return 'Nothing to update — everything is already at the newest version it can be.';
         }
 
-        return 'Nothing moved, because ' . implode('; ', $pinned)
-            . '. A newer version cannot be installed until that requirement is changed.';
+        return 'Nothing moved, because '.implode('; ', $pinned)
+            .'. A newer version cannot be installed until that requirement is changed.';
     }
 
     /**
@@ -577,7 +577,7 @@ class ComposerSteps implements Steps
 
                 // The last swap of an update that moved Flarum itself.
                 if ($package === end($plan)->package && $this->movesCore($plan)) {
-                    $done .= '. ' . $this->bridgeCore();
+                    $done .= '. '.$this->bridgeCore();
                 }
 
                 return $done;
@@ -626,8 +626,8 @@ class ComposerSteps implements Steps
          * update: migrate cannot change a version that was already right, and
          * on a host without proc_open Flarum's updater is not there to ask.
          */
-        if ($was !== null && $was === CoreVersion::onDisk($this->vendorPath !== '' ? $this->vendorPath : $this->installPath . '/vendor')) {
-            return 'Flarum still records ' . $was . ', the version of its new code, so its database is brought up to date with the other migrations';
+        if ($was !== null && $was === CoreVersion::onDisk($this->vendorPath !== '' ? $this->vendorPath : $this->installPath.'/vendor')) {
+            return 'Flarum still records '.$was.', the version of its new code, so its database is brought up to date with the other migrations';
         }
 
         try {
@@ -643,22 +643,22 @@ class ComposerSteps implements Steps
             $now = $db->table('settings')->where('key', 'version')->value('value');
 
             if ($now === $was) {
-                throw new RuntimeException('the database still records Flarum ' . $was . ' after migrating.');
+                throw new RuntimeException('the database still records Flarum '.$was.' after migrating.');
             }
 
-            return 'Flarum moved from ' . $was . ' to ' . $now . ', so its database was brought up to date straight away';
+            return 'Flarum moved from '.$was.' to '.$now.', so its database was brought up to date straight away';
         } catch (\Throwable $e) {
             $restore = $this->restore();
 
             if ($restore === null || ! $restore->possible()) {
-                throw new RuntimeException('Flarum\'s files were updated but its database could not be: ' . $e->getMessage());
+                throw new RuntimeException('Flarum\'s files were updated but its database could not be: '.$e->getMessage());
             }
 
             $done = $restore->run();
 
             throw new Reverted(
-                'Flarum\'s files were updated but its database could not be (' . $e->getMessage() . '), so the update was undone '
-                . 'before the site could be left showing "Update Flarum".' . ($done['note'] !== null ? ' ' . $done['note'] : ''),
+                'Flarum\'s files were updated but its database could not be ('.$e->getMessage().'), so the update was undone '
+                .'before the site could be left showing "Update Flarum".'.($done['note'] !== null ? ' '.$done['note'] : ''),
                 $done['undone']
             );
         }
@@ -680,10 +680,10 @@ class ComposerSteps implements Steps
         }
 
         try {
-            $dir = $this->storagePath . '/millwright';
+            $dir = $this->storagePath.'/millwright';
             $summary = (new Pruner($dir, new Retention($dir)))->prune('finished update', 10.0);
         } catch (\Throwable $e) {
-            return 'Old rollback copies were left for the nightly tidy: ' . $e->getMessage();
+            return 'Old rollback copies were left for the nightly tidy: '.$e->getMessage();
         }
 
         if ($summary['removed'] === 0) {
@@ -705,12 +705,12 @@ class ComposerSteps implements Steps
     private function finalise(string $item, Run $run): string
     {
         return match ($item) {
-            'register'   => $this->register(),
+            'register' => $this->register(),
             'migrations' => $this->migrate(),
-            'assets'     => $this->flarum('assets:publish', 'assets published'),
-            'caches'     => $this->clearCaches(),
+            'assets' => $this->flarum('assets:publish', 'assets published'),
+            'caches' => $this->clearCaches(),
             'check the site again' => $this->verify($run),
-            'tidy the trash'       => $this->tidyTrash(),
+            'tidy the trash' => $this->tidyTrash(),
             /*
              * 🚨 Last, and it is the step that decides whether any of the others
              * were visible. On a host with opcache.validate_timestamps off, every
@@ -719,7 +719,7 @@ class ComposerSteps implements Steps
              * success and changed nothing anybody can see.
              */
             'code cache' => $this->codeCache(),
-            default      => 'nothing to do',
+            default => 'nothing to do',
         };
     }
 
@@ -812,8 +812,8 @@ class ComposerSteps implements Steps
 
         return $result['ok']
             ? 'The site is answering before we start.'
-            : 'The site was already not answering before this update started (' . $result['why']
-                . '), so this update will not be judged by whether it answers afterwards.';
+            : 'The site was already not answering before this update started ('.$result['why']
+                .'), so this update will not be judged by whether it answers afterwards.';
     }
 
     /**
@@ -841,7 +841,7 @@ class ComposerSteps implements Steps
 
             case Verdict::ALREADY_BROKEN:
                 return 'The site is still not answering, but it was not answering before this update either — '
-                    . 'so this has been left in place rather than blamed for it.';
+                    .'so this has been left in place rather than blamed for it.';
 
             case Verdict::NOT_JUDGED:
                 return 'The site was not checked, because there is no way to reach it from here.';
@@ -856,13 +856,13 @@ class ComposerSteps implements Steps
 
         $said = $why === null
             ? $result['why']
-            : $result['why'] . ' The error was: ' . $why;
+            : $result['why'].' The error was: '.$why;
 
         $restore = $this->restore();
 
         if ($restore === null || ! $restore->possible()) {
             throw new RuntimeException(
-                'This update stopped the site from answering, and there is nothing saved to put back. ' . $said
+                'This update stopped the site from answering, and there is nothing saved to put back. '.$said
             );
         }
 
@@ -872,10 +872,10 @@ class ComposerSteps implements Steps
 
         $done = $restore->run();
 
-        $message = 'This update stopped the site from answering, so it has been put back. ' . $said;
+        $message = 'This update stopped the site from answering, so it has been put back. '.$said;
 
         if ($done['note'] !== null) {
-            $message .= ' ' . $done['note'];
+            $message .= ' '.$done['note'];
         }
 
         throw new Reverted($message, $done['undone']);
@@ -896,7 +896,7 @@ class ComposerSteps implements Steps
             $this->vendorPath,
             $this->installPath,
             $this->workDir,
-            $this->storagePath . '/millwright/trash',
+            $this->storagePath.'/millwright/trash',
             $this->journal,
             $this->composer,
             $this->storagePath
@@ -912,12 +912,12 @@ class ComposerSteps implements Steps
      */
     private function rememberHealth(string $state): void
     {
-        @file_put_contents($this->workDir . '/health.before', $state);
+        @file_put_contents($this->workDir.'/health.before', $state);
     }
 
     private function rememberedHealth(): string
     {
-        $saved = @file_get_contents($this->workDir . '/health.before');
+        $saved = @file_get_contents($this->workDir.'/health.before');
 
         return is_string($saved) && $saved !== '' ? trim($saved) : 'unchecked';
     }
@@ -971,12 +971,12 @@ class ComposerSteps implements Steps
              */
             if ($left > self::WAIT_CAP) {
                 return 'The files are updated. This host re-reads them only every '
-                    . $situation['freq'] . ' second(s), which is too long to wait here — '
-                    . 'restart PHP-FPM to make the update take effect now.';
+                    .$situation['freq'].' second(s), which is too long to wait here — '
+                    .'restart PHP-FPM to make the update take effect now.';
             }
 
             throw new NotYet(
-                'Waiting ' . $left . ' more second(s) for the web server to re-read the new files.'
+                'Waiting '.$left.' more second(s) for the web server to re-read the new files.'
             );
         }
 
@@ -998,7 +998,7 @@ class ComposerSteps implements Steps
      */
     private function codeLiveAt(int $freq): int
     {
-        $autoloader = $this->installPath . '/vendor/composer/autoload_static.php';
+        $autoloader = $this->installPath.'/vendor/composer/autoload_static.php';
         $changed = @filemtime($autoloader);
 
         return ($changed ?: time()) + $freq + 2;
@@ -1025,16 +1025,16 @@ class ComposerSteps implements Steps
             // The resolve has already rewritten these; put them back so the
             // refusal's "Nothing was changed" is true and no rollback is owed.
             foreach (['composer.lock', 'composer.json'] as $file) {
-                $saved = $this->workDir . '/' . $file . '.before';
+                $saved = $this->workDir.'/'.$file.'.before';
                 if (is_file($saved)) {
-                    @copy($saved, $this->installPath . '/' . $file);
+                    @copy($saved, $this->installPath.'/'.$file);
                 }
             }
 
             throw new RuntimeException($permissions->explain($blocked));
         }
 
-        return 'every file this update changes is writable' . ($setAside !== '' ? '. ' . $setAside : '');
+        return 'every file this update changes is writable'.($setAside !== '' ? '. '.$setAside : '');
     }
 
     /**
@@ -1073,15 +1073,15 @@ class ComposerSteps implements Steps
 
         $dry = $this->composer->run(['install', '--no-scripts', '--dry-run']);
         if ($dry['code'] !== 0) {
-            throw new RuntimeException("Composer failed:\n" . $dry['output']);
+            throw new RuntimeException("Composer failed:\n".$dry['output']);
         }
 
         $planned = InstalledRecord::plannedOperations($dry['output']);
         if ($planned > 0) {
             throw new RuntimeException(
                 "Composer still wants to change $planned package(s) after the update was applied, so it was stopped "
-                . "before touching any files. Nothing is broken; roll this run back from the Millwright screen.\n"
-                . $dry['output']
+                ."before touching any files. Nothing is broken; roll this run back from the Millwright screen.\n"
+                .$dry['output']
             );
         }
 
@@ -1116,15 +1116,15 @@ class ComposerSteps implements Steps
      */
     private function snapshotAutoloader(): string
     {
-        $dir = $this->workDir . '/register.before';
-        $source = $this->installPath . '/vendor/composer';
+        $dir = $this->workDir.'/register.before';
+        $source = $this->installPath.'/vendor/composer';
 
         if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
             throw new RuntimeException('Could not save a copy of the autoloader, so Composer was not run.');
         }
 
-        foreach ([...(glob($source . '/*.php') ?: []), $source . '/installed.json', $this->installPath . '/vendor/autoload.php'] as $file) {
-            if (is_file($file) && ! copy($file, $dir . '/' . $this->snapshotName($file))) {
+        foreach ([...(glob($source.'/*.php') ?: []), $source.'/installed.json', $this->installPath.'/vendor/autoload.php'] as $file) {
+            if (is_file($file) && ! copy($file, $dir.'/'.$this->snapshotName($file))) {
                 throw new RuntimeException('Could not save a copy of the autoloader, so Composer was not run.');
             }
         }
@@ -1134,11 +1134,11 @@ class ComposerSteps implements Steps
 
     private function restoreAutoloader(string $dir): void
     {
-        foreach (glob($dir . '/*') ?: [] as $saved) {
+        foreach (glob($dir.'/*') ?: [] as $saved) {
             $name = basename($saved);
             $target = $name === 'autoload.php'
-                ? $this->installPath . '/vendor/autoload.php'
-                : $this->installPath . '/vendor/composer/' . substr($name, strlen('composer.'));
+                ? $this->installPath.'/vendor/autoload.php'
+                : $this->installPath.'/vendor/composer/'.substr($name, strlen('composer.'));
 
             self::replaceFile($saved, $target);
         }
@@ -1146,7 +1146,7 @@ class ComposerSteps implements Steps
 
     private function snapshotName(string $file): string
     {
-        return basename(dirname($file)) === 'composer' ? 'composer.' . basename($file) : basename($file);
+        return basename(dirname($file)) === 'composer' ? 'composer.'.basename($file) : basename($file);
     }
 
     private function composerCommand(array $args, string $note): string
@@ -1156,7 +1156,7 @@ class ComposerSteps implements Steps
         $result = $this->composer->run($args);
 
         if ($result['code'] !== 0) {
-            throw new RuntimeException("Composer failed:\n" . $result['output']);
+            throw new RuntimeException("Composer failed:\n".$result['output']);
         }
 
         return $note;
@@ -1172,7 +1172,7 @@ class ComposerSteps implements Steps
         $this->flarum('migrate', 'migrations run');
         $added = $ledger->after($db, resolve(ExtensionManager::class), $this->vendorPath);
 
-        return $added === [] ? 'migrations run (no database changes)' : 'migrations run: ' . count($added) . ' database change(s), which undoing this update reverses';
+        return $added === [] ? 'migrations run (no database changes)' : 'migrations run: '.count($added).' database change(s), which undoing this update reverses';
     }
 
     private function flarum(string $command, string $note): string
@@ -1198,7 +1198,7 @@ class ComposerSteps implements Steps
         if ($result['code'] !== 0) {
             $lines = explode("\n", $result['output']);
 
-            throw new RuntimeException("`flarum $command` failed:\n" . implode("\n", array_slice($lines, -12)));
+            throw new RuntimeException("`flarum $command` failed:\n".implode("\n", array_slice($lines, -12)));
         }
 
         return $note;
@@ -1238,7 +1238,7 @@ class ComposerSteps implements Steps
     /** @return array<string,mixed> */
     private function planFile(): array
     {
-        $path = $this->workDir . '/plan.json';
+        $path = $this->workDir.'/plan.json';
 
         if (! is_file($path)) {
             return [];

@@ -73,7 +73,7 @@ class LockDiffTest extends TestCase
         // If the order moved between runs it would redo one package and skip
         // another — Composer's own ordering is not stable, so this sorts.
         $before = $this->lock(['z/last' => '1.0.0', 'a/first' => '1.0.0', 'm/mid' => '1.0.0']);
-        $after  = $this->lock(['z/last' => '2.0.0', 'a/first' => '2.0.0', 'm/mid' => '2.0.0']);
+        $after = $this->lock(['z/last' => '2.0.0', 'a/first' => '2.0.0', 'm/mid' => '2.0.0']);
 
         $names = fn (array $cs) => array_map(fn ($c) => $c->package, $cs);
 

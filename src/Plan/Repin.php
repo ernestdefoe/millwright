@@ -47,13 +47,13 @@ final class Repin
      */
     public function pins(array $packages): array
     {
-        $available = (array) ($this->cachedUpdates());
-        $require   = (array) ($this->readJson($this->composerJsonPath)['require'] ?? []);
+        $available = (array) $this->cachedUpdates();
+        $require = (array) ($this->readJson($this->composerJsonPath)['require'] ?? []);
 
         $out = [];
 
         foreach ($packages as $package) {
-            $to         = $available[$package]['to'] ?? null;
+            $to = $available[$package]['to'] ?? null;
             $constraint = $require[$package] ?? null;
 
             if (! is_string($to) || $to === '' || ! is_string($constraint)) {
@@ -67,7 +67,7 @@ final class Repin
 
             $out[$package] = [
                 'from' => $constraint,
-                'to'   => str_starts_with($constraint, 'v') && ! str_starts_with($to, 'v') ? 'v' . $to : $to,
+                'to' => str_starts_with($constraint, 'v') && ! str_starts_with($to, 'v') ? 'v'.$to : $to,
             ];
         }
 

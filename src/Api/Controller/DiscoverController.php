@@ -6,7 +6,6 @@ use ErnestDefoe\Millwright\Discover\Cache;
 use ErnestDefoe\Millwright\Discover\Compatibility;
 use ErnestDefoe\Millwright\Discover\Packagist;
 use Flarum\Extension\ExtensionManager;
-use Flarum\Foundation\Application;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
 use Laminas\Diactoros\Response\JsonResponse;
@@ -36,8 +35,8 @@ class DiscoverController implements RequestHandlerInterface
         RequestUtil::getActor($request)->assertAdmin();
 
         $params = $request->getQueryParams();
-        $query  = trim((string) ($params['q'] ?? ''));
-        $page   = max(1, min(20, (int) ($params['page'] ?? 1)));
+        $query = trim((string) ($params['q'] ?? ''));
+        $page = max(1, min(20, (int) ($params['page'] ?? 1)));
 
         /*
          * 🚨 No query means BROWSE, not "return nothing". The first version
@@ -76,6 +75,6 @@ class DiscoverController implements RequestHandlerInterface
 
     private function cache(): Cache
     {
-        return new Cache($this->paths->storage . '/millwright/packagist');
+        return new Cache($this->paths->storage.'/millwright/packagist');
     }
 }

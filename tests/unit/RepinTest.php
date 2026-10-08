@@ -21,14 +21,18 @@ class RepinTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->dir = sys_get_temp_dir() . '/mw-repin-' . bin2hex(random_bytes(6));
-        mkdir($this->dir . '/millwright', 0775, true);
+        $this->dir = sys_get_temp_dir().'/mw-repin-'.bin2hex(random_bytes(6));
+        mkdir($this->dir.'/millwright', 0775, true);
     }
 
     protected function tearDown(): void
     {
-        foreach (glob($this->dir . '/millwright/*') ?: [] as $f) { @unlink($f); }
-        foreach (glob($this->dir . '/*') ?: [] as $f) { is_dir($f) ? @rmdir($f) : @unlink($f); }
+        foreach (glob($this->dir.'/millwright/*') ?: [] as $f) {
+            @unlink($f);
+        }
+        foreach (glob($this->dir.'/*') ?: [] as $f) {
+            is_dir($f) ? @rmdir($f) : @unlink($f);
+        }
         @rmdir($this->dir);
     }
 
@@ -185,7 +189,7 @@ class RepinTest extends TestCase
      */
     public function test_the_factory_passes_the_permission_to_the_steps(): void
     {
-        $source = file_get_contents(dirname(__DIR__, 2) . '/src/Work/ComposerStepsFactory.php');
+        $source = file_get_contents(dirname(__DIR__, 2).'/src/Work/ComposerStepsFactory.php');
 
         $this->assertIsString($source);
         $this->assertStringContainsString(
@@ -198,7 +202,7 @@ class RepinTest extends TestCase
     /** And the controller records it when the run starts. */
     public function test_the_controller_records_the_permission(): void
     {
-        $source = file_get_contents(dirname(__DIR__, 2) . '/src/Api/Controller/StartController.php');
+        $source = file_get_contents(dirname(__DIR__, 2).'/src/Api/Controller/StartController.php');
 
         $this->assertIsString($source);
         // Nightly targets come from Plan\Nightly; every other run still asks repinFor().
@@ -210,8 +214,8 @@ class RepinTest extends TestCase
     /** @return array<string,string> */
     private function repinFor(array $packages, array $body, array $require, array $updates): array
     {
-        file_put_contents($this->dir . '/composer.json', json_encode(['require' => $require]));
-        file_put_contents($this->dir . '/millwright/updates.json', json_encode([
+        file_put_contents($this->dir.'/composer.json', json_encode(['require' => $require]));
+        file_put_contents($this->dir.'/millwright/updates.json', json_encode([
             'checkedAt' => time(), 'updates' => $updates, 'uncheckable' => [], 'tracking' => [],
         ]));
 
@@ -229,22 +233,22 @@ class RepinTest extends TestCase
     /** @return array<string,mixed> the composer.json as it is left */
     private function raise(array $composerJson, array $repin, array $requested): array
     {
-        file_put_contents($this->dir . '/composer.json', json_encode($composerJson));
+        file_put_contents($this->dir.'/composer.json', json_encode($composerJson));
 
         $reflection = new ReflectionClass(ComposerSteps::class);
         $steps = $reflection->newInstanceWithoutConstructor();
 
         foreach ([
             'installPath' => $this->dir,
-            'requested'   => $requested,
-            'mode'        => 'update',
-            'repin'       => $repin,
+            'requested' => $requested,
+            'mode' => 'update',
+            'repin' => $repin,
         ] as $prop => $value) {
             $reflection->getProperty($prop)->setValue($steps, $value);
         }
 
         $reflection->getMethod('raisePins')->invoke($steps);
 
-        return json_decode((string) file_get_contents($this->dir . '/composer.json'), true);
+        return json_decode((string) file_get_contents($this->dir.'/composer.json'), true);
     }
 }

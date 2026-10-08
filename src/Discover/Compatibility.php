@@ -130,7 +130,6 @@ class Compatibility
      */
     private function judge(string $name, array $versions): array
     {
-
         $best = null;
 
         foreach ($versions as $release) {
@@ -141,8 +140,8 @@ class Compatibility
             }
 
             $candidate = [
-                'version'   => (string) ($release['version'] ?? ''),
-                'requires'  => $constraint,
+                'version' => (string) ($release['version'] ?? ''),
+                'requires' => $constraint,
                 'stability' => $this->stability((string) ($release['version'] ?? '')),
             ];
 
@@ -162,9 +161,9 @@ class Compatibility
         if ($best === null) {
             return [
                 'compatible' => false,
-                'version'    => null,
-                'requires'   => $this->latestConstraint($versions),
-                'stability'  => null,
+                'version' => null,
+                'requires' => $this->latestConstraint($versions),
+                'stability' => null,
             ];
         }
 

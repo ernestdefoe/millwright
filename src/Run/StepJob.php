@@ -123,7 +123,7 @@ class StepJob extends AbstractJob
 
         if ($run !== null && ! $run->isFinished()) {
             $store->save($run->failed(
-                'The background worker running this update stopped: ' . $e->getMessage(),
+                'The background worker running this update stopped: '.$e->getMessage(),
                 'queue worker',
                 time()
             ));

@@ -29,10 +29,10 @@ final class FlarumCommand
     public function run(string $command, array $options = []): array
     {
         if ($this->composer->processes()) {
-            $argv = [(string) $this->composer->php(), $this->installPath . '/flarum', $command];
+            $argv = [(string) $this->composer->php(), $this->installPath.'/flarum', $command];
 
             foreach ($options as $name => $value) {
-                $argv[] = $value === true ? $name : $name . '=' . $value;
+                $argv[] = $value === true ? $name : $name.'='.$value;
             }
 
             return Process::run($argv, $this->installPath);

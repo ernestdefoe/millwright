@@ -37,9 +37,9 @@ class Repositories
             $out[] = [
                 // Composer accepts repositories as a list or as a keyed map, and
                 // the key is the name when it is a map.
-                'name'      => (string) ($repo['name'] ?? (is_string($key) ? $key : ($repo['url'] ?? ''))),
-                'type'      => (string) ($repo['type'] ?? '?'),
-                'url'       => (string) ($repo['url'] ?? ''),
+                'name' => (string) ($repo['name'] ?? (is_string($key) ? $key : ($repo['url'] ?? ''))),
+                'type' => (string) ($repo['type'] ?? '?'),
+                'url' => (string) ($repo['url'] ?? ''),
                 'canonical' => (bool) ($repo['canonical'] ?? true),
             ];
         }

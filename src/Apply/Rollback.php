@@ -65,13 +65,13 @@ class Rollback
             }
 
             $change = Change::fromArray((array) $entry['change']);
-            $trash  = (string) ($entry['trash'] ?? $change->trashName());
+            $trash = (string) ($entry['trash'] ?? $change->trashName());
 
             match ($change->op) {
                 Change::REPLACE => $this->restore($change, $trash),
-                Change::ADD     => $this->uninstall($change),
-                Change::REMOVE  => $this->restore($change, $trash),
-                default         => throw new RuntimeException("Unknown change \"{$change->op}\" in the journal for {$change->package}"),
+                Change::ADD => $this->uninstall($change),
+                Change::REMOVE => $this->restore($change, $trash),
+                default => throw new RuntimeException("Unknown change \"{$change->op}\" in the journal for {$change->package}"),
             };
 
             $undone[] = $change->describe();
@@ -110,7 +110,7 @@ class Rollback
         $done = [];
 
         foreach (['composer.lock', 'composer.json'] as $file) {
-            $saved = $this->savedManifests . '/' . $file . '.before';
+            $saved = $this->savedManifests.'/'.$file.'.before';
 
             if (! is_file($saved)) {
                 // composer.json is only saved when the run was an install, so
@@ -118,7 +118,7 @@ class Rollback
                 continue;
             }
 
-            if (! @copy($saved, $this->installPath . '/' . $file)) {
+            if (! @copy($saved, $this->installPath.'/'.$file)) {
                 throw new RuntimeException("Could not put $file back from $saved");
             }
 
@@ -131,8 +131,8 @@ class Rollback
     /** Put the stashed version back, discarding whatever is live. */
     private function restore(Change $change, string $trashName): void
     {
-        $live   = $this->path($this->vendorDir, $change->relativePath());
-        $stash  = $this->path($this->trashDir, $trashName);
+        $live = $this->path($this->vendorDir, $change->relativePath());
+        $stash = $this->path($this->trashDir, $trashName);
 
         if (! is_dir($stash)) {
             /*
@@ -146,7 +146,7 @@ class Rollback
 
         if (is_dir($live)) {
             // The new version. Moved aside, not deleted — see the class comment.
-            $aside = $this->path($this->trashDir, $change->trashName() . '.rolledback');
+            $aside = $this->path($this->trashDir, $change->trashName().'.rolledback');
             Tree::delete($aside);
 
             if (! Tree::move($live, $aside)) {
@@ -171,7 +171,7 @@ class Rollback
             return;
         }
 
-        $aside = $this->path($this->trashDir, $change->trashName() . '.rolledback');
+        $aside = $this->path($this->trashDir, $change->trashName().'.rolledback');
         Tree::delete($aside);
         $this->ensureDir(dirname($aside));
 
@@ -197,7 +197,7 @@ class Rollback
     {
         $vendor = rtrim($this->vendorDir, DIRECTORY_SEPARATOR);
 
-        if ($dir === $vendor || ! str_starts_with($dir, $vendor . DIRECTORY_SEPARATOR)) {
+        if ($dir === $vendor || ! str_starts_with($dir, $vendor.DIRECTORY_SEPARATOR)) {
             return;
         }
 
@@ -206,7 +206,7 @@ class Rollback
 
     private function path(string $base, string $relative): string
     {
-        return rtrim($base, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $relative;
+        return rtrim($base, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.$relative;
     }
 
     private function ensureDir(string $dir): void

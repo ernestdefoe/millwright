@@ -27,9 +27,9 @@ class CheckController implements RequestHandlerInterface
     {
         RequestUtil::getActor($request)->assertAdmin();
 
-        $check = new UpdateCheck($this->paths->storage . '/millwright/updates.json');
+        $check = new UpdateCheck($this->paths->storage.'/millwright/updates.json');
 
-        $lock = (array) json_decode((string) @file_get_contents($this->paths->base . '/composer.lock'), true);
+        $lock = (array) json_decode((string) @file_get_contents($this->paths->base.'/composer.lock'), true);
 
         $packages = array_merge(
             array_values((array) ($lock['packages'] ?? [])),
@@ -46,9 +46,9 @@ class CheckController implements RequestHandlerInterface
 
         return new JsonResponse([
             'updates' => [
-                'available'   => $result['updates'],
-                'checkedAt'   => $result['checkedAt'],
-                'stale'       => false,
+                'available' => $result['updates'],
+                'checkedAt' => $result['checkedAt'],
+                'stale' => false,
                 'uncheckable' => $result['uncheckable'],
             ],
         ]);

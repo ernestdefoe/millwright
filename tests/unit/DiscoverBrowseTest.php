@@ -22,12 +22,12 @@ class DiscoverBrowseTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->dir = sys_get_temp_dir() . '/mw-browse-' . bin2hex(random_bytes(4));
+        $this->dir = sys_get_temp_dir().'/mw-browse-'.bin2hex(random_bytes(4));
     }
 
     protected function tearDown(): void
     {
-        exec('rm -rf ' . escapeshellarg($this->dir));
+        exec('rm -rf '.escapeshellarg($this->dir));
     }
 
     /**
@@ -84,10 +84,10 @@ class DiscoverBrowseTest extends TestCase
     {
         // Browsing 2306 extensions twelve at a time needs to know when to stop
         // offering, and Packagist says so by handing back a next-page URL.
-        [$withNext, ] = $this->packagist($this->body(12, true));
+        [$withNext] = $this->packagist($this->body(12, true));
         $this->assertTrue($withNext->search('')['more']);
 
-        [$without, ] = $this->packagist($this->body(4, false));
+        [$without] = $this->packagist($this->body(4, false));
         $this->assertFalse($without->search('')['more']);
     }
 

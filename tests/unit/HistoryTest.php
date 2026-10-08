@@ -14,11 +14,11 @@ class HistoryTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->dir = sys_get_temp_dir() . '/mw-hist-' . bin2hex(random_bytes(4));
-        mkdir($this->dir . '/runs/r1', 0775, true);
-        file_put_contents($this->dir . '/runs/r1/plan.json', json_encode(['changes' => [['op' => 'replace', 'package' => 'acpl/mobile-tab', 'from' => '2.0.0', 'to' => '2.0.1']]]));
-        file_put_contents($this->dir . '/runs/r1/requested.json', json_encode(['packages' => ['acpl/mobile-tab'], 'mode' => 'update']));
-        file_put_contents($this->dir . '/runs/r1/migrations.json', json_encode([['migration' => '2026_01_01_000000_add_variants', 'extension' => 'acpl-mobile-tab']]));
+        $this->dir = sys_get_temp_dir().'/mw-hist-'.bin2hex(random_bytes(4));
+        mkdir($this->dir.'/runs/r1', 0775, true);
+        file_put_contents($this->dir.'/runs/r1/plan.json', json_encode(['changes' => [['op' => 'replace', 'package' => 'acpl/mobile-tab', 'from' => '2.0.0', 'to' => '2.0.1']]]));
+        file_put_contents($this->dir.'/runs/r1/requested.json', json_encode(['packages' => ['acpl/mobile-tab'], 'mode' => 'update']));
+        file_put_contents($this->dir.'/runs/r1/migrations.json', json_encode([['migration' => '2026_01_01_000000_add_variants', 'extension' => 'acpl-mobile-tab']]));
     }
 
     protected function tearDown(): void
@@ -28,7 +28,7 @@ class HistoryTest extends TestCase
 
     public function test_a_finished_run_is_recorded_once_and_an_undo_updates_it(): void
     {
-        $store = new RunStore($this->dir . '/runs');
+        $store = new RunStore($this->dir.'/runs');
         $run = Run::start('r1', 1000);
 
         $store->save($run);
@@ -45,8 +45,8 @@ class HistoryTest extends TestCase
         $this->assertSame(1, $history[0]['migrations']);
 
         // Undo deletes the run's migrations.json and the pruner may take plan.json: the entry keeps both.
-        unlink($this->dir . '/runs/r1/migrations.json');
-        unlink($this->dir . '/runs/r1/plan.json');
+        unlink($this->dir.'/runs/r1/migrations.json');
+        unlink($this->dir.'/runs/r1/plan.json');
         $store->save(Run::fromArray(['state' => Run::ROLLBACK, 'movedAt' => 1200] + $run->toArray()));
 
         $history = $store->history();

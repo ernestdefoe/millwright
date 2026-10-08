@@ -11,7 +11,7 @@
  * killAt is a step label — journalled | stashed | installed | completed — or
  * "never" to run to completion.
  */
-require __DIR__ . '/../../vendor/autoload.php';
+require __DIR__.'/../../vendor/autoload.php';
 
 use ErnestDefoe\Millwright\Apply\Applier;
 use ErnestDefoe\Millwright\Apply\Journal;

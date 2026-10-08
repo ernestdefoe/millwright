@@ -39,20 +39,20 @@ class PruneTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->dir = sys_get_temp_dir() . '/mw-prune-' . bin2hex(random_bytes(4));
-        $this->mw = $this->dir . '/storage/millwright';
-        mkdir($this->mw . '/trash', 0775, true);
-        mkdir($this->mw . '/runs', 0775, true);
-        mkdir($this->dir . '/vendor', 0775, true);
+        $this->dir = sys_get_temp_dir().'/mw-prune-'.bin2hex(random_bytes(4));
+        $this->mw = $this->dir.'/storage/millwright';
+        mkdir($this->mw.'/trash', 0775, true);
+        mkdir($this->mw.'/runs', 0775, true);
+        mkdir($this->dir.'/vendor', 0775, true);
 
         // Two days after everything on disk was made, so the grace period has passed.
         $this->now = time() + 2 * self::DAY;
-        $this->store = new RunStore($this->mw . '/runs');
+        $this->store = new RunStore($this->mw.'/runs');
     }
 
     protected function tearDown(): void
     {
-        exec('rm -rf ' . escapeshellarg($this->dir));
+        exec('rm -rf '.escapeshellarg($this->dir));
     }
 
     private function pruner(?int $now = null): Pruner
@@ -72,13 +72,13 @@ class PruneTest extends TestCase
         $at = $this->now - $daysAgo * self::DAY;
         $this->store->save(new Run($id, $state, 'finalise', [], 0, [], null, null, $at, $at));
 
-        mkdir($this->mw . '/runs/' . $id, 0775, true);
-        file_put_contents($this->mw . '/runs/' . $id . '/composer.lock.before', '{}');
-        $journal = new Journal($this->mw . '/runs/' . $id . '/journal.jsonl');
+        mkdir($this->mw.'/runs/'.$id, 0775, true);
+        file_put_contents($this->mw.'/runs/'.$id.'/composer.lock.before', '{}');
+        $journal = new Journal($this->mw.'/runs/'.$id.'/journal.jsonl');
 
         foreach ($packages as $spec) {
             [$package, $from] = explode('@', $spec);
-            $change = new Change(Change::REPLACE, $package, $from, $from . '.1');
+            $change = new Change(Change::REPLACE, $package, $from, $from.'.1');
             $seq = $journal->begin(['change' => $change->toArray(), 'trash' => $change->trashName()]);
             $journal->complete($seq);
             $this->copy($change->trashName());
@@ -87,9 +87,9 @@ class PruneTest extends TestCase
 
     private function copy(string $name): void
     {
-        $path = $this->mw . '/trash/' . $name;
-        @mkdir($path . '/src', 0775, true);
-        file_put_contents($path . '/src/Extension.php', str_repeat('x', 5000));
+        $path = $this->mw.'/trash/'.$name;
+        @mkdir($path.'/src', 0775, true);
+        file_put_contents($path.'/src/Extension.php', str_repeat('x', 5000));
     }
 
     /** @return array<string,string> name => reason, for what the plan removes */
@@ -182,10 +182,10 @@ class PruneTest extends TestCase
 
         $this->pruner()->prune('test');
 
-        $this->assertDirectoryDoesNotExist($this->mw . '/trash/acme+p1@1.0.0');
-        $this->assertDirectoryDoesNotExist($this->mw . '/runs/r1');
-        $this->assertFileExists($this->mw . '/runs/r1.json', 'the summary is the record that an update happened');
-        $this->assertDirectoryExists($this->mw . '/trash/acme+p3@1.0.0');
+        $this->assertDirectoryDoesNotExist($this->mw.'/trash/acme+p1@1.0.0');
+        $this->assertDirectoryDoesNotExist($this->mw.'/runs/r1');
+        $this->assertFileExists($this->mw.'/runs/r1.json', 'the summary is the record that an update happened');
+        $this->assertDirectoryExists($this->mw.'/trash/acme+p3@1.0.0');
         $this->assertSame('r7', $this->store->latest()?->id, 'the screen still opens on the same run');
     }
 
@@ -261,7 +261,7 @@ class PruneTest extends TestCase
         $this->makeRun('r1', 300, ['acme/a@1.0.0']);
         $this->makeRun('r2', 200, ['acme/b@1.0.0']);
         $this->makeRun('r3', 100, ['acme/c@1.0.0']);
-        file_put_contents($this->mw . '/runs/r1.json', '{ torn');
+        file_put_contents($this->mw.'/runs/r1.json', '{ torn');
 
         $plan = $this->pruner()->plan();
 
@@ -274,7 +274,7 @@ class PruneTest extends TestCase
         $this->makeRun('r1', 1, ['acme/a@1.0.0']);
         $this->copy('acme+orphan@1.0.0');
 
-        $journal = $this->mw . '/runs/r1/journal.jsonl';
+        $journal = $this->mw.'/runs/r1/journal.jsonl';
         chmod($journal, 0000);   // there, but unreadable
 
         if (is_readable($journal)) {
@@ -288,43 +288,43 @@ class PruneTest extends TestCase
             $this->assertStringContainsString('Nothing was removed', $e->getMessage());
         }
 
-        $this->assertDirectoryExists($this->mw . '/trash/acme+orphan@1.0.0');
+        $this->assertDirectoryExists($this->mw.'/trash/acme+orphan@1.0.0');
     }
 
     // ── the deletion itself ───────────────────────────────────────────────────
 
     public function test_a_symlink_in_the_trash_is_unlinked_and_never_followed(): void
     {
-        $checkout = $this->dir . '/my-repo';
-        mkdir($checkout . '/src', 0775, true);
-        file_put_contents($checkout . '/src/Unpushed.php', '<?php // three days of work');
+        $checkout = $this->dir.'/my-repo';
+        mkdir($checkout.'/src', 0775, true);
+        file_put_contents($checkout.'/src/Unpushed.php', '<?php // three days of work');
 
         // At the top of the trash (a path install somebody stashed by hand)...
-        symlink($checkout, $this->mw . '/trash/acme+linked@1.0.0');
+        symlink($checkout, $this->mw.'/trash/acme+linked@1.0.0');
 
         // ...and deep inside an ordinary copy (a vendor/bin style link).
         $this->copy('acme+nested@1.0.0');
-        symlink($checkout, $this->mw . '/trash/acme+nested@1.0.0/src/link-to-repo');
-        symlink($checkout . '/src/Unpushed.php', $this->mw . '/trash/acme+nested@1.0.0/file-link.php');
+        symlink($checkout, $this->mw.'/trash/acme+nested@1.0.0/src/link-to-repo');
+        symlink($checkout.'/src/Unpushed.php', $this->mw.'/trash/acme+nested@1.0.0/file-link.php');
 
         $this->makeRun('r1', 1, ['acme/kept@1.0.0']);
 
         $summary = $this->pruner()->prune('test');
 
         $this->assertSame(2, $summary['removed']);
-        $this->assertFalse(is_link($this->mw . '/trash/acme+linked@1.0.0'));
-        $this->assertDirectoryDoesNotExist($this->mw . '/trash/acme+nested@1.0.0');
-        $this->assertFileExists($checkout . '/src/Unpushed.php', 'removing a link must never reach through it');
-        $this->assertSame('<?php // three days of work', file_get_contents($checkout . '/src/Unpushed.php'));
+        $this->assertFalse(is_link($this->mw.'/trash/acme+linked@1.0.0'));
+        $this->assertDirectoryDoesNotExist($this->mw.'/trash/acme+nested@1.0.0');
+        $this->assertFileExists($checkout.'/src/Unpushed.php', 'removing a link must never reach through it');
+        $this->assertSame('<?php // three days of work', file_get_contents($checkout.'/src/Unpushed.php'));
     }
 
     public function test_a_path_outside_the_trash_is_refused(): void
     {
-        $outside = $this->dir . '/vendor/acme/widget';
+        $outside = $this->dir.'/vendor/acme/widget';
         mkdir($outside, 0775, true);
-        file_put_contents($outside . '/keep.php', 'live code');
+        file_put_contents($outside.'/keep.php', 'live code');
 
-        $trash = new Contained($this->mw . '/trash');
+        $trash = new Contained($this->mw.'/trash');
 
         foreach (['..', '.', '', '../../../vendor', 'acme/widget', "a\0b"] as $name) {
             try {
@@ -335,7 +335,7 @@ class PruneTest extends TestCase
             }
         }
 
-        foreach ([$outside, $this->mw . '/trash/../../../vendor/acme', $this->mw . '/trash/x/../../runs'] as $path) {
+        foreach ([$outside, $this->mw.'/trash/../../../vendor/acme', $this->mw.'/trash/x/../../runs'] as $path) {
             try {
                 $trash->removeAt($path);
                 $this->fail("$path must be refused");
@@ -344,49 +344,49 @@ class PruneTest extends TestCase
             }
         }
 
-        $this->assertFileExists($outside . '/keep.php');
-        $this->assertDirectoryExists($this->mw . '/runs');
+        $this->assertFileExists($outside.'/keep.php');
+        $this->assertDirectoryExists($this->mw.'/runs');
     }
 
     public function test_a_trash_that_is_itself_reached_through_a_link_stays_inside_its_target(): void
     {
         // Some hosts symlink storage/ elsewhere. The base is resolved once, and
         // nothing beside the trash's real directory is touched.
-        $real = $this->dir . '/elsewhere/trash';
-        mkdir($real . '/acme+a@1.0.0', 0775, true);
-        mkdir($this->dir . '/elsewhere/sibling', 0775, true);
-        symlink($real, $this->dir . '/trash-link');
+        $real = $this->dir.'/elsewhere/trash';
+        mkdir($real.'/acme+a@1.0.0', 0775, true);
+        mkdir($this->dir.'/elsewhere/sibling', 0775, true);
+        symlink($real, $this->dir.'/trash-link');
 
-        $trash = new Contained($this->dir . '/trash-link');
+        $trash = new Contained($this->dir.'/trash-link');
         $trash->remove('acme+a@1.0.0');
 
-        $this->assertDirectoryDoesNotExist($real . '/acme+a@1.0.0');
-        $this->assertDirectoryExists($this->dir . '/elsewhere/sibling');
+        $this->assertDirectoryDoesNotExist($real.'/acme+a@1.0.0');
+        $this->assertDirectoryExists($this->dir.'/elsewhere/sibling');
         $this->expectException(RuntimeException::class);
-        $trash->removeAt($this->dir . '/elsewhere/sibling');
+        $trash->removeAt($this->dir.'/elsewhere/sibling');
     }
 
     // ── the end-to-end promise ────────────────────────────────────────────────
 
     public function test_the_latest_update_still_rolls_back_after_a_prune(): void
     {
-        $vendor = $this->dir . '/vendor';
+        $vendor = $this->dir.'/vendor';
 
         // Three real updates of the same package, through the real Applier.
         foreach (['1.0.0' => '1.1.0', '1.1.0' => '1.2.0', '1.2.0' => '1.3.0'] as $from => $to) {
-            $id = 'r-' . str_replace('.', '', $to);
+            $id = 'r-'.str_replace('.', '', $to);
 
             if (! is_dir("$vendor/acme/widget")) {
                 mkdir("$vendor/acme/widget", 0775, true);
                 file_put_contents("$vendor/acme/widget/version", $from);
             }
 
-            $staging = $this->mw . "/runs/$id/staging/acme/widget";
+            $staging = $this->mw."/runs/$id/staging/acme/widget";
             mkdir($staging, 0775, true);
             file_put_contents("$staging/version", $to);
 
-            $journal = new Journal($this->mw . "/runs/$id/journal.jsonl");
-            (new Applier($vendor, $this->mw . "/runs/$id/staging", $this->mw . '/trash', $journal))
+            $journal = new Journal($this->mw."/runs/$id/journal.jsonl");
+            (new Applier($vendor, $this->mw."/runs/$id/staging", $this->mw.'/trash', $journal))
                 ->applyOne(new Change(Change::REPLACE, 'acme/widget', $from, $to));
 
             $at = $this->now - (200 - (int) str_replace('.', '', $to)) * self::DAY;
@@ -404,7 +404,7 @@ class PruneTest extends TestCase
         $latest = $this->store->latest();
         $this->assertSame('r-130', $latest?->id);
 
-        (new Rollback($vendor, $this->mw . '/trash', new Journal($this->mw . '/runs/r-130/journal.jsonl')))->run();
+        (new Rollback($vendor, $this->mw.'/trash', new Journal($this->mw.'/runs/r-130/journal.jsonl')))->run();
 
         $this->assertSame('1.2.0', file_get_contents("$vendor/acme/widget/version"), 'Roll back still puts the previous version back');
     }
@@ -437,7 +437,7 @@ class PruneTest extends TestCase
 
     public function test_the_schedule_passes_no_arguments_and_the_finalise_step_tidies_last(): void
     {
-        $extend = (string) file_get_contents(__DIR__ . '/../../extend.php');
+        $extend = (string) file_get_contents(__DIR__.'/../../extend.php');
 
         // A keyed ['--dry-run' => true] renders as --dry-run='1' and fails nightly, silently.
         $this->assertMatchesRegularExpression(
@@ -446,7 +446,7 @@ class PruneTest extends TestCase
         );
         $this->assertStringContainsString('->command(PruneCommand::class)', $extend);
 
-        $steps = (string) file_get_contents(__DIR__ . '/../../src/Work/ComposerSteps.php');
+        $steps = (string) file_get_contents(__DIR__.'/../../src/Work/ComposerSteps.php');
         $this->assertMatchesRegularExpression("/'check the site again', 'tidy the trash'\\]/", $steps);
         $this->assertStringContainsString("'tidy the trash'       => \$this->tidyTrash()", $steps);
     }

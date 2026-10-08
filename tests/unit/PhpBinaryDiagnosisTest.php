@@ -173,7 +173,7 @@ class PhpBinaryDiagnosisTest extends TestCase
 
     public function test_an_override_is_refused_unless_it_runs_as_the_cli(): void
     {
-        $override = new PhpOverride(sys_get_temp_dir() . '/mw-php-' . uniqid());
+        $override = new PhpOverride(sys_get_temp_dir().'/mw-php-'.uniqid());
 
         $this->assertSame('php_path_not_absolute', $override->refusal('php', $this->host([]))[0]);
         $this->assertSame('php_path_not_cli', $override->refusal(self::PLESK_CLI, $this->host([self::PLESK_CLI => ['code' => 0, 'out' => 'fpm-fcgi 8.5.1', 'err' => '']]))[0]);
@@ -185,7 +185,7 @@ class PhpBinaryDiagnosisTest extends TestCase
 
     public function test_an_override_survives_a_round_trip_and_clears(): void
     {
-        $dir = sys_get_temp_dir() . '/mw-php-' . uniqid();
+        $dir = sys_get_temp_dir().'/mw-php-'.uniqid();
         $override = new PhpOverride($dir);
 
         $override->set(self::PLESK_CLI);
@@ -198,8 +198,8 @@ class PhpBinaryDiagnosisTest extends TestCase
 
     public function test_every_key_the_host_tab_can_send_is_translated(): void
     {
-        $locale = Yaml::parseFile(__DIR__ . '/../../resources/locale/en.yml')['ernestdefoe-millwright']['admin'];
-        $source = file_get_contents(__DIR__ . '/../../src/Host/Capability.php') . file_get_contents(__DIR__ . '/../../src/Host/PhpOverride.php');
+        $locale = Yaml::parseFile(__DIR__.'/../../resources/locale/en.yml')['ernestdefoe-millwright']['admin'];
+        $source = file_get_contents(__DIR__.'/../../src/Host/Capability.php').file_get_contents(__DIR__.'/../../src/Host/PhpOverride.php');
 
         preg_match_all("/'(host\.[a-z_]+|php_path_[a-z_]+)'/", $source, $m);
         $this->assertNotEmpty($m[1]);

@@ -92,7 +92,7 @@ class UpdateCommand extends AbstractCommand
         }
 
         $named = array_values(array_filter(array_map('strval', (array) $this->input->getArgument('packages'))));
-        $all   = (bool) $this->input->getOption('all');
+        $all = (bool) $this->input->getOption('all');
 
         if ($this->input->getOption('nightly')) {
             return $this->nightly();
@@ -105,7 +105,7 @@ class UpdateCommand extends AbstractCommand
         }
 
         if ($all) {
-            $named = array_keys((array) ($this->check()->current($this->paths->base . '/composer.lock')['updates'] ?? []));
+            $named = array_keys((array) ($this->check()->current($this->paths->base.'/composer.lock')['updates'] ?? []));
 
             if ($named === []) {
                 /*
@@ -149,9 +149,9 @@ class UpdateCommand extends AbstractCommand
             return 1;
         }
 
-        if ((new Capability($this->paths->base, \ErnestDefoe\Millwright\Host\PhpBinary::forStorage($this->paths->storage), $this->paths->storage . '/.composer'))->resolveTier() === Capability::NONE) {
+        if ((new Capability($this->paths->base, \ErnestDefoe\Millwright\Host\PhpBinary::forStorage($this->paths->storage), $this->paths->storage.'/.composer'))->resolveTier() === Capability::NONE) {
             $this->error('This host does not have enough memory for Composer to work out what an update involves. '
-                . 'Nothing was started. Ask your host to raise memory_limit to 256 MB and try again.');
+                .'Nothing was started. Ask your host to raise memory_limit to 256 MB and try again.');
 
             return 1;
         }
@@ -162,13 +162,13 @@ class UpdateCommand extends AbstractCommand
             $age = time() - $existing->movedAt;
 
             $this->error("An update is already in progress: {$existing->id}, at {$existing->phase}"
-                . ($age > 120 ? ', and nothing has moved for ' . round($age / 60) . ' minutes' : '') . '.');
+                .($age > 120 ? ', and nothing has moved for '.round($age / 60).' minutes' : '').'.');
             $this->error('Drive it with --resume, or abandon it on the Millwright screen. Nothing was started.');
 
             return 1;
         }
 
-        $pins  = (new Repin($this->paths->base . '/composer.json', $this->storagePath('updates.json')))->pins($named);
+        $pins = (new Repin($this->paths->base.'/composer.json', $this->storagePath('updates.json')))->pins($named);
         $repin = [];
 
         if ($pins !== []) {
@@ -180,7 +180,7 @@ class UpdateCommand extends AbstractCommand
                  * go green having moved nothing. Refusing, by name, with the
                  * flag that fixes it, is the only honest answer.
                  */
-                $this->error(count($pins) . ' package(s) are pinned to an exact version, so an update cannot move them:');
+                $this->error(count($pins).' package(s) are pinned to an exact version, so an update cannot move them:');
 
                 foreach ($pins as $package => $pin) {
                     $this->error("  $package is pinned at {$pin['from']} and would have to be raised to {$pin['to']}");
@@ -197,11 +197,11 @@ class UpdateCommand extends AbstractCommand
             }
         }
 
-        $id = 'r' . date('Ymd-His') . '-' . bin2hex(random_bytes(3));
+        $id = 'r'.date('Ymd-His').'-'.bin2hex(random_bytes(3));
 
         (new WorkDir($this->paths->storage, $id))->create()->remember($named, 'update', $repin);
 
-        $this->info('Updating ' . implode(', ', $named));
+        $this->info('Updating '.implode(', ', $named));
 
         return $this->pump($this->runner->begin($id));
     }
@@ -256,7 +256,7 @@ class UpdateCommand extends AbstractCommand
                  * command's call to make.
                  */
                 $this->error("Gave up waiting after {$this->input->getOption('timeout')}s. "
-                    . "The run is not lost: {$run->id} is at {$run->phase} and `millwright:update --resume` will carry on.");
+                    ."The run is not lost: {$run->id} is at {$run->phase} and `millwright:update --resume` will carry on.");
 
                 return 1;
             }
@@ -266,7 +266,7 @@ class UpdateCommand extends AbstractCommand
             if ($this->runner->needsWebRequest()) {
                 $this->emit($run->log);
                 $this->error("This host cannot start separate processes, so the rest of {$run->id} has to run from "
-                    . 'the web: open Millwright in the admin panel and it will carry on from here.');
+                    .'the web: open Millwright in the admin panel and it will carry on from here.');
 
                 return 1;
             }
@@ -292,7 +292,7 @@ class UpdateCommand extends AbstractCommand
 
         $this->error("Failed at {$run->errorStep}: {$run->error}");
         $this->error("Nothing was rolled back automatically. Roll {$run->id} back from the Millwright screen, "
-            . 'or fix the cause and run this again.');
+            .'or fix the cause and run this again.');
 
         return 1;
     }
@@ -310,14 +310,14 @@ class UpdateCommand extends AbstractCommand
             }
 
             $this->printed[$i] = $line;
-            $this->info('  ' . $line);
+            $this->info('  '.$line);
         }
     }
 
     /** Which of these the site does not actually have, if any. */
     private function notInstalled(array $packages): ?string
     {
-        $lock = @file_get_contents($this->paths->base . '/composer.lock');
+        $lock = @file_get_contents($this->paths->base.'/composer.lock');
 
         if ($lock === false) {
             // Nothing to check against; the plan phase will say so properly.
@@ -339,8 +339,8 @@ class UpdateCommand extends AbstractCommand
             return null;
         }
 
-        return implode(', ', $missing) . ' is not installed, so there is nothing to update. '
-            . 'Install it from the Millwright screen first. Nothing was started.';
+        return implode(', ', $missing).' is not installed, so there is nothing to update. '
+            .'Install it from the Millwright screen first. Nothing was started.';
     }
 
     /** See Plan\Nightly: the server works out what moves, and to which branch. */
@@ -354,7 +354,7 @@ class UpdateCommand extends AbstractCommand
             return 1;
         }
 
-        $targets = (new Nightly($this->paths->base . '/composer.json', $this->paths->base . '/composer.lock'))->targets();
+        $targets = (new Nightly($this->paths->base.'/composer.json', $this->paths->base.'/composer.lock'))->targets();
 
         if ($targets === []) {
             $this->error('There is no nightly build to move to: Packagist has no development branch for this Flarum, or could not be reached. Nothing was started.');
@@ -362,10 +362,10 @@ class UpdateCommand extends AbstractCommand
             return 1;
         }
 
-        $id = 'r' . date('Ymd-His') . '-' . bin2hex(random_bytes(3));
+        $id = 'r'.date('Ymd-His').'-'.bin2hex(random_bytes(3));
         (new WorkDir($this->paths->storage, $id))->create()->remember(array_keys($targets), 'update', $targets);
 
-        $this->info('Moving ' . count($targets) . ' Flarum package(s) to ' . reset($targets) . ': ' . implode(', ', array_keys($targets)));
+        $this->info('Moving '.count($targets).' Flarum package(s) to '.reset($targets).': '.implode(', ', array_keys($targets)));
 
         return $this->pump($this->runner->begin($id));
     }
@@ -377,7 +377,7 @@ class UpdateCommand extends AbstractCommand
 
     private function storagePath(string $file): string
     {
-        return $this->paths->storage . '/millwright/' . $file;
+        return $this->paths->storage.'/millwright/'.$file;
     }
 
     /**

@@ -30,9 +30,9 @@ class Fetcher
      */
     public function fetch(string $package, array $source): void
     {
-        $target = $this->stagingDir . '/' . $this->safePath($package);
+        $target = $this->stagingDir.'/'.$this->safePath($package);
 
-        if (is_dir($target) && is_file($target . '/composer.json')) {
+        if (is_dir($target) && is_file($target.'/composer.json')) {
             // Already staged by an earlier attempt. Fetch is idempotent because
             // the driver saves progress AFTER the work, so a process killed in
             // between will ask for this package again.
@@ -72,18 +72,18 @@ class Fetcher
         $ch = curl_init($url);
 
         curl_setopt_array($ch, [
-            CURLOPT_FILE           => $handle,
+            CURLOPT_FILE => $handle,
             CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_MAXREDIRS      => 5,
-            CURLOPT_TIMEOUT        => 300,
+            CURLOPT_MAXREDIRS => 5,
+            CURLOPT_TIMEOUT => 300,
             CURLOPT_CONNECTTIMEOUT => 20,
-            CURLOPT_USERAGENT      => 'Millwright',
-            CURLOPT_HTTPHEADER     => $this->authHeaders($url),
+            CURLOPT_USERAGENT => 'Millwright',
+            CURLOPT_HTTPHEADER => $this->authHeaders($url),
         ]);
 
-        $ok   = curl_exec($ch);
+        $ok = curl_exec($ch);
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $err  = curl_error($ch);
+        $err = curl_error($ch);
 
         // curl_close() has done nothing since PHP 8.0 and is deprecated in 8.5.
         // The handle is released when it goes out of scope.
@@ -103,7 +103,7 @@ class Fetcher
                 ? ' If this package is private, Millwright found no credentials for it — check auth.json.'
                 : '';
 
-            throw new RuntimeException("Could not download $url (HTTP $code).$hint" . ($err ? " $err" : ''));
+            throw new RuntimeException("Could not download $url (HTTP $code).$hint".($err ? " $err" : ''));
         }
 
         return $tmp;
@@ -119,19 +119,19 @@ class Fetcher
 
         foreach (($auth['github-oauth'] ?? []) as $h => $token) {
             if ($this->hostMatches($host, (string) $h)) {
-                return ['Authorization: Bearer ' . $token];
+                return ['Authorization: Bearer '.$token];
             }
         }
 
         foreach (($auth['bearer'] ?? []) as $h => $token) {
             if ($this->hostMatches($host, (string) $h)) {
-                return ['Authorization: Bearer ' . $token];
+                return ['Authorization: Bearer '.$token];
             }
         }
 
         foreach (($auth['http-basic'] ?? []) as $h => $cred) {
             if ($this->hostMatches($host, (string) $h) && isset($cred['username'], $cred['password'])) {
-                return ['Authorization: Basic ' . base64_encode($cred['username'] . ':' . $cred['password'])];
+                return ['Authorization: Basic '.base64_encode($cred['username'].':'.$cred['password'])];
             }
         }
 
@@ -143,7 +143,7 @@ class Fetcher
         $configured = strtolower($configured);
 
         // api.github.com and codeload.github.com both belong to a github.com entry.
-        return $host === $configured || str_ends_with($host, '.' . $configured);
+        return $host === $configured || str_ends_with($host, '.'.$configured);
     }
 
     /** @return array<string,mixed> */
@@ -179,7 +179,7 @@ class Fetcher
 
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $name = (string) $zip->getNameIndex($i);
-            $rel  = $root === null ? $name : substr($name, strlen($root));
+            $rel = $root === null ? $name : substr($name, strlen($root));
 
             if ($rel === '' || str_ends_with($rel, '/')) {
                 continue;
@@ -191,10 +191,10 @@ class Fetcher
                 throw new RuntimeException("Refusing to unpack $package: the archive contains a path that escapes it.");
             }
 
-            $to = $target . '/' . $rel;
+            $to = $target.'/'.$rel;
 
             if (! is_dir(dirname($to)) && ! mkdir(dirname($to), 0775, true) && ! is_dir(dirname($to))) {
-                throw new RuntimeException("Could not create " . dirname($to));
+                throw new RuntimeException('Could not create '.dirname($to));
             }
 
             $stream = $zip->getStream($name);

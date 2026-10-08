@@ -64,11 +64,11 @@ class CompatController implements RequestHandlerInterface
          */
         $core = $this->targetOr($this->coreVersion(), Arr::get((array) $request->getParsedBody(), 'core'));
 
-        $packagist = new Packagist(new Cache($this->paths->storage . '/millwright/packagist'));
+        $packagist = new Packagist(new Cache($this->paths->storage.'/millwright/packagist'));
 
         return new JsonResponse([
             'verdicts' => $packagist->verdicts($names, new Compatibility($core)),
-            'core'     => $core,
+            'core' => $core,
         ]);
     }
 

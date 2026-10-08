@@ -30,9 +30,9 @@ class CoreBridgeTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->dir = sys_get_temp_dir() . '/mw-bridge-' . bin2hex(random_bytes(4));
-        mkdir($this->dir . '/project/vendor/flarum/core/src/Foundation', 0775, true);
-        mkdir($this->dir . '/work', 0775, true);
+        $this->dir = sys_get_temp_dir().'/mw-bridge-'.bin2hex(random_bytes(4));
+        mkdir($this->dir.'/project/vendor/flarum/core/src/Foundation', 0775, true);
+        mkdir($this->dir.'/work', 0775, true);
         $this->previous = Container::getInstance();
     }
 
@@ -63,7 +63,7 @@ class CoreBridgeTest extends TestCase
     private function forum(string $recorded, string $onDisk): void
     {
         file_put_contents(
-            $this->dir . '/project/vendor/flarum/core/src/Foundation/Application.php',
+            $this->dir.'/project/vendor/flarum/core/src/Foundation/Application.php',
             "<?php\n\nnamespace Flarum\\Foundation;\n\nclass Application\n{\n    public const VERSION = '$onDisk';\n}\n"
         );
 
@@ -87,17 +87,17 @@ class CoreBridgeTest extends TestCase
 
     private function bridge(): string
     {
-        $journal = new Journal($this->dir . '/work/journal.jsonl');
+        $journal = new Journal($this->dir.'/work/journal.jsonl');
         $php = new PhpBinary(PHP_BINARY, null, '', null, PHP_BINARY, 'cli', '');
 
         $steps = new ComposerSteps(
-            $this->dir . '/project',
-            $this->dir . '/work',
-            (new ComposerRunner($this->dir . '/project', __FILE__, $this->dir . '/home'))->withPhp($php),
-            new Fetcher($this->dir . '/work/staging'),
-            new Applier($this->dir . '/project/vendor', $this->dir . '/work/staging', $this->dir . '/work/trash', $journal),
+            $this->dir.'/project',
+            $this->dir.'/work',
+            (new ComposerRunner($this->dir.'/project', __FILE__, $this->dir.'/home'))->withPhp($php),
+            new Fetcher($this->dir.'/work/staging'),
+            new Applier($this->dir.'/project/vendor', $this->dir.'/work/staging', $this->dir.'/work/trash', $journal),
             $journal,
-            vendorPath: $this->dir . '/project/vendor',
+            vendorPath: $this->dir.'/project/vendor',
         );
 
         return (new \ReflectionMethod($steps, 'bridgeCore'))->invoke($steps);

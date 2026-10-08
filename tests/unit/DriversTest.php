@@ -101,8 +101,14 @@ class DriversTest extends TestCase
          * The result was "a worker is available" on a forum with none.
          */
         $wrapper = new class(new SyncQueue()) {
-            public function __construct(private mixed $driver) {}
-            public function getDriver(): mixed { return $this->driver; }
+            public function __construct(private mixed $driver)
+            {
+            }
+
+            public function getDriver(): mixed
+            {
+                return $this->driver;
+            }
         };
 
         $bus = $this->createMock(Dispatcher::class);
@@ -117,8 +123,14 @@ class DriversTest extends TestCase
     public function test_a_real_driver_behind_the_wrapper_is_a_worker(): void
     {
         $wrapper = new class(new stdClass()) {
-            public function __construct(private mixed $driver) {}
-            public function getDriver(): mixed { return $this->driver; }
+            public function __construct(private mixed $driver)
+            {
+            }
+
+            public function getDriver(): mixed
+            {
+                return $this->driver;
+            }
         };
 
         $drivers = new Drivers($this->queue($wrapper), $this->createMock(Dispatcher::class));
@@ -131,7 +143,7 @@ class DriversTest extends TestCase
         $bus = $this->createMock(Dispatcher::class);
 
         $withWorker = new Drivers($this->queue(new stdClass()), $bus);
-        $without    = new Drivers($this->queue(new SyncQueue()), $bus);
+        $without = new Drivers($this->queue(new SyncQueue()), $bus);
 
         $this->assertStringContainsString('close this page', $withWorker->describe());
         $this->assertStringContainsString('keep this page open', $without->describe());

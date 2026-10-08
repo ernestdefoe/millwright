@@ -18,13 +18,15 @@ class UpdateScopeTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->dir = sys_get_temp_dir() . '/mw-scope-' . bin2hex(random_bytes(6));
+        $this->dir = sys_get_temp_dir().'/mw-scope-'.bin2hex(random_bytes(6));
         mkdir($this->dir, 0775, true);
     }
 
     protected function tearDown(): void
     {
-        foreach (glob($this->dir . '/*') ?: [] as $f) { @unlink($f); }
+        foreach (glob($this->dir.'/*') ?: [] as $f) {
+            @unlink($f);
+        }
         @rmdir($this->dir);
     }
 
@@ -39,7 +41,7 @@ class UpdateScopeTest extends TestCase
      */
     public function test_an_update_does_not_move_root_requirements(): void
     {
-        $source = file_get_contents(dirname(__DIR__, 2) . '/src/Work/ComposerSteps.php');
+        $source = file_get_contents(dirname(__DIR__, 2).'/src/Work/ComposerSteps.php');
 
         $this->assertIsString($source);
         $this->assertStringContainsString("'--with-dependencies'", $source);
@@ -80,7 +82,7 @@ class UpdateScopeTest extends TestCase
      */
     public function test_the_update_branch_uses_that_explanation(): void
     {
-        $source = file_get_contents(dirname(__DIR__, 2) . '/src/Work/ComposerSteps.php');
+        $source = file_get_contents(dirname(__DIR__, 2).'/src/Work/ComposerSteps.php');
 
         $this->assertIsString($source);
         $this->assertMatchesRegularExpression(
@@ -130,7 +132,7 @@ class UpdateScopeTest extends TestCase
 
     private function whyNothingMoved(array $composerJson, array $requested): string
     {
-        file_put_contents($this->dir . '/composer.json', json_encode($composerJson));
+        file_put_contents($this->dir.'/composer.json', json_encode($composerJson));
 
         $reflection = new ReflectionClass(ComposerSteps::class);
         $steps = $reflection->newInstanceWithoutConstructor();

@@ -4,8 +4,8 @@ namespace ErnestDefoe\Millwright\Console;
 
 use ErnestDefoe\Millwright\Work\StaleCache;
 use Flarum\Console\AbstractCommand;
-use Flarum\Foundation\Paths;
 use Flarum\Formatter\Formatter;
+use Flarum\Foundation\Paths;
 
 /**
  * Put Flarum's post formatter back into a state that can render.
@@ -85,13 +85,13 @@ class RepairFormatterCommand extends AbstractCommand
 
         if ($stranded !== []) {
             $this->error(
-                'The formatter was rebuilt, but ' . count($stranded) . ' cache file(s) could not be replaced '
-                . 'because they are not owned by the web server user. Post rendering will still fail. '
-                . 'Remove them as root and run this again:'
+                'The formatter was rebuilt, but '.count($stranded).' cache file(s) could not be replaced '
+                .'because they are not owned by the web server user. Post rendering will still fail. '
+                .'Remove them as root and run this again:'
             );
 
             foreach (array_slice($stranded, 0, 5) as $file) {
-                $this->error('  ' . $file);
+                $this->error('  '.$file);
             }
 
             return 1;
@@ -120,7 +120,7 @@ class RepairFormatterCommand extends AbstractCommand
             return [];
         }
 
-        $root = resolve(Paths::class)->storage . '/cache';
+        $root = resolve(Paths::class)->storage.'/cache';
 
         if (! is_dir($root)) {
             return [];

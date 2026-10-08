@@ -38,7 +38,7 @@ class CheckCommand extends AbstractCommand
 
     protected function fire(): int
     {
-        $check = new UpdateCheck($this->paths->storage . '/millwright/updates.json');
+        $check = new UpdateCheck($this->paths->storage.'/millwright/updates.json');
 
         if (! $this->input->getOption('force') && ! $check->isStale()) {
             $this->info('The last check is still fresh. Use --force to check anyway.');
@@ -71,15 +71,15 @@ class CheckCommand extends AbstractCommand
          * repository can never shadow a public package.
          */
         $private = new PrivateIndex(
-            new Repositories(new JsonFile($this->paths->base . '/composer.json')),
-            new AuthTokens(new JsonFile($this->paths->base . '/auth.json')),
+            new Repositories(new JsonFile($this->paths->base.'/composer.json')),
+            new AuthTokens(new JsonFile($this->paths->base.'/auth.json')),
         );
 
         $result = $check->refresh(
             $installed,
             fn (string $name) => $check->fromPackagist($name) ?? $private->versionsFor($name)
         );
-        $count  = count($result['updates']);
+        $count = count($result['updates']);
 
         $this->info($count === 0
             ? 'Everything that can be checked is up to date.'
@@ -92,8 +92,8 @@ class CheckCommand extends AbstractCommand
         if ($result['uncheckable'] !== []) {
             // Said out loud rather than omitted: silence here would read as
             // "these are fine", which is not something this can know.
-            $this->info(count($result['uncheckable']) . ' package(s) could not be checked anywhere: '
-                . implode(', ', $result['uncheckable']));
+            $this->info(count($result['uncheckable']).' package(s) could not be checked anywhere: '
+                .implode(', ', $result['uncheckable']));
         }
 
         /*
@@ -102,8 +102,8 @@ class CheckCommand extends AbstractCommand
          * question for the update itself.
          */
         if (($result['tracking'] ?? []) !== []) {
-            $this->info(count($result['tracking']) . ' package(s) track a branch, so there is no version to compare: '
-                . implode(', ', $result['tracking']));
+            $this->info(count($result['tracking']).' package(s) track a branch, so there is no version to compare: '
+                .implode(', ', $result['tracking']));
         }
 
         return 0;
@@ -112,7 +112,7 @@ class CheckCommand extends AbstractCommand
     /** @return list<array<string,mixed>> */
     private function lockPackages(): array
     {
-        $lock = @file_get_contents($this->paths->base . '/composer.lock');
+        $lock = @file_get_contents($this->paths->base.'/composer.lock');
 
         if ($lock === false) {
             return [];

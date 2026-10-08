@@ -37,7 +37,7 @@ class ConfigController implements RequestHandlerInterface
         RequestUtil::getActor($request)->assertAdmin();
 
         $method = $request->getMethod();
-        $body   = (array) $request->getParsedBody();
+        $body = (array) $request->getParsedBody();
         $action = (string) Arr::get($body, 'action', '');
 
         try {
@@ -65,27 +65,27 @@ class ConfigController implements RequestHandlerInterface
             }
 
             match ($action) {
-                'add-repository'    => $this->repositories()->add(
+                'add-repository' => $this->repositories()->add(
                     (string) Arr::get($body, 'type', 'vcs'),
                     (string) Arr::get($body, 'url', ''),
                     Arr::get($body, 'name')
                 ),
                 'remove-repository' => $this->repositories()->remove((string) Arr::get($body, 'url', '')),
-                'set-stability'     => $this->stability()->set(
+                'set-stability' => $this->stability()->set(
                     (string) Arr::get($body, 'minimumStability', 'stable'),
                     (bool) Arr::get($body, 'preferStable', true)
                 ),
-                'set-auth'          => $this->auth()->set(
+                'set-auth' => $this->auth()->set(
                     (string) Arr::get($body, 'kind', ''),
                     (string) Arr::get($body, 'host', ''),
                     (string) Arr::get($body, 'secret', ''),
                     Arr::get($body, 'username')
                 ),
-                'remove-auth'       => $this->auth()->remove(
+                'remove-auth' => $this->auth()->remove(
                     (string) Arr::get($body, 'kind', ''),
                     (string) Arr::get($body, 'host', '')
                 ),
-                default             => throw new RuntimeException('Unknown action.'),
+                default => throw new RuntimeException('Unknown action.'),
             };
         } catch (RuntimeException $e) {
             /*
@@ -107,42 +107,42 @@ class ConfigController implements RequestHandlerInterface
 
         return [
             'repositories' => $this->repositories()->all(),
-            'stability'    => $current + [
-                'levels'      => Stability::LEVELS,
+            'stability' => $current + [
+                'levels' => Stability::LEVELS,
                 'consequence' => $stability->consequence($current['minimumStability']),
-                'explains'    => array_map(
+                'explains' => array_map(
                     fn (string $l) => ['level' => $l, 'means' => $stability->consequence($l)],
                     Stability::LEVELS
                 ),
             ],
-            'auth'         => [
+            'auth' => [
                 'stored' => $this->auth()->all(),
-                'kinds'  => AuthTokens::KINDS,
-                'path'   => 'auth.json',
+                'kinds' => AuthTokens::KINDS,
+                'path' => 'auth.json',
             ],
-            'types'        => Repositories::TYPES,
+            'types' => Repositories::TYPES,
             /*
              * 🚨 A change here does not re-resolve anything. Composer reads these
              * on the NEXT install or update, so saying so is the difference
              * between somebody understanding why nothing happened and somebody
              * concluding the screen is broken.
              */
-            'note'         => 'These take effect the next time something is installed or updated.',
+            'note' => 'These take effect the next time something is installed or updated.',
         ];
     }
 
     private function repositories(): Repositories
     {
-        return new Repositories(new JsonFile($this->paths->base . '/composer.json'));
+        return new Repositories(new JsonFile($this->paths->base.'/composer.json'));
     }
 
     private function stability(): Stability
     {
-        return new Stability(new JsonFile($this->paths->base . '/composer.json'));
+        return new Stability(new JsonFile($this->paths->base.'/composer.json'));
     }
 
     private function auth(): AuthTokens
     {
-        return new AuthTokens(new JsonFile($this->paths->base . '/auth.json'));
+        return new AuthTokens(new JsonFile($this->paths->base.'/auth.json'));
     }
 }

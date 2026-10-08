@@ -19,7 +19,7 @@ class ReplacedPackageTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->dir = sys_get_temp_dir() . '/mw-replaced-' . bin2hex(random_bytes(4));
+        $this->dir = sys_get_temp_dir().'/mw-replaced-'.bin2hex(random_bytes(4));
     }
 
     private function packagist(array $responses, array &$asked = []): Packagist
@@ -54,8 +54,8 @@ class ReplacedPackageTest extends TestCase
     {
         $p2 = ['minified' => 'composer/2.0', 'packages' => ['v17development/flarum-seo' => [
             ['version' => '4.0.0-beta.10', 'require' => ['flarum/core' => '^2.0'],
-             'replace' => ['v17development/flarum-seo' => '*'],
-             'source' => ['type' => 'git', 'url' => 'https://github.com/FriendsOfFlarum/seo.git', 'reference' => 'abc123']],
+                'replace' => ['v17development/flarum-seo' => '*'],
+                'source' => ['type' => 'git', 'url' => 'https://github.com/FriendsOfFlarum/seo.git', 'reference' => 'abc123']],
         ]]];
 
         $asked = [];
@@ -105,7 +105,7 @@ class ReplacedPackageTest extends TestCase
         $asked = [];
         $p2 = ['packages' => ['acme/old' => [
             ['version' => '1.0.0', 'require' => ['flarum/core' => '^2.0'], 'replace' => ['acme/old' => '*'],
-             'source' => ['url' => 'http://169.254.169.254/latest/meta-data', 'reference' => 'x']],
+                'source' => ['url' => 'http://169.254.169.254/latest/meta-data', 'reference' => 'x']],
         ]]];
 
         $v = $this->packagist(['https://repo.packagist.org/p2/acme/old.json' => json_encode($p2)], $asked)

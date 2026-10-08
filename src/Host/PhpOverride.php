@@ -93,6 +93,6 @@ class PhpOverride
 
     private function file(): string
     {
-        return $this->storagePath . '/millwright/php.json';
+        return $this->storagePath.'/millwright/php.json';
     }
 }

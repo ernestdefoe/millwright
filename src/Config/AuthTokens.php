@@ -58,7 +58,7 @@ class AuthTokens
                      * apart. The password is never included.
                      */
                     'detail' => is_array($value) && isset($value['username'])
-                        ? 'username ' . (string) $value['username']
+                        ? 'username '.(string) $value['username']
                         : 'token set',
                 ];
             }
@@ -95,8 +95,8 @@ class AuthTokens
         $basic = $auth['http-basic'][$host] ?? null;
 
         if (is_array($basic) && isset($basic['username'], $basic['password'])) {
-            return 'Authorization: Basic ' . base64_encode(
-                (string) $basic['username'] . ':' . (string) $basic['password']
+            return 'Authorization: Basic '.base64_encode(
+                (string) $basic['username'].':'.(string) $basic['password']
             );
         }
 
@@ -104,7 +104,7 @@ class AuthTokens
             $token = $auth[$kind][$host] ?? null;
 
             if (is_string($token) && $token !== '') {
-                return 'Authorization: Bearer ' . $token;
+                return 'Authorization: Bearer '.$token;
             }
         }
 
@@ -114,7 +114,7 @@ class AuthTokens
     public function set(string $kind, string $host, string $secret, ?string $username = null): void
     {
         if (! in_array($kind, self::KINDS, true)) {
-            throw new RuntimeException('Unknown credential type. Use one of: ' . implode(', ', self::KINDS) . '.');
+            throw new RuntimeException('Unknown credential type. Use one of: '.implode(', ', self::KINDS).'.');
         }
 
         $host = strtolower(trim($host));

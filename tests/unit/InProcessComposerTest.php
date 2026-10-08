@@ -34,10 +34,10 @@ class InProcessComposerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->dir = sys_get_temp_dir() . '/mw-inproc-' . bin2hex(random_bytes(6));
-        mkdir($this->dir . '/project', 0775, true);
-        mkdir($this->dir . '/work', 0775, true);
-        mkdir($this->dir . '/home', 0775, true);
+        $this->dir = sys_get_temp_dir().'/mw-inproc-'.bin2hex(random_bytes(6));
+        mkdir($this->dir.'/project', 0775, true);
+        mkdir($this->dir.'/work', 0775, true);
+        mkdir($this->dir.'/home', 0775, true);
     }
 
     protected function tearDown(): void
@@ -66,7 +66,7 @@ class InProcessComposerTest extends TestCase
     public function test_no_command_line_php_also_falls_back_to_in_process(): void
     {
         $php = new PhpBinary(null, ['/nonexistent/php-for-test'], '', null, '/x/php-fpm', 'fpm-fcgi', '');
-        $runner = (new ComposerRunner($this->dir . '/project', __FILE__, $this->dir . '/home'))->withPhp($php);
+        $runner = (new ComposerRunner($this->dir.'/project', __FILE__, $this->dir.'/home'))->withPhp($php);
 
         $this->assertFalse($runner->canSpawn());
         $this->assertTrue($runner->inProcess());
@@ -132,6 +132,7 @@ class InProcessComposerTest extends TestCase
             InProcess::isolate([], function () {
                 set_error_handler(static fn () => true);
                 chdir(sys_get_temp_dir());
+
                 throw new RuntimeException('boom');
             });
             $this->fail('the exception should come out');
@@ -147,12 +148,12 @@ class InProcessComposerTest extends TestCase
 
     public function test_sources_that_need_git_are_named_before_anything_runs(): void
     {
-        $versioned = $this->dir . '/project/packages/versioned';
-        $unversioned = $this->dir . '/project/packages/unversioned';
+        $versioned = $this->dir.'/project/packages/versioned';
+        $unversioned = $this->dir.'/project/packages/unversioned';
         mkdir($versioned, 0775, true);
         mkdir($unversioned, 0775, true);
-        file_put_contents($versioned . '/composer.json', json_encode(['name' => 'acme/versioned', 'version' => '1.0.0']));
-        file_put_contents($unversioned . '/composer.json', json_encode(['name' => 'acme/unversioned']));
+        file_put_contents($versioned.'/composer.json', json_encode(['name' => 'acme/versioned', 'version' => '1.0.0']));
+        file_put_contents($unversioned.'/composer.json', json_encode(['name' => 'acme/unversioned']));
 
         $this->writeJson('project/composer.json', ['repositories' => [
             ['type' => 'vcs', 'url' => 'https://github.com/acme/private-a'],
@@ -167,7 +168,7 @@ class InProcessComposerTest extends TestCase
             'packagist.org' => false,
         ]]);
 
-        $blockers = (new NeedsGit($this->dir . '/project', $this->dir . '/home'))->blockers();
+        $blockers = (new NeedsGit($this->dir.'/project', $this->dir.'/home'))->blockers();
 
         $this->assertSame([
             ['url' => 'https://github.com/acme/private-a', 'why' => NeedsGit::WHY_TOKEN],
@@ -189,11 +190,11 @@ class InProcessComposerTest extends TestCase
         $this->writeJson('project/composer.json', ['repositories' => [['type' => 'vcs', 'url' => 'https://github.com/acme/private-a']]]);
 
         $this->writeJson('home/auth.json', ['github-oauth' => ['github.com' => 'ghp_test']]);
-        $this->assertSame([], (new NeedsGit($this->dir . '/project', $this->dir . '/home'))->blockers());
+        $this->assertSame([], (new NeedsGit($this->dir.'/project', $this->dir.'/home'))->blockers());
 
-        unlink($this->dir . '/home/auth.json');
+        unlink($this->dir.'/home/auth.json');
         $this->writeJson('project/auth.json', ['github-oauth' => ['github.com' => 'ghp_test']]);
-        $this->assertSame([], (new NeedsGit($this->dir . '/project', $this->dir . '/home'))->blockers());
+        $this->assertSame([], (new NeedsGit($this->dir.'/project', $this->dir.'/home'))->blockers());
     }
 
     public function test_planning_refuses_with_a_sentence_and_changes_nothing(): void
@@ -201,7 +202,7 @@ class InProcessComposerTest extends TestCase
         $json = ['require' => [], 'repositories' => [['type' => 'vcs', 'url' => 'https://github.com/acme/private-a']]];
         $this->writeJson('project/composer.json', $json);
         $this->writeJson('project/composer.lock', ['packages' => []]);
-        $before = file_get_contents($this->dir . '/project/composer.json');
+        $before = file_get_contents($this->dir.'/project/composer.json');
 
         try {
             $this->steps(['acme/widget'], 'install')->doItem('plan', 'work out what changes', new Run('r1'));
@@ -211,8 +212,8 @@ class InProcessComposerTest extends TestCase
             $this->assertStringNotContainsString('proc_open', $e->getMessage(), 'a sentence, not a stack trace');
         }
 
-        $this->assertSame($before, file_get_contents($this->dir . '/project/composer.json'));
-        $this->assertDirectoryDoesNotExist($this->dir . '/project/vendor');
+        $this->assertSame($before, file_get_contents($this->dir.'/project/composer.json'));
+        $this->assertDirectoryDoesNotExist($this->dir.'/project/vendor');
     }
 
     // ── a real in-process resolve, no network ───────────────────────────
@@ -227,16 +228,16 @@ class InProcessComposerTest extends TestCase
 
         $this->assertStringContainsString('1 package(s) will change', $note);
 
-        $lock = json_decode((string) file_get_contents($this->dir . '/project/composer.lock'), true);
+        $lock = json_decode((string) file_get_contents($this->dir.'/project/composer.lock'), true);
         $this->assertSame('acme/widget', $lock['packages'][0]['name']);
         $this->assertSame('1.2.0', $lock['packages'][0]['version']);
-        $this->assertArrayHasKey('acme/widget', json_decode((string) file_get_contents($this->dir . '/project/composer.json'), true)['require']);
+        $this->assertArrayHasKey('acme/widget', json_decode((string) file_get_contents($this->dir.'/project/composer.json'), true)['require']);
 
-        $this->assertDirectoryDoesNotExist($this->dir . '/project/vendor', 'Composer resolves; Millwright installs');
+        $this->assertDirectoryDoesNotExist($this->dir.'/project/vendor', 'Composer resolves; Millwright installs');
         $this->assertSame($cwd, getcwd());
         $this->assertSame($handler, $this->currentErrorHandler());
-        $this->assertFileExists($this->dir . '/work/composer.lock.before');
-        $this->assertFileDoesNotExist($this->dir . '/work/resolve.attempt.json', 'a finished attempt leaves no marker');
+        $this->assertFileExists($this->dir.'/work/composer.lock.before');
+        $this->assertFileDoesNotExist($this->dir.'/work/resolve.attempt.json', 'a finished attempt leaves no marker');
     }
 
     /**
@@ -246,12 +247,12 @@ class InProcessComposerTest extends TestCase
     public function test_a_resolve_the_host_killed_is_announced_then_retried_from_the_saved_manifests(): void
     {
         $this->fixtureProject();
-        $original = file_get_contents($this->dir . '/project/composer.json');
-        copy($this->dir . '/project/composer.json', $this->dir . '/work/composer.json.before');
-        copy($this->dir . '/project/composer.lock', $this->dir . '/work/composer.lock.before');
+        $original = file_get_contents($this->dir.'/project/composer.json');
+        copy($this->dir.'/project/composer.json', $this->dir.'/work/composer.json.before');
+        copy($this->dir.'/project/composer.lock', $this->dir.'/work/composer.lock.before');
 
         // What the dead request left: composer.json already edited by `require`.
-        file_put_contents($this->dir . '/project/composer.json', '{"require": {"half": "written"');
+        file_put_contents($this->dir.'/project/composer.json', '{"require": {"half": "written"');
         $this->writeJson('work/resolve.attempt.json', ['attempts' => 1, 'announced' => false, 'stopped' => 'time', 'timeLimit' => 30]);
 
         $steps = $this->steps(['acme/widget'], 'install');
@@ -264,7 +265,7 @@ class InProcessComposerTest extends TestCase
             $this->assertStringContainsString('attempt 2 of 6', $e->getMessage());
         }
 
-        $this->assertSame($original, file_get_contents($this->dir . '/project/composer.json'), 'put back before anything else');
+        $this->assertSame($original, file_get_contents($this->dir.'/project/composer.json'), 'put back before anything else');
 
         $note = $steps->doItem('plan', 'work out what changes', new Run('r1'));
         $this->assertStringContainsString('1 package(s) will change', $note);
@@ -273,8 +274,8 @@ class InProcessComposerTest extends TestCase
     public function test_after_six_killed_attempts_it_stops_with_the_limit_named(): void
     {
         $this->fixtureProject();
-        copy($this->dir . '/project/composer.json', $this->dir . '/work/composer.json.before');
-        copy($this->dir . '/project/composer.lock', $this->dir . '/work/composer.lock.before');
+        copy($this->dir.'/project/composer.json', $this->dir.'/work/composer.json.before');
+        copy($this->dir.'/project/composer.lock', $this->dir.'/work/composer.lock.before');
         $this->writeJson('work/resolve.attempt.json', ['attempts' => 6, 'announced' => true, 'stopped' => 'time', 'timeLimit' => 30]);
 
         try {
@@ -293,38 +294,38 @@ class InProcessComposerTest extends TestCase
     {
         $this->expectException(NeedsWebRequest::class);
 
-        (new FreshCode($this->dir . '/work', $this->dir . '/project', $this->opcache(false), 'cli', microtime(true)))->ensure();
+        (new FreshCode($this->dir.'/work', $this->dir.'/project', $this->opcache(false), 'cli', microtime(true)))->ensure();
     }
 
     public function test_a_request_that_started_before_the_swap_waits_for_the_next_one(): void
     {
-        file_put_contents($this->dir . '/work/journal.jsonl', "{}\n");
+        file_put_contents($this->dir.'/work/journal.jsonl', "{}\n");
 
         $this->expectException(NotYet::class);
-        (new FreshCode($this->dir . '/work', $this->dir . '/project', $this->opcache(false), 'fpm-fcgi', time() - 30))->ensure();
+        (new FreshCode($this->dir.'/work', $this->dir.'/project', $this->opcache(false), 'fpm-fcgi', time() - 30))->ensure();
     }
 
     public function test_opcache_is_cleared_and_the_step_runs_on_the_following_request(): void
     {
-        file_put_contents($this->dir . '/work/journal.jsonl', "{}\n");
-        touch($this->dir . '/work/journal.jsonl', time() - 60);
+        file_put_contents($this->dir.'/work/journal.jsonl', "{}\n");
+        touch($this->dir.'/work/journal.jsonl', time() - 60);
         $opcache = $this->opcache(true);
 
         try {
-            (new FreshCode($this->dir . '/work', $this->dir . '/project', $opcache, 'fpm-fcgi', microtime(true)))->ensure();
+            (new FreshCode($this->dir.'/work', $this->dir.'/project', $opcache, 'fpm-fcgi', microtime(true)))->ensure();
             $this->fail('the clearing request must not run the step itself');
         } catch (NotYet $e) {
             $this->assertSame(1, $opcache->cleared);
         }
 
         // The next request began after the clear.
-        (new FreshCode($this->dir . '/work', $this->dir . '/project', $opcache, 'fpm-fcgi', microtime(true) + 2))->ensure();
+        (new FreshCode($this->dir.'/work', $this->dir.'/project', $opcache, 'fpm-fcgi', microtime(true) + 2))->ensure();
         $this->assertSame(1, $opcache->cleared, 'not cleared again');
     }
 
     public function test_a_queue_worker_stops_asking_when_only_the_page_can_continue(): void
     {
-        $store = new RunStore($this->dir . '/runs');
+        $store = new RunStore($this->dir.'/runs');
         $steps = new class implements Steps {
             public function itemsFor(string $phase, Run $run): array
             {
@@ -354,20 +355,20 @@ class InProcessComposerTest extends TestCase
     {
         $php = new PhpBinary(PHP_BINARY, null, '', null, PHP_BINARY, 'cli', $disabled);
 
-        return (new ComposerRunner($this->dir . '/project', __FILE__, $this->dir . '/home'))->withPhp($php);
+        return (new ComposerRunner($this->dir.'/project', __FILE__, $this->dir.'/home'))->withPhp($php);
     }
 
     /** @param list<string> $packages */
     private function steps(array $packages, string $mode): ComposerSteps
     {
-        $journal = new Journal($this->dir . '/work/journal.jsonl');
+        $journal = new Journal($this->dir.'/work/journal.jsonl');
 
         return new ComposerSteps(
-            $this->dir . '/project',
-            $this->dir . '/work',
+            $this->dir.'/project',
+            $this->dir.'/work',
             $this->runner('proc_open'),
-            new Fetcher($this->dir . '/work/staging'),
-            new Applier($this->dir . '/project/vendor', $this->dir . '/work/staging', $this->dir . '/work/trash', $journal),
+            new Fetcher($this->dir.'/work/staging'),
+            new Applier($this->dir.'/project/vendor', $this->dir.'/work/staging', $this->dir.'/work/trash', $journal),
             $journal,
             $packages,
             $mode
@@ -377,7 +378,7 @@ class InProcessComposerTest extends TestCase
     /** A project whose only source is a local package repository: no network. */
     private function fixtureProject(): void
     {
-        $dist = $this->dir . '/widget.zip';
+        $dist = $this->dir.'/widget.zip';
         $zip = new \ZipArchive();
         $zip->open($dist, \ZipArchive::CREATE);
         $zip->addFromString('composer.json', json_encode(['name' => 'acme/widget']));
@@ -402,7 +403,7 @@ class InProcessComposerTest extends TestCase
 
     private function opcache(bool $enabled): Opcache
     {
-        return new class ($enabled) extends Opcache {
+        return new class($enabled) extends Opcache {
             public int $cleared = 0;
 
             public function __construct(private bool $enabled)
@@ -426,7 +427,7 @@ class InProcessComposerTest extends TestCase
 
     private function writeJson(string $relative, array $data): void
     {
-        file_put_contents($this->dir . '/' . $relative, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        file_put_contents($this->dir.'/'.$relative, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
 
     private function currentErrorHandler(): mixed
@@ -455,7 +456,7 @@ class InProcessComposerTest extends TestCase
 
         foreach (scandir($path) ?: [] as $entry) {
             if ($entry !== '.' && $entry !== '..') {
-                $this->rmTree($path . '/' . $entry);
+                $this->rmTree($path.'/'.$entry);
             }
         }
 

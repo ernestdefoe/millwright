@@ -23,7 +23,7 @@ class MillwrightServiceProvider extends AbstractServiceProvider
              * the web root, and already backed up with the rest of the site. A
              * run's state is not secret but it is not public either.
              */
-            return new RunStore($container->make(Paths::class)->storage . '/millwright/runs');
+            return new RunStore($container->make(Paths::class)->storage.'/millwright/runs');
         });
 
         $this->container->singleton(Drivers::class, function ($container) {
@@ -76,7 +76,7 @@ class MillwrightServiceProvider extends AbstractServiceProvider
                 $container->make(RunStore::class),
                 $container->make(StepsFactory::class),
                 fn () => time(),
-                $storage . '/millwright/locks'
+                $storage.'/millwright/locks'
             );
         });
     }

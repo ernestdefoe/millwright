@@ -11,9 +11,9 @@ use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
-use RuntimeException;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use RuntimeException;
 
 /**
  * Put everything back the way it was.
@@ -36,7 +36,7 @@ class RollbackController implements RequestHandlerInterface
         return new ComposerRunner(
             $this->paths->base,
             null,
-            $this->paths->storage . '/.composer',
+            $this->paths->storage.'/.composer',
             (new \ErnestDefoe\Millwright\Host\PhpOverride($this->paths->storage))->get()
         );
     }
@@ -69,7 +69,7 @@ class RollbackController implements RequestHandlerInterface
          * So the question is not "is there a journal" but "is there anything
          * saved to put back".
          */
-        $savedLock = $workDir->root() . '/composer.lock.before';
+        $savedLock = $workDir->root().'/composer.lock.before';
 
         if (! $journal->exists() && ! is_file($savedLock)) {
             return new JsonResponse([
@@ -107,8 +107,8 @@ class RollbackController implements RequestHandlerInterface
 
         return new JsonResponse([
             'undone' => $undone,
-            'run'    => $this->runs->present($this->runs->latest()),
-            'next'   => $note,
+            'run' => $this->runs->present($this->runs->latest()),
+            'next' => $note,
         ]);
     }
 }

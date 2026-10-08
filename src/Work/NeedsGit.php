@@ -29,7 +29,7 @@ namespace ErnestDefoe\Millwright\Work;
 final class NeedsGit
 {
     public const WHY_TOKEN = 'token';
-    public const WHY_GIT   = 'git';
+    public const WHY_GIT = 'git';
 
     public function __construct(private string $installPath, private string $composerHome)
     {
@@ -40,7 +40,7 @@ final class NeedsGit
      */
     public function blockers(): array
     {
-        $json = $this->read($this->installPath . '/composer.json');
+        $json = $this->read($this->installPath.'/composer.json');
         $config = (array) ($json['config'] ?? []);
         $githubDomains = array_map('strtolower', (array) ($config['github-domains'] ?? ['github.com']));
         $gitlabDomains = array_map('strtolower', (array) ($config['gitlab-domains'] ?? ['gitlab.com']));
@@ -90,17 +90,17 @@ final class NeedsGit
         $git = array_column(array_filter($blockers, fn ($b) => $b['why'] === self::WHY_GIT), 'url');
 
         $out = 'Nothing was changed. This host does not allow PHP to start other programs, so Composer cannot run git, '
-            . 'and some of this site\'s package sources need it.';
+            .'and some of this site\'s package sources need it.';
 
         if ($tokens !== []) {
             $out .= ' Add a GitHub token under Millwright → Sources so Composer reads these through GitHub\'s API '
-                . 'instead: ' . implode(', ', $tokens) . '.';
+                .'instead: '.implode(', ', $tokens).'.';
         }
 
         if ($git !== []) {
-            $out .= ' These can only be read with git: ' . implode(', ', $git) . '. Serve those packages from a '
-                . 'Composer repository instead (Packagist, Private Packagist or Satis), or remove the source if nothing '
-                . 'uses it.';
+            $out .= ' These can only be read with git: '.implode(', ', $git).'. Serve those packages from a '
+                .'Composer repository instead (Packagist, Private Packagist or Satis), or remove the source if nothing '
+                .'uses it.';
         }
 
         return $out;
@@ -127,8 +127,8 @@ final class NeedsGit
     {
         $sources = [
             (array) ($config['github-oauth'] ?? []),
-            (array) ($this->read($this->installPath . '/auth.json')['github-oauth'] ?? []),
-            (array) ($this->read($this->composerHome . '/auth.json')['github-oauth'] ?? []),
+            (array) ($this->read($this->installPath.'/auth.json')['github-oauth'] ?? []),
+            (array) ($this->read($this->composerHome.'/auth.json')['github-oauth'] ?? []),
         ];
 
         $env = getenv('COMPOSER_AUTH') ?: ($_SERVER['COMPOSER_AUTH'] ?? '');
@@ -152,10 +152,10 @@ final class NeedsGit
     /** @param array<string,mixed> $options */
     private function pathNeedsGit(string $url, array $options): bool
     {
-        $pattern = str_starts_with($url, '/') ? $url : $this->installPath . '/' . $url;
+        $pattern = str_starts_with($url, '/') ? $url : $this->installPath.'/'.$url;
 
         foreach (glob(rtrim($pattern, '/'), GLOB_ONLYDIR) ?: [] as $dir) {
-            $package = $this->read($dir . '/composer.json');
+            $package = $this->read($dir.'/composer.json');
 
             if ($package === []) {
                 continue;

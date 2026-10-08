@@ -45,6 +45,6 @@ class Cache
     private function path(string $key): string
     {
         // Hashed, so a package name can never become a path.
-        return $this->dir . '/' . sha1($key) . '.json';
+        return $this->dir.'/'.sha1($key).'.json';
     }
 }

@@ -30,10 +30,10 @@ class StylesheetTest extends TestCase
         $parser = new Less_Parser(['compress' => false]);
 
         try {
-            $parser->parseFile(dirname(__DIR__, 2) . '/less/' . $file);
+            $parser->parseFile(dirname(__DIR__, 2).'/less/'.$file);
             $css = $parser->getCss();
         } catch (\Throwable $e) {
-            $this->fail("less/$file does not compile under less.php: " . $e->getMessage());
+            $this->fail("less/$file does not compile under less.php: ".$e->getMessage());
         }
 
         $this->assertNotSame('', trim($css), "less/$file compiled to nothing.");

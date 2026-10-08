@@ -4,9 +4,9 @@ namespace ErnestDefoe\Millwright\Apply;
 
 use ErnestDefoe\Millwright\Host\Opcache;
 use ErnestDefoe\Millwright\Work\ComposerRunner;
+use ErnestDefoe\Millwright\Work\FlarumCommand;
 use ErnestDefoe\Millwright\Work\InstalledRecord;
 use ErnestDefoe\Millwright\Work\MigrationLedger;
-use ErnestDefoe\Millwright\Work\FlarumCommand;
 use ErnestDefoe\Millwright\Work\StaleCache;
 use Flarum\Database\Migrator;
 use Flarum\Extension\ExtensionManager;
@@ -40,7 +40,7 @@ class Restore
     /** Is there anything saved to put back? */
     public function possible(): bool
     {
-        return $this->journal->exists() || is_file($this->workDirRoot . '/composer.lock.before');
+        return $this->journal->exists() || is_file($this->workDirRoot.'/composer.lock.before');
     }
 
     /**
@@ -97,11 +97,11 @@ class Restore
                     $undone[] = "Composer's record put back";
                 } else {
                     $note = 'The files are back, but Composer could not update its own record. '
-                        . 'Run `composer install` to finish putting things back.';
+                        .'Run `composer install` to finish putting things back.';
                 }
             } catch (Throwable $e) {
-                $note = 'The files are back, but Composer could not be run here (' . $e->getMessage() . '). '
-                    . 'Run `composer install` to finish putting things back.';
+                $note = 'The files are back, but Composer could not be run here ('.$e->getMessage().'). '
+                    .'Run `composer install` to finish putting things back.';
             }
         }
 
@@ -129,7 +129,7 @@ class Restore
      */
     private function refresh(array &$undone): ?string
     {
-        if (! is_file($this->basePath . '/flarum')) {
+        if (! is_file($this->basePath.'/flarum')) {
             return null;   // not a forum (the tests' trees)
         }
 
@@ -164,8 +164,8 @@ class Restore
 
             if ($result['code'] !== 0) {
                 return "The files are back, but `php flarum $command` failed, so the forum may still be serving "
-                    . 'the newer version\'s assets. Run `php flarum assets:publish`, `php flarum cache:clear` and '
-                    . '`php flarum millwright:repair-formatter` to finish.';
+                    .'the newer version\'s assets. Run `php flarum assets:publish`, `php flarum cache:clear` and '
+                    .'`php flarum millwright:repair-formatter` to finish.';
             }
         }
 

@@ -77,10 +77,10 @@ class LockDiff
             }
 
             $out[(string) $package['name']] = [
-                'url'       => (string) $dist['url'],
-                'type'      => (string) ($dist['type'] ?? 'zip'),
+                'url' => (string) $dist['url'],
+                'type' => (string) ($dist['type'] ?? 'zip'),
                 'reference' => isset($dist['reference']) ? (string) $dist['reference'] : null,
-                'shasum'    => isset($dist['shasum']) && $dist['shasum'] !== '' ? (string) $dist['shasum'] : null,
+                'shasum' => isset($dist['shasum']) && $dist['shasum'] !== '' ? (string) $dist['shasum'] : null,
             ];
         }
 
@@ -136,7 +136,7 @@ class LockDiff
 
             $reasons[$change->package] = $blamed === null
                 ? 'pulled in by this update'
-                : 'required by ' . $blamed;
+                : 'required by '.$blamed;
         }
 
         return $reasons;

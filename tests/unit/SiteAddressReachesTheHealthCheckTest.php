@@ -52,7 +52,7 @@ class SiteAddressReachesTheHealthCheckTest extends TestCase
      */
     public function test_the_service_provider_passes_a_config(): void
     {
-        $source = file_get_contents(dirname(__DIR__, 2) . '/src/MillwrightServiceProvider.php');
+        $source = file_get_contents(dirname(__DIR__, 2).'/src/MillwrightServiceProvider.php');
 
         $this->assertIsString($source);
         $this->assertMatchesRegularExpression(

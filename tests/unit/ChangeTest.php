@@ -18,12 +18,12 @@ class ChangeTest extends TestCase
     public static function hostileNames(): array
     {
         return [
-            'parent traversal'      => ['a/../../etc'],
-            'leading traversal'     => ['../etc/passwd'],
-            'current dir segment'   => ['a/./b'],
-            'empty segment'         => ['a//b'],
-            'absolute-ish'          => ['/etc/passwd'],
-            'null byte'             => ["a/b\0c"],
+            'parent traversal' => ['a/../../etc'],
+            'leading traversal' => ['../etc/passwd'],
+            'current dir segment' => ['a/./b'],
+            'empty segment' => ['a//b'],
+            'absolute-ish' => ['/etc/passwd'],
+            'null byte' => ["a/b\0c"],
             'space and shell chars' => ['a/b;rm -rf'],
         ];
     }
@@ -40,7 +40,7 @@ class ChangeTest extends TestCase
     {
         $change = new Change(Change::REPLACE, 'fof/pwa', '2.0.0-beta.3', '2.0.0-beta.4');
 
-        $this->assertSame('fof' . DIRECTORY_SEPARATOR . 'pwa', $change->relativePath());
+        $this->assertSame('fof'.DIRECTORY_SEPARATOR.'pwa', $change->relativePath());
     }
 
     public function test_the_trash_name_cannot_collide_across_versions(): void

@@ -51,7 +51,7 @@ class ComposerStepsFactory implements StepsFactory
             return '';
         }
 
-        return str_starts_with($url, 'http') ? rtrim($url, '/') . '/' : '';
+        return str_starts_with($url, 'http') ? rtrim($url, '/').'/' : '';
     }
 
     public function for(string $runId): Steps
@@ -65,10 +65,10 @@ class ComposerStepsFactory implements StepsFactory
             new ComposerRunner(
                 $this->paths->base,
                 null,
-                $this->paths->storage . '/.composer',
+                $this->paths->storage.'/.composer',
                 (new \ErnestDefoe\Millwright\Host\PhpOverride($this->paths->storage))->get()
             ),
-            new Fetcher($workDir->staging(), $this->paths->base . '/auth.json'),
+            new Fetcher($workDir->staging(), $this->paths->base.'/auth.json'),
             new Applier($this->paths->vendor, $workDir->staging(), $workDir->trash(), $journal),
             $journal,
             $workDir->requested(),

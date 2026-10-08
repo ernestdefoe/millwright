@@ -108,7 +108,7 @@ class PrivateIndex
             $url = (string) ($repo['url'] ?? '');
 
             if (preg_match('#github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?/?$#i', $url, $m)) {
-                $out[$m[1] . '/' . $m[2]] = $url;
+                $out[$m[1].'/'.$m[2]] = $url;
             }
         }
 
@@ -134,7 +134,7 @@ class PrivateIndex
             return $this->packageNames[$url] = null;
         }
 
-        $body = $this->get('https://raw.githubusercontent.com/' . $m[1] . '/' . $m[2] . '/HEAD/composer.json', 'github.com');
+        $body = $this->get('https://raw.githubusercontent.com/'.$m[1].'/'.$m[2].'/HEAD/composer.json', 'github.com');
         $data = is_string($body) ? json_decode($body, true) : null;
         $name = is_array($data) && isset($data['name']) ? (string) $data['name'] : null;
 
@@ -148,7 +148,7 @@ class PrivateIndex
             return $this->tagLists[$repo];
         }
 
-        $body = $this->get('https://api.github.com/repos/' . $repo . '/tags?per_page=100', 'github.com');
+        $body = $this->get('https://api.github.com/repos/'.$repo.'/tags?per_page=100', 'github.com');
         $data = is_string($body) ? json_decode($body, true) : null;
 
         if (! is_array($data)) {
@@ -225,12 +225,12 @@ class PrivateIndex
         $header = $host === '' ? null : $this->auth->headerFor($host);
 
         if ($header !== null) {
-            $headers .= $header . "\r\n";
+            $headers .= $header."\r\n";
         }
 
         $body = @file_get_contents($url, false, stream_context_create(['http' => [
-            'timeout'       => $this->timeout,
-            'header'        => $headers,
+            'timeout' => $this->timeout,
+            'header' => $headers,
             'ignore_errors' => true,
         ]]));
 
@@ -240,7 +240,7 @@ class PrivateIndex
     /** @return array<string, list<string>>|null */
     private function fetchIndex(string $url): ?array
     {
-        $body = $this->get($url . '/packages.json');
+        $body = $this->get($url.'/packages.json');
 
         if (! is_string($body)) {
             return null;

@@ -19,7 +19,7 @@ class JournalTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->path = sys_get_temp_dir() . '/mw-journal-' . bin2hex(random_bytes(6)) . '.jsonl';
+        $this->path = sys_get_temp_dir().'/mw-journal-'.bin2hex(random_bytes(6)).'.jsonl';
     }
 
     protected function tearDown(): void

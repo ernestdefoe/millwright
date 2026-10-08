@@ -22,13 +22,13 @@ class InstalledRecordTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->dir = sys_get_temp_dir() . '/mw-record-' . bin2hex(random_bytes(4));
-        mkdir($this->dir . '/vendor/composer', 0775, true);
+        $this->dir = sys_get_temp_dir().'/mw-record-'.bin2hex(random_bytes(4));
+        mkdir($this->dir.'/vendor/composer', 0775, true);
     }
 
     protected function tearDown(): void
     {
-        exec('rm -rf ' . escapeshellarg($this->dir));
+        exec('rm -rf '.escapeshellarg($this->dir));
     }
 
     public function test_the_record_names_exactly_what_the_lock_names(): void
@@ -53,7 +53,7 @@ class InstalledRecordTest extends TestCase
 
         $count = (new InstalledRecord($this->dir))->syncFromLock();
 
-        $record = json_decode(file_get_contents($this->dir . '/vendor/composer/installed.json'), true);
+        $record = json_decode(file_get_contents($this->dir.'/vendor/composer/installed.json'), true);
         $byName = array_column($record['packages'], null, 'name');
 
         $this->assertSame(3, $count);
@@ -65,7 +65,7 @@ class InstalledRecordTest extends TestCase
         $this->assertSame('dist', $byName['acme/widget']['installation-source']);
         $this->assertSame('source', $byName['acme/fresh']['installation-source']);
         $this->assertSame(['acme/tool'], $record['dev-package-names']);
-        $this->assertFileDoesNotExist($this->dir . '/vendor/composer/installed.json.millwright');
+        $this->assertFileDoesNotExist($this->dir.'/vendor/composer/installed.json.millwright');
     }
 
     public function test_the_dry_run_count_is_read_from_composers_own_summary(): void
@@ -77,14 +77,14 @@ class InstalledRecordTest extends TestCase
 
     public function test_real_composer_has_nothing_left_to_extract_once_the_record_is_synced(): void
     {
-        $composer = dirname(__DIR__, 2) . '/vendor/composer/composer/bin/composer';
+        $composer = dirname(__DIR__, 2).'/vendor/composer/composer/bin/composer';
         if (! is_file($composer)) {
             $this->markTestSkipped('Composer is not installed in this checkout.');
         }
 
         // A package at 1.0.0, installed by Composer for real, from a path
         // repository so the test needs no network.
-        $pkg = $this->dir . '/src/widget';
+        $pkg = $this->dir.'/src/widget';
         mkdir($pkg, 0775, true);
         $this->writePackage($pkg, '1.0.0');
         $this->json('composer.json', [
@@ -95,14 +95,14 @@ class InstalledRecordTest extends TestCase
             ],
             'require' => ['acme/widget' => '*'],
         ]);
-        $runner = new ComposerRunner($this->dir, $composer, $this->dir . '/.composer');
+        $runner = new ComposerRunner($this->dir, $composer, $this->dir.'/.composer');
         $this->assertSame(0, $runner->run(['install', '--no-scripts'])['code']);
 
         // What Millwright does: plan to 2.0.0 without installing, then place
         // the new files itself. Disk and lock now say 2.0.0; the record says 1.0.0.
         $this->writePackage($pkg, '2.0.0');
         $this->assertSame(0, $runner->run(['update', '--no-install', '--no-scripts'])['code']);
-        copy($pkg . '/composer.json', $this->dir . '/vendor/acme/widget/composer.json');
+        copy($pkg.'/composer.json', $this->dir.'/vendor/acme/widget/composer.json');
 
         $before = $runner->run(['install', '--no-scripts', '--dry-run']);
         $this->assertSame(1, InstalledRecord::plannedOperations($before['output']), 'the stale record is what makes Composer re-extract');
@@ -116,13 +116,13 @@ class InstalledRecordTest extends TestCase
         // And the real install, which is what the register step runs, still
         // produces a working autoloader that knows the new version.
         $this->assertSame(0, $runner->run(['install', '--no-scripts'])['code']);
-        $installed = require $this->dir . '/vendor/composer/installed.php';
+        $installed = require $this->dir.'/vendor/composer/installed.php';
         $this->assertSame('2.0.0', $installed['versions']['acme/widget']['pretty_version']);
     }
 
     private function writePackage(string $dir, string $version): void
     {
-        file_put_contents($dir . '/composer.json', json_encode([
+        file_put_contents($dir.'/composer.json', json_encode([
             'name' => 'acme/widget',
             'version' => $version,
             'autoload' => ['psr-4' => ['Acme\\Widget\\' => '']],
@@ -131,6 +131,6 @@ class InstalledRecordTest extends TestCase
 
     private function json(string $path, array $data): void
     {
-        file_put_contents($this->dir . '/' . $path, json_encode($data));
+        file_put_contents($this->dir.'/'.$path, json_encode($data));
     }
 }

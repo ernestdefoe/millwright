@@ -30,7 +30,7 @@ use RuntimeException;
 class Journal
 {
     private const STATE_BEGUN = 'begun';
-    private const STATE_DONE  = 'done';
+    private const STATE_DONE = 'done';
 
     public function __construct(private string $path)
     {
@@ -181,10 +181,11 @@ class Journal
             throw new RuntimeException("Cannot write the journal at {$this->path}");
         }
 
-        $line = json_encode($row, JSON_UNESCAPED_SLASHES) . "\n";
+        $line = json_encode($row, JSON_UNESCAPED_SLASHES)."\n";
 
         if (fwrite($handle, $line) === false) {
             fclose($handle);
+
             throw new RuntimeException("Cannot append to the journal at {$this->path}");
         }
 

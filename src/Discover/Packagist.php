@@ -39,9 +39,9 @@ class Packagist
      */
     public function search(string $query, int $perPage = 12, int $page = 1): array
     {
-        $url = 'https://packagist.org/search.json?type=flarum-extension&per_page=' . $perPage
-            . '&page=' . max(1, $page)
-            . ($query === '' ? '' : '&q=' . rawurlencode($query));
+        $url = 'https://packagist.org/search.json?type=flarum-extension&per_page='.$perPage
+            .'&page='.max(1, $page)
+            .($query === '' ? '' : '&q='.rawurlencode($query));
 
         $body = ($this->get)($url);
 
@@ -71,27 +71,27 @@ class Packagist
             }
 
             $results[] = [
-                'name'        => $name,
+                'name' => $name,
                 'description' => (string) ($row['description'] ?? ''),
-                'downloads'   => (int) ($row['downloads'] ?? 0),
-                'favers'      => (int) ($row['favers'] ?? 0),
-                'repository'  => (string) ($row['repository'] ?? ''),
+                'downloads' => (int) ($row['downloads'] ?? 0),
+                'favers' => (int) ($row['favers'] ?? 0),
+                'repository' => (string) ($row['repository'] ?? ''),
                 /*
                  * 🚨 Carried through rather than dropped. Packagist marks a
                  * package abandoned when its author says so, and installing one
                  * unknowingly is exactly the kind of thing somebody would want
                  * to have been told before rather than after.
                  */
-                'abandoned'   => $row['abandoned'] ?? false,
+                'abandoned' => $row['abandoned'] ?? false,
             ];
         }
 
         return [
             'results' => $results,
-            'total'   => (int) ($data['total'] ?? count($results)),
-            'error'   => null,
+            'total' => (int) ($data['total'] ?? count($results)),
+            'error' => null,
             // Packagist hands back the URL of the next page when there is one.
-            'more'    => ! empty($data['next']),
+            'more' => ! empty($data['next']),
         ];
     }
 
@@ -114,7 +114,7 @@ class Packagist
          */
         // "v2": verdicts cached before replacements were detected carry no
         // replaced flag, and must not be read as "not replaced".
-        $scope = 'compat:v2:' . $compat->coreVersion() . ':';
+        $scope = 'compat:v2:'.$compat->coreVersion().':';
 
         foreach ($names as $name) {
             $out[$name] = $this->one($name, $compat, $scope);
@@ -147,13 +147,13 @@ class Packagist
     /** @return array<string,mixed> */
     private function one(string $name, Compatibility $compat, string $scope): array
     {
-        $cached = $this->cache->get($scope . $name);
+        $cached = $this->cache->get($scope.$name);
 
         if ($cached !== null) {
             return $cached;
         }
 
-        $body = ($this->get)('https://repo.packagist.org/p2/' . $name . '.json');
+        $body = ($this->get)('https://repo.packagist.org/p2/'.$name.'.json');
 
         if ($body === null) {
             // Not cached: a package that could not be reached today may be
@@ -168,7 +168,7 @@ class Packagist
         }
 
         unset($verdict['source']);
-        $this->cache->put($scope . $name, $verdict);
+        $this->cache->put($scope.$name, $verdict);
 
         return $verdict;
     }
@@ -208,7 +208,7 @@ class Packagist
     {
         $context = stream_context_create(['http' => [
             'timeout' => 15,
-            'header'  => "User-Agent: Millwright (Flarum extension updater)\r\n",
+            'header' => "User-Agent: Millwright (Flarum extension updater)\r\n",
         ]]);
 
         $body = @file_get_contents($url, false, $context);

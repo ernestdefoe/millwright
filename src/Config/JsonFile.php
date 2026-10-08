@@ -51,8 +51,8 @@ class JsonFile
              * by hand into one whose contents are gone.
              */
             throw new RuntimeException(
-                basename($this->path) . ' is not valid JSON, so Millwright will not overwrite it. '
-                . 'Fix it by hand first — ' . (json_last_error_msg() ?: 'unknown error') . '.'
+                basename($this->path).' is not valid JSON, so Millwright will not overwrite it. '
+                .'Fix it by hand first — '.(json_last_error_msg() ?: 'unknown error').'.'
             );
         }
 
@@ -68,17 +68,17 @@ class JsonFile
         $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
         if ($json === false) {
-            throw new RuntimeException('Could not encode ' . basename($this->path) . ': ' . json_last_error_msg());
+            throw new RuntimeException('Could not encode '.basename($this->path).': '.json_last_error_msg());
         }
 
         // 🚨 Prove it parses before it goes anywhere near the real path.
         if (json_decode($json, true) === null) {
-            throw new RuntimeException('Refusing to write ' . basename($this->path) . ': the result does not parse.');
+            throw new RuntimeException('Refusing to write '.basename($this->path).': the result does not parse.');
         }
 
         $this->backup();
 
-        $tmp = $this->path . '.millwright-' . bin2hex(random_bytes(4));
+        $tmp = $this->path.'.millwright-'.bin2hex(random_bytes(4));
         $handle = @fopen($tmp, 'w');
 
         if ($handle === false) {
@@ -86,7 +86,7 @@ class JsonFile
         }
 
         try {
-            fwrite($handle, $json . "\n");
+            fwrite($handle, $json."\n");
             fflush($handle);
             // The file must be on disk before the rename, or a crash between the
             // two leaves an empty file where a valid one used to be.
@@ -116,7 +116,7 @@ class JsonFile
             return;
         }
 
-        $to = $this->path . '.millwright-backup-' . date('Ymd-His');
+        $to = $this->path.'.millwright-backup-'.date('Ymd-His');
 
         if (! is_file($to)) {
             @copy($this->path, $to);

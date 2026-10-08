@@ -75,7 +75,7 @@ class Retention
     /** @return array<string,mixed> */
     private function read(string $file): array
     {
-        $path = $this->dir . '/' . $file;
+        $path = $this->dir.'/'.$file;
         $data = is_file($path) ? json_decode((string) file_get_contents($path), true) : null;
 
         return is_array($data) ? $data : [];
@@ -88,8 +88,8 @@ class Retention
             @mkdir($this->dir, 0775, true);
         }
 
-        $path = $this->dir . '/' . $file;
-        $temp = $path . '.' . bin2hex(random_bytes(4)) . '.tmp';
+        $path = $this->dir.'/'.$file;
+        $temp = $path.'.'.bin2hex(random_bytes(4)).'.tmp';
 
         file_put_contents($temp, json_encode($data, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
 

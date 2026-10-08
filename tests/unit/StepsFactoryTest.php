@@ -26,13 +26,13 @@ class StepsFactoryTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->dir = sys_get_temp_dir() . '/mw-factory-' . bin2hex(random_bytes(4));
+        $this->dir = sys_get_temp_dir().'/mw-factory-'.bin2hex(random_bytes(4));
         mkdir($this->dir, 0775, true);
     }
 
     protected function tearDown(): void
     {
-        foreach (glob($this->dir . '/*') ?: [] as $f) {
+        foreach (glob($this->dir.'/*') ?: [] as $f) {
             unlink($f);
         }
         @rmdir($this->dir);
@@ -41,7 +41,7 @@ class StepsFactoryTest extends TestCase
     public function test_each_run_gets_work_built_for_that_run(): void
     {
         $factory = $this->recordingFactory();
-        $runner  = new StepRunner(new RunStore($this->dir), $factory, fn () => $this->clock);
+        $runner = new StepRunner(new RunStore($this->dir), $factory, fn () => $this->clock);
 
         $runner->begin('run-a');
         $runner->step('run-a');
@@ -60,8 +60,8 @@ class StepsFactoryTest extends TestCase
          * wrong ones.
          */
         $factory = $this->recordingFactory();
-        $store   = new RunStore($this->dir);
-        $runner  = new StepRunner($store, $factory, fn () => $this->clock);
+        $store = new RunStore($this->dir);
+        $runner = new StepRunner($store, $factory, fn () => $this->clock);
 
         $runner->begin('run-a');
         while (! $store->load('run-a')?->isFinished()) {
@@ -123,7 +123,9 @@ class StepsFactoryTest extends TestCase
                 $this->askedFor[] = $runId;
 
                 return new class($runId, $this) implements Steps {
-                    public function __construct(private string $runId, private object $parent) {}
+                    public function __construct(private string $runId, private object $parent)
+                    {
+                    }
 
                     public function itemsFor(string $phase, Run $run): array
                     {

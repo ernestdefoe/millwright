@@ -50,7 +50,7 @@ final class FlarumUpdater
         $port = parse_url($this->siteUrl, PHP_URL_PORT);
         $path = (string) (parse_url($this->siteUrl, PHP_URL_PATH) ?: '/');
 
-        $local = $this->post('http://127.0.0.1' . $path, $fields, $host . ($port ? ':' . $port : ''));
+        $local = $this->post('http://127.0.0.1'.$path, $fields, $host.($port ? ':'.$port : ''));
 
         if ($local['status'] === 200) {
             return $local['body'];
@@ -71,8 +71,8 @@ final class FlarumUpdater
 
         throw new RuntimeException(
             'Flarum\'s updater did not update the database ('
-            . ($local['status'] === null ? 'it could not be reached: ' . $local['error'] : 'it answered ' . $local['status'] . ': ' . mb_substr(trim(strip_tags($local['body'])), 0, 200))
-            . ').'
+            .($local['status'] === null ? 'it could not be reached: '.$local['error'] : 'it answered '.$local['status'].': '.mb_substr(trim(strip_tags($local['body'])), 0, 200))
+            .').'
         );
     }
 
@@ -84,14 +84,14 @@ final class FlarumUpdater
     {
         $ch = curl_init($url);
         curl_setopt_array($ch, [
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => http_build_query($fields),
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => http_build_query($fields),
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => self::TIMEOUT,
+            CURLOPT_TIMEOUT => self::TIMEOUT,
             CURLOPT_CONNECTTIMEOUT => 8,
             CURLOPT_FOLLOWLOCATION => false,
-            CURLOPT_USERAGENT      => 'Millwright',
-            CURLOPT_HTTPHEADER     => $hostHeader !== null ? ['Host: ' . $hostHeader] : [],
+            CURLOPT_USERAGENT => 'Millwright',
+            CURLOPT_HTTPHEADER => $hostHeader !== null ? ['Host: '.$hostHeader] : [],
         ]);
 
         $body = curl_exec($ch);
@@ -99,8 +99,8 @@ final class FlarumUpdater
 
         return [
             'status' => $body === false || $status === 0 ? null : $status,
-            'body'   => is_string($body) ? $body : '',
-            'error'  => curl_error($ch),
+            'body' => is_string($body) ? $body : '',
+            'error' => curl_error($ch),
         ];
     }
 }

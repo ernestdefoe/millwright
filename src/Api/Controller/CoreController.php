@@ -34,9 +34,9 @@ class CoreController implements RequestHandlerInterface
         RequestUtil::getActor($request)->assertAdmin();
 
         $current = ltrim($this->app->version(), 'v');
-        $target  = trim((string) ($request->getQueryParams()['target'] ?? ''));
+        $target = trim((string) ($request->getQueryParams()['target'] ?? ''));
 
-        $lock = (array) json_decode((string) @file_get_contents($this->paths->base . '/composer.lock'), true);
+        $lock = (array) json_decode((string) @file_get_contents($this->paths->base.'/composer.lock'), true);
         $packages = array_values((array) ($lock['packages'] ?? []));
 
         if ($packages === []) {
@@ -53,8 +53,8 @@ class CoreController implements RequestHandlerInterface
              * extension that fails the cheap test.
              */
             return new JsonResponse([
-                'current'   => $current,
-                'newest'    => $this->newestCore(),
+                'current' => $current,
+                'newest' => $this->newestCore(),
                 'preflight' => null,
             ]);
         }
@@ -71,8 +71,8 @@ class CoreController implements RequestHandlerInterface
         $preflight = (new CoreUpgrade())->preflight($packages, $target);
 
         return new JsonResponse([
-            'current'   => $current,
-            'newest'    => $this->newestCore(),
+            'current' => $current,
+            'newest' => $this->newestCore(),
             'preflight' => $preflight,
         ]);
     }
@@ -89,7 +89,7 @@ class CoreController implements RequestHandlerInterface
     private function newestCore(): ?array
     {
         $cache = (array) json_decode(
-            (string) @file_get_contents($this->paths->storage . '/millwright/updates.json'),
+            (string) @file_get_contents($this->paths->storage.'/millwright/updates.json'),
             true
         );
 

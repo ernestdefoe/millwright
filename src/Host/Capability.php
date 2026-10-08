@@ -22,9 +22,9 @@ namespace ErnestDefoe\Millwright\Host;
  */
 class Capability
 {
-    public const FULL     = 'full';
+    public const FULL = 'full';
     public const TARGETED = 'targeted';
-    public const NONE     = 'none';
+    public const NONE = 'none';
 
     /**
      * 🚨 MEASURED, in-process, on dev.ernestdefoe.online's own composer.json
@@ -86,9 +86,9 @@ class Capability
 
         return [
             'resolves' => $this->resolveTier($memory),
-            'tier'     => $this->applyTier(),
-            'checks'   => $checks,
-            'summary'  => $this->summary($memory),
+            'tier' => $this->applyTier(),
+            'checks' => $checks,
+            'summary' => $this->summary($memory),
             'summaryKey' => $this->summaryKey(),
         ];
     }
@@ -107,7 +107,7 @@ class Capability
         return match (true) {
             $mb >= 192 => self::FULL,
             $mb >= 160 => self::TARGETED,
-            default    => self::NONE,
+            default => self::NONE,
         };
     }
 
@@ -139,9 +139,9 @@ class Capability
     {
         if ($this->inProcess() && $this->limits()['memory']) {
             return [
-                'id'      => 'memory',
-                'ok'      => true,
-                'warn'    => false,
+                'id' => 'memory',
+                'ok' => true,
+                'warn' => false,
                 'whatKey' => 'host.memory_in_process',
                 'whatParams' => ['limit' => (string) ini_get('memory_limit')],
                 'whyKeys' => [['key' => 'host.memory_in_process_why']],
@@ -149,17 +149,17 @@ class Capability
         }
 
         $tier = $this->resolveTier($bytes);
-        $mb   = $bytes === -1 ? 'unlimited' : round($bytes / 1048576) . ' MB';
+        $mb = $bytes === -1 ? 'unlimited' : round($bytes / 1048576).' MB';
 
         return [
-            'id'   => 'memory',
-            'ok'   => $tier !== self::NONE,
+            'id' => 'memory',
+            'ok' => $tier !== self::NONE,
             'warn' => $tier === self::TARGETED,
             'what' => "Memory: $mb",
-            'why'  => match ($tier) {
-                self::FULL     => 'A resolve on a forum this size peaks around 165 MB, so everything works, including updating Flarum itself.',
+            'why' => match ($tier) {
+                self::FULL => 'A resolve on a forum this size peaks around 165 MB, so everything works, including updating Flarum itself.',
                 self::TARGETED => 'Enough to update one extension at a time, but not to re-resolve everything at once. Updating Flarum needs about 192 MB.',
-                default        => 'Below about 160 MB, Composer cannot resolve dependencies here at all. Ask your host to raise memory_limit — 256 MB is plenty.',
+                default => 'Below about 160 MB, Composer cannot resolve dependencies here at all. Ask your host to raise memory_limit — 256 MB is plenty.',
             },
         ];
     }
@@ -178,12 +178,12 @@ class Capability
             $lifted = $limit === 0 || $this->limits()['time'];
 
             return [
-                'id'         => 'time',
-                'ok'         => true,
-                'warn'       => ! $lifted,
-                'whatKey'    => $limit === 0 ? 'host.time_none' : 'host.time_limit',
+                'id' => 'time',
+                'ok' => true,
+                'warn' => ! $lifted,
+                'whatKey' => $limit === 0 ? 'host.time_none' : 'host.time_limit',
                 'whatParams' => ['seconds' => (string) $limit],
-                'whyKeys'    => $lifted
+                'whyKeys' => $lifted
                     ? [['key' => 'host.time_in_process_lifted']]
                     : [
                         ['key' => 'host.time_in_process_locked', 'params' => ['seconds' => (string) $limit]],
@@ -193,13 +193,13 @@ class Capability
         }
 
         return [
-            'id'   => 'time',
-            'ok'   => true,
+            'id' => 'time',
+            'ok' => true,
             'warn' => false,
-            'what' => 'Execution limit: ' . ($limit === 0 ? 'none' : $limit . ' seconds'),
-            'why'  => $limit === 0
+            'what' => 'Execution limit: '.($limit === 0 ? 'none' : $limit.' seconds'),
+            'why' => $limit === 0
                 ? 'Not that it matters — no single step needs more than a few seconds either way.'
-                : 'Not a problem. Millwright does one small step per request, so an update that takes ten minutes still finishes on a host that cuts every request at ' . $limit . ' seconds.',
+                : 'Not a problem. Millwright does one small step per request, so an update that takes ten minutes still finishes on a host that cuts every request at '.$limit.' seconds.',
         ];
     }
 
@@ -213,9 +213,9 @@ class Capability
          */
         if (! $this->inProcess()) {
             return [
-                'id'      => 'subprocess',
-                'ok'      => true,
-                'warn'    => false,
+                'id' => 'subprocess',
+                'ok' => true,
+                'warn' => false,
                 'whatKey' => 'host.spawn_ok',
                 'whyKeys' => [['key' => 'host.spawn_ok_why']],
             ];
@@ -242,9 +242,9 @@ class Capability
         }
 
         return [
-            'id'      => 'subprocess',
-            'ok'      => true,
-            'warn'    => true,
+            'id' => 'subprocess',
+            'ok' => true,
+            'warn' => true,
             'whatKey' => 'host.in_process',
             'whyKeys' => $lines,
         ];
@@ -263,7 +263,7 @@ class Capability
 
         $blockers = $this->blockers ??= (new \ErnestDefoe\Millwright\Work\NeedsGit(
             $this->installPath,
-            $this->composerHome ?? $this->installPath . '/storage/.composer'
+            $this->composerHome ?? $this->installPath.'/storage/.composer'
         ))->blockers();
 
         if ($blockers === []) {
@@ -274,9 +274,9 @@ class Capability
         $git = array_column(array_filter($blockers, fn ($b) => $b['why'] === 'git'), 'url');
 
         return [[
-            'id'      => 'git',
-            'ok'      => false,
-            'warn'    => false,
+            'id' => 'git',
+            'ok' => false,
+            'warn' => false,
             'whatKey' => 'host.git_needed',
             'whyKeys' => array_values(array_filter([
                 ['key' => 'host.git_needed_why'],
@@ -308,13 +308,13 @@ class Capability
             $lines = [['key' => $d['override'] !== null ? 'host.php_found_override_why' : 'host.php_found_why']];
 
             return [[
-                'id'         => 'php',
-                'ok'         => true,
-                'warn'       => false,
-                'whatKey'    => 'host.php_found',
+                'id' => 'php',
+                'ok' => true,
+                'warn' => false,
+                'whatKey' => 'host.php_found',
                 'whatParams' => ['path' => $d['found'], 'version' => (string) ($d['version'] ?? '')],
-                'whyKeys'    => $lines,
-                'override'   => $d['override'],
+                'whyKeys' => $lines,
+                'override' => $d['override'],
             ]];
         }
 
@@ -335,10 +335,10 @@ class Capability
             $dir = dirname($d['hiddenPath']);
             $lines[] = ['key' => 'host.php_hidden_why', 'params' => ['openBasedir' => $d['openBasedir']]];
             $lines[] = ['key' => match ($d['panel']) {
-                PhpBinary::PANEL_PLESK  => 'host.php_hidden_fix_plesk',
+                PhpBinary::PANEL_PLESK => 'host.php_hidden_fix_plesk',
                 PhpBinary::PANEL_CPANEL => 'host.php_hidden_fix_cpanel',
-                default                 => 'host.php_hidden_fix_generic',
-            }, 'params' => ['dir' => $dir . '/']];
+                default => 'host.php_hidden_fix_generic',
+            }, 'params' => ['dir' => $dir.'/']];
         } else {
             $what = ['host.php_missing', []];
             $lines[] = ['key' => 'host.php_missing_why'];
@@ -350,13 +350,13 @@ class Capability
         // Not a blocker: without it, Composer and Flarum's commands run inside
         // the web request instead (the row above says what that means).
         return [[
-            'id'         => 'php',
-            'ok'         => true,
-            'warn'       => true,
-            'whatKey'    => $what[0],
+            'id' => 'php',
+            'ok' => true,
+            'warn' => true,
+            'whatKey' => $what[0],
             'whatParams' => $what[1],
-            'whyKeys'    => $lines,
-            'override'   => $d['override'],
+            'whyKeys' => $lines,
+            'override' => $d['override'],
         ]];
     }
 
@@ -376,7 +376,7 @@ class Capability
             return [
                 'id' => 'opcache', 'ok' => true, 'warn' => false,
                 'what' => 'No compiled-code cache',
-                'why'  => 'Nothing stands between the files an update writes and the code that runs.',
+                'why' => 'Nothing stands between the files an update writes and the code that runs.',
             ];
         }
 
@@ -389,34 +389,34 @@ class Capability
         $handled = $o['canReset'];
 
         return [
-            'id'   => 'opcache',
-            'ok'   => $handled,
+            'id' => 'opcache',
+            'ok' => $handled,
             'warn' => ! $handled,
             'what' => $o['validates']
-                ? 'PHP re-reads changed files every ' . max(1, $o['freq']) . ' second(s)'
+                ? 'PHP re-reads changed files every '.max(1, $o['freq']).' second(s)'
                 : 'PHP caches compiled code and never re-reads files',
-            'why'  => $handled
+            'why' => $handled
                 ? 'Millwright clears the compiled-code cache when an update finishes, so the new files are used '
-                    . 'straight away rather than after a delay.'
+                    .'straight away rather than after a delay.'
                 : ($o['validates']
                     ? 'The cache cannot be cleared from here, so an update becomes live within '
-                        . max(1, $o['freq']) . ' second(s) rather than immediately.'
+                        .max(1, $o['freq']).' second(s) rather than immediately.'
                     : 'This host never re-reads changed files and the cache cannot be cleared from here, so PHP-FPM '
-                        . 'has to be restarted for an update to take effect.'),
+                        .'has to be restarted for an update to take effect.'),
         ];
     }
 
     private function diskCheck(): array
     {
         $free = @disk_free_space($this->installPath);
-        $gb   = $free === false ? null : round($free / 1073741824, 1);
+        $gb = $free === false ? null : round($free / 1073741824, 1);
 
         return [
-            'id'   => 'disk',
-            'ok'   => $gb === null || $gb > 1,
+            'id' => 'disk',
+            'ok' => $gb === null || $gb > 1,
             'warn' => $gb !== null && $gb <= 1,
-            'what' => 'Disk: ' . ($gb === null ? 'unknown' : $gb . ' GB free'),
-            'why'  => 'The previous version of anything replaced is kept so you can roll back. That needs room for what changed, not for a second copy of everything.',
+            'what' => 'Disk: '.($gb === null ? 'unknown' : $gb.' GB free'),
+            'why' => 'The previous version of anything replaced is kept so you can roll back. That needs room for what changed, not for a second copy of everything.',
         ];
     }
 
@@ -459,12 +459,12 @@ class Capability
         }
 
         $unit = strtolower(substr($raw, -1));
-        $n    = (int) $raw;
+        $n = (int) $raw;
 
         return match ($unit) {
-            'g'     => $n * 1073741824,
-            'm'     => $n * 1048576,
-            'k'     => $n * 1024,
+            'g' => $n * 1073741824,
+            'm' => $n * 1048576,
+            'k' => $n * 1024,
             default => $n,
         };
     }
@@ -473,5 +473,4 @@ class Capability
     {
         return $this->php->canSpawn();
     }
-
 }

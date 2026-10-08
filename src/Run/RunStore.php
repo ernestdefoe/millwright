@@ -29,7 +29,7 @@ class RunStore
         $this->ensureDir();
 
         $path = $this->path($run->id);
-        $temp = $path . '.' . bin2hex(random_bytes(4)) . '.tmp';
+        $temp = $path.'.'.bin2hex(random_bytes(4)).'.tmp';
 
         $json = json_encode($run->toArray(), JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
 
@@ -48,6 +48,7 @@ class RunStore
         // previous state or the whole new one, and never a half-written file.
         if (! @rename($temp, $path)) {
             @unlink($temp);
+
             throw new RuntimeException("Cannot move the run state into place at $path");
         }
 
@@ -91,7 +92,7 @@ class RunStore
 
         $runs = [];
 
-        foreach (glob($this->dir . '/*.json') ?: [] as $file) {
+        foreach (glob($this->dir.'/*.json') ?: [] as $file) {
             $row = json_decode((string) file_get_contents($file), true);
 
             if (is_array($row) && isset($row['id'])) {
@@ -119,13 +120,13 @@ class RunStore
         }
 
         $this->path($run->id);   // validates the id before it reaches a path
-        $manifest = json_decode((string) @file_get_contents(rtrim($this->dir, '/') . '/' . $run->id . '/requested.json'), true);
+        $manifest = json_decode((string) @file_get_contents(rtrim($this->dir, '/').'/'.$run->id.'/requested.json'), true);
 
-        $migrations = json_decode((string) @file_get_contents(rtrim($this->dir, '/') . '/' . $run->id . '/migrations.json'), true);
+        $migrations = json_decode((string) @file_get_contents(rtrim($this->dir, '/').'/'.$run->id.'/migrations.json'), true);
 
         return $run->toArray() + [
-            'packages'   => array_values(array_filter((array) ($manifest['packages'] ?? []), 'is_string')),
-            'mode'       => (string) ($manifest['mode'] ?? 'update'),
+            'packages' => array_values(array_filter((array) ($manifest['packages'] ?? []), 'is_string')),
+            'mode' => (string) ($manifest['mode'] ?? 'update'),
             // The database changes undoing would reverse; see MigrationLedger.
             'migrations' => array_values(array_map(fn ($m) => (string) ($m['migration'] ?? ''), (array) $migrations)),
         ];
@@ -145,7 +146,7 @@ class RunStore
             throw new RuntimeException("Refusing to build a path from run id: $id");
         }
 
-        return rtrim($this->dir, '/') . '/' . $id . '.json';
+        return rtrim($this->dir, '/').'/'.$id.'.json';
     }
 
     private function ensureDir(): void

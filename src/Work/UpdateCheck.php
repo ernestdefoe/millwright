@@ -124,9 +124,9 @@ class UpdateCheck
 
         $result = [
             'checkedAt' => time(),
-            'updates'   => $found,
+            'updates' => $found,
             'uncheckable' => $unknown,
-            'tracking'    => $tracking,
+            'tracking' => $tracking,
         ];
 
         /*
@@ -258,11 +258,11 @@ class UpdateCheck
      */
     public function fromPackagist(string $name): ?array
     {
-        $url = 'https://repo.packagist.org/p2/' . $name . '.json';
+        $url = 'https://repo.packagist.org/p2/'.$name.'.json';
 
         $context = stream_context_create(['http' => [
             'timeout' => 15,
-            'header'  => "User-Agent: Millwright\r\n",
+            'header' => "User-Agent: Millwright\r\n",
         ]]);
 
         $body = @file_get_contents($url, false, $context);

@@ -19,13 +19,13 @@ class StepRunnerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->dir = sys_get_temp_dir() . '/mw-run-' . bin2hex(random_bytes(6));
+        $this->dir = sys_get_temp_dir().'/mw-run-'.bin2hex(random_bytes(6));
         mkdir($this->dir, 0775, true);
     }
 
     protected function tearDown(): void
     {
-        foreach (glob($this->dir . '/*') ?: [] as $f) {
+        foreach (glob($this->dir.'/*') ?: [] as $f) {
             @unlink($f);
         }
         @rmdir($this->dir);

@@ -28,14 +28,14 @@ class ResumabilityTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->dir = sys_get_temp_dir() . '/mw-resume-' . bin2hex(random_bytes(6));
+        $this->dir = sys_get_temp_dir().'/mw-resume-'.bin2hex(random_bytes(6));
         mkdir($this->dir, 0775, true);
-        $this->log = $this->dir . '/done.log';
+        $this->log = $this->dir.'/done.log';
     }
 
     protected function tearDown(): void
     {
-        foreach (glob($this->dir . '/*') ?: [] as $f) {
+        foreach (glob($this->dir.'/*') ?: [] as $f) {
             @unlink($f);
         }
         @rmdir($this->dir);
@@ -44,9 +44,9 @@ class ResumabilityTest extends TestCase
     public function test_a_run_killed_repeatedly_at_random_points_still_completes_every_item(): void
     {
         $plan = [
-            'plan'     => ['resolve'],
-            'fetch'    => ['pkg-a', 'pkg-b', 'pkg-c', 'pkg-d', 'pkg-e'],
-            'apply'    => ['pkg-a', 'pkg-b', 'pkg-c', 'pkg-d', 'pkg-e'],
+            'plan' => ['resolve'],
+            'fetch' => ['pkg-a', 'pkg-b', 'pkg-c', 'pkg-d', 'pkg-e'],
+            'apply' => ['pkg-a', 'pkg-b', 'pkg-c', 'pkg-d', 'pkg-e'],
             'finalise' => ['autoload', 'migrate', 'assets'],
         ];
 
@@ -178,13 +178,13 @@ class ResumabilityTest extends TestCase
     {
         $cmd = sprintf(
             'exec php %s %s %s %s %s %d',
-            escapeshellarg(__DIR__ . '/../fixtures/step-run.php'),
+            escapeshellarg(__DIR__.'/../fixtures/step-run.php'),
             escapeshellarg($this->dir),
             escapeshellarg('r1'),
             escapeshellarg(json_encode($plan)),
             escapeshellarg($this->log),
             $budget
-        ) . ' ' . escapeshellarg((string) $killInside) . ' 2>/dev/null';
+        ).' '.escapeshellarg((string) $killInside).' 2>/dev/null';
 
         exec($cmd);
     }

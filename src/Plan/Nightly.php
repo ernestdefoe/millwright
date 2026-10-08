@@ -40,7 +40,7 @@ final class Nightly
 
         foreach ((array) ($lock['packages'] ?? []) as $package) {
             if (($package['name'] ?? '') === 'flarum/core' && preg_match('/^v?(\d+)\./', (string) ($package['version'] ?? ''), $m)) {
-                return $m[1] . '.x-dev';
+                return $m[1].'.x-dev';
             }
         }
 
@@ -79,7 +79,7 @@ final class Nightly
     public static function devVersions(string $name): ?array
     {
         $ctx = stream_context_create(['http' => ['timeout' => 10, 'user_agent' => 'Millwright (+https://github.com/ernestdefoe/millwright)']]);
-        $json = @file_get_contents('https://repo.packagist.org/p2/' . $name . '~dev.json', false, $ctx);
+        $json = @file_get_contents('https://repo.packagist.org/p2/'.$name.'~dev.json', false, $ctx);
         $data = is_string($json) ? json_decode($json, true) : null;
 
         if (! is_array($data)) {

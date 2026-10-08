@@ -26,7 +26,7 @@ class CrashRecoveryTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->root = sys_get_temp_dir() . '/millwright-' . bin2hex(random_bytes(6));
+        $this->root = sys_get_temp_dir().'/millwright-'.bin2hex(random_bytes(6));
         mkdir($this->root, 0775, true);
     }
 
@@ -133,13 +133,13 @@ class CrashRecoveryTest extends TestCase
         // The realistic shape of a core update: several packages, and the
         // process dies in the middle of the run rather than the middle of a step.
         $this->seedVendor([
-            'acme/one'   => 'one v1',
-            'acme/two'   => 'two v1',
+            'acme/one' => 'one v1',
+            'acme/two' => 'two v1',
             'acme/three' => 'three v1',
         ]);
         $this->seedStaging([
-            'acme/one'   => 'one v2',
-            'acme/two'   => 'two v2',
+            'acme/one' => 'one v2',
+            'acme/two' => 'two v2',
             'acme/three' => 'three v2',
         ]);
 
@@ -162,7 +162,7 @@ class CrashRecoveryTest extends TestCase
 
     private function runApply(array $changes, string $killAt, ?string $killOnPackage = null): int
     {
-        $harness = __DIR__ . '/../fixtures/crash-apply.php';
+        $harness = __DIR__.'/../fixtures/crash-apply.php';
 
         // `exec` so the shell replaces itself with PHP rather than supervising
         // it — otherwise it reports every SIGKILL as "Killed: 9" on the test
@@ -191,14 +191,14 @@ class CrashRecoveryTest extends TestCase
 
     private function dir(string $name): string
     {
-        return $this->root . '/' . $name;
+        return $this->root.'/'.$name;
     }
 
     /** @param array<string,string> $packages */
     private function seedVendor(array $packages): void
     {
         foreach ($packages as $name => $content) {
-            $this->writeTree($this->dir('vendor') . '/' . $name, $content);
+            $this->writeTree($this->dir('vendor').'/'.$name, $content);
         }
     }
 
@@ -206,20 +206,20 @@ class CrashRecoveryTest extends TestCase
     private function seedStaging(array $packages): void
     {
         foreach ($packages as $name => $content) {
-            $this->writeTree($this->dir('staging') . '/' . $name, $content);
+            $this->writeTree($this->dir('staging').'/'.$name, $content);
         }
     }
 
     private function writeTree(string $dir, string $content): void
     {
-        mkdir($dir . '/src', 0775, true);
-        file_put_contents($dir . '/file.txt', $content);
-        file_put_contents($dir . '/src/Deep.php', "<?php // $content");
+        mkdir($dir.'/src', 0775, true);
+        file_put_contents($dir.'/file.txt', $content);
+        file_put_contents($dir.'/src/Deep.php', "<?php // $content");
     }
 
     private function read(string $relative): string
     {
-        return trim((string) @file_get_contents($this->root . '/' . $relative));
+        return trim((string) @file_get_contents($this->root.'/'.$relative));
     }
 
     /**

@@ -35,7 +35,7 @@ class TrashController implements RequestHandlerInterface
     {
         RequestUtil::getActor($request)->assertAdmin();
 
-        $dir = $this->paths->storage . '/millwright';
+        $dir = $this->paths->storage.'/millwright';
         $retention = new Retention($dir);
         $pruner = new Pruner($dir, $retention);
         $pruned = null;
@@ -45,9 +45,9 @@ class TrashController implements RequestHandlerInterface
                 $body = (array) $request->getParsedBody();
 
                 match ((string) Arr::get($body, 'action', '')) {
-                    'prune'    => $pruned = $pruner->prune('admin'),
+                    'prune' => $pruned = $pruner->prune('admin'),
                     'settings' => $retention->save(Arr::get($body, 'keepDays'), Arr::get($body, 'keepRuns')),
-                    default    => throw new \InvalidArgumentException('Unknown action.'),
+                    default => throw new \InvalidArgumentException('Unknown action.'),
                 };
             }
 
@@ -59,17 +59,17 @@ class TrashController implements RequestHandlerInterface
         $keptTrash = array_values(array_filter($plan['keep'], fn ($r) => $r['kind'] === 'trash'));
 
         return new JsonResponse([
-            'settings'    => $plan['settings'],
-            'trashBytes'  => $plan['trashBytes'],
-            'trashCount'  => count($keptTrash) + count(array_filter($plan['remove'], fn ($r) => $r['kind'] === 'trash')),
-            'keptCount'   => count($keptTrash),
+            'settings' => $plan['settings'],
+            'trashBytes' => $plan['trashBytes'],
+            'trashCount' => count($keptTrash) + count(array_filter($plan['remove'], fn ($r) => $r['kind'] === 'trash')),
+            'keptCount' => count($keptTrash),
             'removeCount' => count($plan['remove']),
             'removeBytes' => $plan['removeBytes'],
-            'remove'      => array_map(fn ($r) => [
+            'remove' => array_map(fn ($r) => [
                 'kind' => $r['kind'], 'name' => $r['name'], 'bytes' => $r['bytes'], 'why' => $r['why'],
             ], $plan['remove']),
-            'lastPrune'   => $retention->lastPrune(),
-            'pruned'      => $pruned,
+            'lastPrune' => $retention->lastPrune(),
+            'pruned' => $pruned,
         ]);
     }
 }

@@ -23,18 +23,18 @@ class ConfigTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->dir = sys_get_temp_dir() . '/mw-config-' . bin2hex(random_bytes(4));
+        $this->dir = sys_get_temp_dir().'/mw-config-'.bin2hex(random_bytes(4));
         mkdir($this->dir, 0775, true);
     }
 
     protected function tearDown(): void
     {
-        exec('rm -rf ' . escapeshellarg($this->dir));
+        exec('rm -rf '.escapeshellarg($this->dir));
     }
 
     private function file(string $name, array $data = null): JsonFile
     {
-        $path = $this->dir . '/' . $name;
+        $path = $this->dir.'/'.$name;
 
         if ($data !== null) {
             file_put_contents($path, json_encode($data));
@@ -75,10 +75,10 @@ class ConfigTest extends TestCase
         $auth = new AuthTokens($this->file('auth.json', []));
         $auth->set('github-oauth', 'github.com', 'ghp_token');
 
-        $onDisk = json_decode(file_get_contents($this->dir . '/auth.json'), true);
+        $onDisk = json_decode(file_get_contents($this->dir.'/auth.json'), true);
 
         $this->assertSame('ghp_token', $onDisk['github-oauth']['github.com']);
-        $this->assertSame('0600', substr(sprintf('%o', fileperms($this->dir . '/auth.json')), -4));
+        $this->assertSame('0600', substr(sprintf('%o', fileperms($this->dir.'/auth.json')), -4));
     }
 
     public function test_http_basic_needs_a_username(): void
@@ -100,7 +100,7 @@ class ConfigTest extends TestCase
         $auth->set('bearer', 'floxum.com', 'tok');
         $auth->remove('bearer', 'floxum.com');
 
-        $this->assertSame([], json_decode(file_get_contents($this->dir . '/auth.json'), true));
+        $this->assertSame([], json_decode(file_get_contents($this->dir.'/auth.json'), true));
     }
 
     // ── repositories ────────────────────────────────────────────────────────
@@ -202,10 +202,10 @@ class ConfigTest extends TestCase
          * 🚨 Treating unreadable JSON as an empty array would replace a file
          * somebody could still fix by hand with one built from nothing.
          */
-        file_put_contents($this->dir . '/composer.json', '{"require": {,,,}');
+        file_put_contents($this->dir.'/composer.json', '{"require": {,,,}');
 
         $this->expectExceptionMessageMatches('/not valid JSON/');
-        (new Repositories(new JsonFile($this->dir . '/composer.json')))->all();
+        (new Repositories(new JsonFile($this->dir.'/composer.json')))->all();
     }
 
     public function test_the_previous_contents_are_kept(): void
@@ -213,7 +213,7 @@ class ConfigTest extends TestCase
         $s = new Stability($this->file('composer.json', ['minimum-stability' => 'stable', 'name' => 'flarum/flarum']));
         $s->set('beta', true);
 
-        $backups = glob($this->dir . '/composer.json.millwright-backup-*');
+        $backups = glob($this->dir.'/composer.json.millwright-backup-*');
         $this->assertNotEmpty($backups, 'a write with no backup is a write that cannot be undone');
         $this->assertStringContainsString('stable', file_get_contents($backups[0]));
     }
@@ -232,7 +232,7 @@ class ConfigTest extends TestCase
         $s = new Stability($this->file('composer.json', $original));
         $s->set('beta', true);
 
-        $after = json_decode(file_get_contents($this->dir . '/composer.json'), true);
+        $after = json_decode(file_get_contents($this->dir.'/composer.json'), true);
 
         $this->assertSame($original['require'], $after['require']);
         $this->assertSame($original['repositories'], $after['repositories']);

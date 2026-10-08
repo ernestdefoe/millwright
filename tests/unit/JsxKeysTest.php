@@ -26,7 +26,7 @@ class JsxKeysTest extends TestCase
 {
     public function test_no_static_keys_in_any_component(): void
     {
-        $root = dirname(__DIR__, 2) . '/js/src';
+        $root = dirname(__DIR__, 2).'/js/src';
         $offenders = [];
 
         $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS));
@@ -40,7 +40,7 @@ class JsxKeysTest extends TestCase
                 // key="literal" — as opposed to key={expression}, which is the
                 // .map() form and is the only legitimate one.
                 if (preg_match('/\skey="[^"]*"/', $line)) {
-                    $offenders[] = str_replace($root, 'js/src', $file->getPathname()) . ':' . ($n + 1) . ' — ' . trim($line);
+                    $offenders[] = str_replace($root, 'js/src', $file->getPathname()).':'.($n + 1).' — '.trim($line);
                 }
             }
         }
@@ -49,9 +49,9 @@ class JsxKeysTest extends TestCase
             [],
             $offenders,
             "Static keys found. Mithril needs a key only inside .map(); a literal key on a static\n"
-            . "child risks a children list where some vnodes are keyed and some are not, which\n"
-            . "throws during view and leaves the last frame — a spinner — on screen:\n  "
-            . implode("\n  ", $offenders)
+            ."child risks a children list where some vnodes are keyed and some are not, which\n"
+            ."throws during view and leaves the last frame — a spinner — on screen:\n  "
+            .implode("\n  ", $offenders)
         );
     }
 }

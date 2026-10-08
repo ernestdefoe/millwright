@@ -36,8 +36,8 @@ class InstalledRecord
     /** Rewrite installed.json from composer.lock. Returns the number of packages recorded. */
     public function syncFromLock(): int
     {
-        $lock = $this->read($this->installPath . '/composer.lock');
-        $recordPath = $this->installPath . '/vendor/composer/installed.json';
+        $lock = $this->read($this->installPath.'/composer.lock');
+        $recordPath = $this->installPath.'/vendor/composer/installed.json';
         $record = is_file($recordPath) ? $this->read($recordPath) : [];
 
         // Composer 1 wrote a bare list; 2 wraps it. Keep whatever extra keys
@@ -63,7 +63,7 @@ class InstalledRecord
                 // stale copy from the old entry would describe the wrong version.
                 unset($entry['version_normalized']);
                 $entry['installation-source'] = isset($locked['dist']) ? 'dist' : 'source';
-                $entry['install-path'] = $old['install-path'] ?? '../' . $name;
+                $entry['install-path'] = $old['install-path'] ?? '../'.$name;
 
                 $packages[] = $entry;
 
@@ -83,9 +83,10 @@ class InstalledRecord
 
         // Written beside and renamed over, so a kill mid-write cannot leave
         // Composer a truncated record to misread.
-        $tmp = $recordPath . '.millwright';
-        if ($json === false || file_put_contents($tmp, $json . "\n") === false || ! rename($tmp, $recordPath)) {
+        $tmp = $recordPath.'.millwright';
+        if ($json === false || file_put_contents($tmp, $json."\n") === false || ! rename($tmp, $recordPath)) {
             @unlink($tmp);
+
             throw new RuntimeException('Could not rewrite vendor/composer/installed.json.');
         }
 

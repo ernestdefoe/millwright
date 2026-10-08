@@ -17,8 +17,8 @@ use InvalidArgumentException;
 class Change
 {
     public const REPLACE = 'replace';
-    public const ADD     = 'add';
-    public const REMOVE  = 'remove';
+    public const ADD = 'add';
+    public const REMOVE = 'remove';
 
     public function __construct(
         public readonly string $op,
@@ -68,16 +68,16 @@ class Change
     /** A stable, filesystem-safe name for this package's slot in the trash. */
     public function trashName(): string
     {
-        return str_replace('/', '+', $this->package) . '@' . ($this->from ?? 'absent');
+        return str_replace('/', '+', $this->package).'@'.($this->from ?? 'absent');
     }
 
     public function describe(): string
     {
         return match ($this->op) {
             self::REPLACE => "{$this->package} {$this->from} → {$this->to}",
-            self::ADD     => "{$this->package} {$this->to} (new)",
-            self::REMOVE  => "{$this->package} {$this->from} (removed)",
-            default       => $this->package,
+            self::ADD => "{$this->package} {$this->to} (new)",
+            self::REMOVE => "{$this->package} {$this->from} (removed)",
+            default => $this->package,
         };
     }
 
@@ -85,10 +85,10 @@ class Change
     public function toArray(): array
     {
         return array_filter([
-            'op'      => $this->op,
+            'op' => $this->op,
             'package' => $this->package,
-            'from'    => $this->from,
-            'to'      => $this->to,
+            'from' => $this->from,
+            'to' => $this->to,
         ], fn ($v) => $v !== null);
     }
 

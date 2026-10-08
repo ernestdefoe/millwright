@@ -17,8 +17,8 @@ class FetcherTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->dir = sys_get_temp_dir() . '/mw-fetch-' . bin2hex(random_bytes(6));
-        mkdir($this->dir . '/staging', 0775, true);
+        $this->dir = sys_get_temp_dir().'/mw-fetch-'.bin2hex(random_bytes(6));
+        mkdir($this->dir.'/staging', 0775, true);
     }
 
     protected function tearDown(): void
@@ -29,7 +29,7 @@ class FetcherTest extends TestCase
     /** @param array<string,string> $entries */
     private function zip(string $name, array $entries): string
     {
-        $path = $this->dir . '/' . $name;
+        $path = $this->dir.'/'.$name;
         $zip = new ZipArchive();
         $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
 
@@ -44,10 +44,10 @@ class FetcherTest extends TestCase
 
     private function fetchLocal(string $archive, string $package, ?string $shasum = null): void
     {
-        $fetcher = new Fetcher($this->dir . '/staging');
+        $fetcher = new Fetcher($this->dir.'/staging');
         // file:// so the download path is exercised without a network.
         $fetcher->fetch($package, [
-            'url' => 'file://' . $archive, 'type' => 'zip', 'reference' => null, 'shasum' => $shasum,
+            'url' => 'file://'.$archive, 'type' => 'zip', 'reference' => null, 'shasum' => $shasum,
         ]);
     }
 
@@ -63,9 +63,9 @@ class FetcherTest extends TestCase
 
         $this->fetchLocal($archive, 'a/b');
 
-        $this->assertFileExists($this->dir . '/staging/a/b/composer.json');
-        $this->assertFileExists($this->dir . '/staging/a/b/src/Thing.php');
-        $this->assertDirectoryDoesNotExist($this->dir . '/staging/a/b/vendor-pkg-9f8e7d6');
+        $this->assertFileExists($this->dir.'/staging/a/b/composer.json');
+        $this->assertFileExists($this->dir.'/staging/a/b/src/Thing.php');
+        $this->assertDirectoryDoesNotExist($this->dir.'/staging/a/b/vendor-pkg-9f8e7d6');
     }
 
     public function test_an_archive_with_no_wrapper_is_left_alone(): void
@@ -74,8 +74,8 @@ class FetcherTest extends TestCase
 
         $this->fetchLocal($archive, 'a/b');
 
-        $this->assertFileExists($this->dir . '/staging/a/b/composer.json');
-        $this->assertFileExists($this->dir . '/staging/a/b/src/X.php');
+        $this->assertFileExists($this->dir.'/staging/a/b/composer.json');
+        $this->assertFileExists($this->dir.'/staging/a/b/src/X.php');
     }
 
     public function test_a_wrong_checksum_stops_it_before_anything_is_unpacked(): void
@@ -91,7 +91,7 @@ class FetcherTest extends TestCase
             $this->assertStringContainsString('checksum', $e->getMessage());
         }
 
-        $this->assertDirectoryDoesNotExist($this->dir . '/staging/a/b', 'nothing should have been unpacked');
+        $this->assertDirectoryDoesNotExist($this->dir.'/staging/a/b', 'nothing should have been unpacked');
     }
 
     public function test_a_correct_checksum_passes(): void
@@ -100,7 +100,7 @@ class FetcherTest extends TestCase
 
         $this->fetchLocal($archive, 'a/b', hash_file('sha1', $archive));
 
-        $this->assertFileExists($this->dir . '/staging/a/b/composer.json');
+        $this->assertFileExists($this->dir.'/staging/a/b/composer.json');
     }
 
     public function test_an_archive_that_tries_to_escape_its_directory_is_refused(): void
@@ -108,7 +108,7 @@ class FetcherTest extends TestCase
         // The oldest archive attack there is, and an archive is untrusted input
         // however trustworthy the index that named it.
         $archive = $this->zip('e.zip', [
-            'pkg/composer.json'     => '{}',
+            'pkg/composer.json' => '{}',
             'pkg/../../../evil.php' => '<?php // hello',
         ]);
 
@@ -131,21 +131,25 @@ class FetcherTest extends TestCase
         $archive = $this->zip('g.zip', ['pkg/composer.json' => '{"name":"a/b"}']);
 
         $this->fetchLocal($archive, 'a/b');
-        file_put_contents($this->dir . '/staging/a/b/marker', 'still here');
+        file_put_contents($this->dir.'/staging/a/b/marker', 'still here');
 
         $this->fetchLocal($archive, 'a/b');
 
-        $this->assertFileExists($this->dir . '/staging/a/b/marker', 'it re-downloaded something already staged');
+        $this->assertFileExists($this->dir.'/staging/a/b/marker', 'it re-downloaded something already staged');
     }
 
     private function rmrf(string $dir): void
     {
-        if (! is_dir($dir)) return;
+        if (! is_dir($dir)) {
+            return;
+        }
         $it = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
             \RecursiveIteratorIterator::CHILD_FIRST
         );
-        foreach ($it as $i) { $i->isDir() ? @rmdir($i->getPathname()) : @unlink($i->getPathname()); }
+        foreach ($it as $i) {
+            $i->isDir() ? @rmdir($i->getPathname()) : @unlink($i->getPathname());
+        }
         @rmdir($dir);
     }
 }

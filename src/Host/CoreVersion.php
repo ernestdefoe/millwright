@@ -13,7 +13,7 @@ final class CoreVersion
 {
     public static function onDisk(string $vendorPath): ?string
     {
-        $source = @file_get_contents($vendorPath . '/flarum/core/src/Foundation/Application.php');
+        $source = @file_get_contents($vendorPath.'/flarum/core/src/Foundation/Application.php');
 
         if ($source === false || ! preg_match("/const\\s+VERSION\\s*=\\s*'([^']+)'/", $source, $m)) {
             return null;

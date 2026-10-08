@@ -19,7 +19,7 @@ class UpdateCheckTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->cache = sys_get_temp_dir() . '/mw-upd-' . bin2hex(random_bytes(6)) . '.json';
+        $this->cache = sys_get_temp_dir().'/mw-upd-'.bin2hex(random_bytes(6)).'.json';
     }
 
     protected function tearDown(): void
@@ -179,7 +179,11 @@ class UpdateCheckTest extends TestCase
 
         $check->refresh(
             ['vendor/branchy' => 'dev-main', 'vendor/other' => '1.x-dev'],
-            function (string $name) use (&$asked) { $asked[] = $name; return null; }
+            function (string $name) use (&$asked) {
+                $asked[] = $name;
+
+                return null;
+            }
         );
 
         $this->assertSame([], $asked, 'Nothing to ask: neither has a version to compare.');
@@ -203,16 +207,16 @@ class UpdateCheckTest extends TestCase
      */
     public function test_the_result_is_kept_when_its_directory_does_not_exist_yet(): void
     {
-        $dir = sys_get_temp_dir() . '/mw-fresh-' . bin2hex(random_bytes(6));
-        $check = new UpdateCheck($dir . '/millwright/updates.json');
+        $dir = sys_get_temp_dir().'/mw-fresh-'.bin2hex(random_bytes(6));
+        $check = new UpdateCheck($dir.'/millwright/updates.json');
 
         $check->refresh(['a/b' => '1.0.0'], fn () => ['1.0.0', '1.1.0']);
 
         $this->assertSame(['from' => '1.0.0', 'to' => '1.1.0'], $check->cached()['updates']['a/b'] ?? null);
         $this->assertFalse($check->isStale());
 
-        @unlink($dir . '/millwright/updates.json');
-        @rmdir($dir . '/millwright');
+        @unlink($dir.'/millwright/updates.json');
+        @rmdir($dir.'/millwright');
         @rmdir($dir);
     }
 
@@ -223,12 +227,12 @@ class UpdateCheckTest extends TestCase
     public function test_an_update_already_installed_is_no_longer_offered(): void
     {
         file_put_contents($this->cache, json_encode(['checkedAt' => time(), 'updates' => [
-            'acpl/mobile-tab'        => ['from' => '2.0.0', 'to' => '2.0.1'],
+            'acpl/mobile-tab' => ['from' => '2.0.0', 'to' => '2.0.1'],
             'ernestdefoe/millwright' => ['from' => 'v1.13.0', 'to' => 'v1.14.0'],
-            'fof/upload'             => ['from' => '2.0.0-beta.7', 'to' => '2.0.2'],
-            'acme/gone'              => ['from' => '1.0.0', 'to' => '1.1.0'],
+            'fof/upload' => ['from' => '2.0.0-beta.7', 'to' => '2.0.2'],
+            'acme/gone' => ['from' => '1.0.0', 'to' => '1.1.0'],
         ]]));
-        $lock = $this->cache . '.lock';
+        $lock = $this->cache.'.lock';
         file_put_contents($lock, json_encode(['packages' => [
             ['name' => 'acpl/mobile-tab', 'type' => 'flarum-extension', 'version' => '2.0.1'],
             ['name' => 'ernestdefoe/millwright', 'type' => 'flarum-extension', 'version' => 'v1.14.0'],

@@ -111,7 +111,7 @@ class CompatibilityTest extends TestCase
          * the name alone, an upgrade would keep serving yesterday's answers for
          * a day — exactly when somebody goes looking for extensions that now work.
          */
-        $dir = sys_get_temp_dir() . '/mw-compat-' . bin2hex(random_bytes(4));
+        $dir = sys_get_temp_dir().'/mw-compat-'.bin2hex(random_bytes(4));
         $calls = 0;
 
         $body = json_encode($this->p2('acme/w', [['version' => '2.0.0', 'require' => ['flarum/core' => '^2.0']]]));
@@ -129,14 +129,14 @@ class CompatibilityTest extends TestCase
         $this->assertSame(2, $calls, 'a different core is a different question');
         $this->assertTrue($after['acme/w']['compatible']);
 
-        exec('rm -rf ' . escapeshellarg($dir));
+        exec('rm -rf '.escapeshellarg($dir));
     }
 
     public function test_a_package_that_could_not_be_fetched_is_not_cached_as_unknown(): void
     {
         // Unreachable today is not unreachable tomorrow, and caching "unknown"
         // would hide a working extension for a day.
-        $dir = sys_get_temp_dir() . '/mw-compat-' . bin2hex(random_bytes(4));
+        $dir = sys_get_temp_dir().'/mw-compat-'.bin2hex(random_bytes(4));
         $calls = 0;
 
         $packagist = new Packagist(new Cache($dir), function () use (&$calls) {
@@ -150,6 +150,6 @@ class CompatibilityTest extends TestCase
 
         $this->assertSame(2, $calls);
 
-        exec('rm -rf ' . escapeshellarg($dir));
+        exec('rm -rf '.escapeshellarg($dir));
     }
 }
