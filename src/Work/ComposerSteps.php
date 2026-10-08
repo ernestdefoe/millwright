@@ -12,6 +12,7 @@ use Flarum\Extension\ExtensionManager;
 use Illuminate\Database\ConnectionInterface;
 use ErnestDefoe\Millwright\Plan\LockDiff;
 use ErnestDefoe\Millwright\Run\Run;
+use ErnestDefoe\Millwright\Host\CoreVersion;
 use ErnestDefoe\Millwright\Host\Opcache;
 use Flarum\Foundation\Config;
 use ErnestDefoe\Millwright\Host\FlarumUpdater;
@@ -615,6 +616,19 @@ class ComposerSteps implements Steps
         $ledger = new MigrationLedger($this->workDir);
         $ledger->before($db);
         $was = $db->table('settings')->where('key', 'version')->value('value');
+
+        /*
+         * 🚨 Only a new VERSION puts the forum behind "Update Flarum". A core
+         * that moves without one — the nightly build (2.x-dev) to the release
+         * it becomes, both of which say 2.0.0 — leaves the site answering, so
+         * the migrations step later in this run is still reachable and does
+         * the work. Bridging here would undo a correct
+         * update: migrate cannot change a version that was already right, and
+         * on a host without proc_open Flarum's updater is not there to ask.
+         */
+        if ($was !== null && $was === CoreVersion::onDisk($this->vendorPath !== '' ? $this->vendorPath : $this->installPath . '/vendor')) {
+            return 'Flarum still records ' . $was . ', the version of its new code, so its database is brought up to date with the other migrations';
+        }
 
         try {
             (new Opcache())->clear();
