@@ -94,8 +94,13 @@ teardown() {
   docker network ls -q --filter "name=^${P}" | xargs -r docker network rm >/dev/null 2>&1
   rm -rf "$WORK" 2>/dev/null || true
 }
-# Leftovers from an interrupted run are ours by name; nothing else is touched.
+# Leftovers from an interrupted or --keep run are ours by name; nothing else
+# is touched. Volumes and networks too, not only containers: a kept Docker
+# run left its app volume behind with Flarum installed on it, and the next
+# run's fresh database made the image's own migrate step fail at boot.
 docker ps -aq --filter "name=^${P}_" | xargs -r docker rm -f >/dev/null 2>&1
+docker volume ls -q --filter "name=^${P}" | xargs -r docker volume rm >/dev/null 2>&1
+docker network ls -q --filter "name=^${P}" | xargs -r docker network rm >/dev/null 2>&1
 [ "$KEEP" = 1 ] || trap teardown EXIT
 
 # ── helpers that run inside a container ───────────────────────────────────────
@@ -426,7 +431,7 @@ done
 say "Summary"
 printf '  %-13s %-34s %s\n' ENV CHECK RESULT
 for r in "${RESULTS[@]}"; do IFS='|' read -r e w m d <<<"$r"; printf '  %-13s %-34s %s\n' "$e" "$w" "$m"; done
-[ "$KEEP" = 1 ] && echo && echo "Kept: containers ${P}_*; work dir $WORK. Remove with: docker rm -f \$(docker ps -aq --filter name=^${P}_)"
+[ "$KEEP" = 1 ] && echo && echo "Kept: containers ${P}_*; work dir $WORK. Remove with: docker rm -f \$(docker ps -aq --filter name=^${P}_); docker volume rm \$(docker volume ls -q --filter name=^${P})"
 echo
 if [ "$FAILED" = 0 ]; then echo "All checks passed."; else echo "Some checks FAILED."; fi
 exit $FAILED
