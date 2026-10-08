@@ -448,6 +448,7 @@ class PruneTest extends TestCase
 
         $steps = (string) file_get_contents(__DIR__.'/../../src/Work/ComposerSteps.php');
         $this->assertMatchesRegularExpression("/'check the site again', 'tidy the trash'\\]/", $steps);
-        $this->assertStringContainsString("'tidy the trash'       => \$this->tidyTrash()", $steps);
+        // Whitespace-tolerant: the code style decides alignment, not this test.
+        $this->assertMatchesRegularExpression("/'tidy the trash'\\s*=> \\\$this->tidyTrash\\(\\)/", $steps);
     }
 }

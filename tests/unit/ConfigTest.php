@@ -32,7 +32,7 @@ class ConfigTest extends TestCase
         exec('rm -rf '.escapeshellarg($this->dir));
     }
 
-    private function file(string $name, array $data = null): JsonFile
+    private function file(string $name, ?array $data = null): JsonFile
     {
         $path = $this->dir.'/'.$name;
 
