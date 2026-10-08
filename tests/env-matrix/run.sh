@@ -228,7 +228,7 @@ flarum_install() { # database, url
   cat > "$WORK/$C/install.yml" <<YML
 debug: false
 baseUrl: $2
-databaseConfiguration: {driver: mysql, host: ${P}_db, database: $1, username: flarum, password: "$PASS_DB", prefix: "", port: 3306}
+databaseConfiguration: {driver: mariadb, host: ${P}_db, database: $1, username: flarum, password: "$PASS_DB", prefix: "", port: 3306}
 adminUser: {username: admin, password: "${PASS_DB}Aa1!", password_confirmation: "${PASS_DB}Aa1!", email: admin@example.test}
 settings: {forum_title: Millwright matrix}
 YML
