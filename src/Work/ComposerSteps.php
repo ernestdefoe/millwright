@@ -838,6 +838,22 @@ class ComposerSteps implements Steps
 
         $result = $health->check(3);
 
+        /*
+         * 🚨 Flarum answers 503 with its "Update Flarum" page while php-fpm is
+         * still running the old code against a database the update already
+         * migrated. That's the web server not having re-read the files yet,
+         * not a broken update. Within the window it can take, wait and look
+         * again rather than put back an update that is about to work.
+         */
+        if (! $result['ok'] && ($result['status'] ?? null) === 503) {
+            $situation = (new Opcache())->situation();
+            $freq = (int) ($situation['freq'] ?? 0);
+
+            if ($situation['validates'] && $freq > 0 && $freq <= self::WAIT_CAP && time() < $this->codeLiveAt($freq) + $freq) {
+                throw new NotYet('The site answered 503 while the web server may still be re-reading the new files; looking again shortly.');
+            }
+        }
+
         switch (Verdict::from($before, $result['ok'])) {
             case Verdict::HEALTHY:
                 return 'The site is answering normally after the update.';
@@ -1001,8 +1017,20 @@ class ComposerSteps implements Steps
      */
     private function codeLiveAt(int $freq): int
     {
-        $autoloader = $this->installPath.'/vendor/composer/autoload_static.php';
-        $changed = @filemtime($autoloader);
+        /*
+         * 🚨 Timed from Composer's install record as well as the autoloader.
+         * The autoloader is only rewritten when the set of classes changes, and
+         * 2.0.0-rc.8 → 2.0.0 changed none, so its timestamp was days old and the
+         * wait was skipped. The site was checked while php-fpm still ran rc.8
+         * against a database already at 2.0.0, answered Flarum's 503 "Update
+         * Flarum" page, and a correct update was put back (wowcraft,
+         * 2026-10-09). InstalledRecord rewrites installed.json on every run.
+         */
+        clearstatcache();
+        $changed = max(
+            (int) @filemtime($this->installPath.'/vendor/composer/autoload_static.php'),
+            (int) @filemtime($this->installPath.'/vendor/composer/installed.json'),
+        );
 
         return ($changed ?: time()) + $freq + 2;
     }
