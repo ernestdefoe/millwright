@@ -642,6 +642,10 @@ class ComposerSteps implements Steps
 
             $now = $db->table('settings')->where('key', 'version')->value('value');
 
+            // The database is now ahead of the web server's compiled code: close
+            // that window at once rather than within opcache's own timer.
+            $this->clearWebCache();
+
             if ($now === $was) {
                 throw new RuntimeException('the database still records Flarum '.$was.' after migrating.');
             }
@@ -774,9 +778,15 @@ class ComposerSteps implements Steps
         $this->flarum('millwright:repair-formatter', 'formatter rebuilt');
         // Before Flarum 2.0.0, cache:clear leaves the compiled bundles as they
         // were: the update's new screen never reached the browser.
-        $this->flarum('millwright:rebuild-assets', 'assets rebuilt');
+        $this->needsFreshCode();
+        $rebuilt = (new FlarumCommand($this->installPath, $this->composer))->run('millwright:rebuild-assets');
+        $warnings = array_values(array_filter(
+            array_map('trim', explode("\n", (string) $rebuilt['output'])),
+            fn (string $line) => str_starts_with($line, 'Warning:')
+        ));
 
-        return 'Caches cleared; the formatter and the compiled assets rebuilt';
+        return 'Caches cleared; the formatter and the compiled assets rebuilt'
+            .($warnings === [] ? '' : '. '.implode(' ', $warnings));
     }
 
     /**
@@ -900,6 +910,32 @@ class ComposerSteps implements Steps
         throw new Reverted($message, $done['undone']);
     }
 
+    /**
+     * From the command line, ask the web server to reset its compiled code and
+     * wait briefly for a request to take it up. True when it did. On the web
+     * this process can reset its own, so there is nothing to ask.
+     */
+    private function clearWebCache(): bool
+    {
+        if (PHP_SAPI !== 'cli' || $this->storagePath === '' || ($health = $this->health()) === null) {
+            return false;
+        }
+
+        Opcache::requestWebReset($this->storagePath);
+
+        for ($i = 0; $i < 10; $i++) {
+            $health->check(1);   // any answer will do; booting Flarum takes the flag
+
+            if (! Opcache::webResetPending($this->storagePath)) {
+                return true;
+            }
+
+            usleep(500_000);
+        }
+
+        return false;
+    }
+
     private function health(): ?SiteHealth
     {
         return $this->siteUrl === '' ? null : new SiteHealth($this->siteUrl);
@@ -961,6 +997,10 @@ class ComposerSteps implements Steps
      */
     private function codeCache(): string
     {
+        if ($this->clearWebCache()) {
+            return 'Cleared the web server\'s compiled-code cache, so the new files are used.';
+        }
+
         $opcache = new Opcache();
         $situation = $opcache->situation();
         $result = $opcache->clear();

@@ -40,29 +40,69 @@ class RebuildAssetsCommand extends AbstractCommand
     {
         $settings = resolve(SettingsRepositoryInterface::class);
         $locales = array_keys(resolve(LocaleManager::class)->getLocales());
+        $markDirty = (bool) $this->input->getOption('mark-dirty');
+
+        /*
+         * 🚨 A custom LESS error recorded during the update window is retried,
+         * not trusted. Flarum leaves the custom LESS out for as long as the
+         * flag is set, and the flag was written by a request that compiled new
+         * LESS with old PHP. Cleared here, it is set again by the compile below
+         * only if the custom LESS genuinely fails, and then this says so.
+         */
+        $hadError = (string) $settings->get('custom_less_error', '');
+
+        if (! $markDirty && $hadError !== '') {
+            $settings->delete('custom_less_error');
+        }
 
         foreach (resolve(AssetManager::class)->all() as $assets) {
             $dirty = 'assets_dirty.'.$assets->getName();
 
-            if ($this->input->getOption('mark-dirty')) {
+            if ($markDirty) {
                 $settings->set($dirty, 1);
                 continue;
             }
 
-            $assets->makeJs()->commit();
-            $assets->makeCss()->commit();
+            /*
+             * One frontend that will not compile must not stop the others, nor
+             * an update: Flarum compiles these when they are first requested,
+             * and a set nobody loads may never have compiled at all.
+             */
+            try {
+                $assets->makeJs()->commit();
+                $assets->makeCss()->commit();
 
-            foreach ($locales as $locale) {
-                $assets->makeLocaleJs($locale)->commit();
-                $assets->makeLocaleCss($locale)->commit();
+                foreach ($locales as $locale) {
+                    $assets->makeLocaleJs($locale)->commit();
+                    $assets->makeLocaleCss($locale)->commit();
+                }
+
+                $assets->makeJsDirectory()->commit();
+
+                $settings->delete($dirty);
+            } catch (\Throwable $e) {
+                $settings->set($dirty, 1);
+                $this->info('Warning: the '.$assets->getName().' assets could not be rebuilt and will be on its next page load: '
+                    .strtok($e->getMessage(), "\n"));
             }
-
-            $assets->makeJsDirectory()->commit();
-
-            $settings->delete($dirty);
         }
 
-        $this->info($this->input->getOption('mark-dirty') ? 'Assets flagged; the next request rebuilds them.' : 'Assets rebuilt.');
+        if ($markDirty) {
+            $this->info('Assets flagged; the next request rebuilds them.');
+
+            return 0;
+        }
+
+        $error = (string) $settings->get('custom_less_error', '');
+
+        if ($error !== '') {
+            $this->info('Warning: the custom LESS does not compile, so the forum is shown without it until it is fixed: '
+                .strtok($error, "\n"));
+        } elseif ($hadError !== '') {
+            $this->info('The custom LESS compiles again and is back in the forum\'s styles.');
+        }
+
+        $this->info('Assets rebuilt.');
 
         return 0;
     }

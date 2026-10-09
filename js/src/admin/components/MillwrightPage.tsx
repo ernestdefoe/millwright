@@ -522,8 +522,19 @@ export default class MillwrightPage extends ExtensionPage {
     ].filter(Boolean);
   }
 
+  /**
+   * 🚨 One count everywhere: the extensions "Update all" would update. The tab
+   * badge and the line above counted every newer package, Flarum itself
+   * included, so they read 17 beside "Update all 16" and stayed one ahead
+   * after each update (ClaudiusH, 2026-10-09). Flarum has its own panel, and
+   * the line names it separately.
+   */
   updateCount(): number {
-    return Object.keys(this.updates?.available || {}).length;
+    return this.installed.filter((e) => cardOffers(e).update).length;
+  }
+
+  coreHasUpdate(): boolean {
+    return !!(this.updates?.available || {})['flarum/core'];
   }
 
   /**
@@ -542,7 +553,13 @@ export default class MillwrightPage extends ExtensionPage {
       <div className={'Millwright-checkline Millwright-checkline--' + age}>
         {age === 'overdue' ? <p className="Millwright-checkPrompt">{t('check_overdue')}</p> : null}
         <span>
-          <b>{n === 0 ? t('none_newer') : t('some_newer', { count: n })}</b>{' '}
+          <b>
+            {n === 0 && !this.coreHasUpdate()
+              ? t('none_newer')
+              : n === 0
+                ? t('core_newer')
+                : t('some_newer', { count: n }) + (this.coreHasUpdate() ? ' ' + t('core_newer_too') : '')}
+          </b>{' '}
           {this.updates?.checkedAt ? t('checked_ago', { when: this.ago(this.updates.checkedAt) }) : t('never_checked')}
           {uncheckable > 0 ? ' ' + t('uncheckable', { count: uncheckable }) : ''}
           {tracking > 0 ? ' ' + t('tracking', { count: tracking }) : ''}

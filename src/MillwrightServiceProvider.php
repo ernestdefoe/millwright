@@ -15,6 +15,14 @@ use Illuminate\Contracts\Queue\Factory as QueueFactory;
 
 class MillwrightServiceProvider extends AbstractServiceProvider
 {
+    /** A CLI update asking the web server to drop its compiled code; see Opcache::requestWebReset(). */
+    public function boot(): void
+    {
+        if (PHP_SAPI !== 'cli') {
+            \ErnestDefoe\Millwright\Host\Opcache::honourWebReset($this->container->make(Paths::class)->storage);
+        }
+    }
+
     public function register(): void
     {
         $this->container->singleton(RunStore::class, function ($container) {

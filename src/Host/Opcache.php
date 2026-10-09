@@ -174,4 +174,53 @@ class Opcache
 
         return is_array($status) && ! empty($status['restart_pending']);
     }
+
+    /**
+     * 🚨 The command line cannot clear the web server's compiled code, but it
+     * can ask. A flag in storage, honoured by the next web request (see
+     * honourWebReset(), called from the service provider), resets the cache the
+     * whole php-fpm pool shares.
+     *
+     * Without it, a core update run from the CLI moved the database to 2.0.0
+     * while php-fpm kept serving rc.8 for minutes. Every page was Flarum's 503
+     * "Update Flarum", and a request in that window compiled the forum CSS from
+     * the old code, failed, and switched the custom LESS off (wowcraft,
+     * 2026-10-09).
+     */
+    public static function requestWebReset(string $storagePath): void
+    {
+        $dir = $storagePath.'/millwright';
+
+        if (! is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+
+        @touch($dir.'/opcache-reset');
+    }
+
+    public static function webResetPending(string $storagePath): bool
+    {
+        clearstatcache(true, $storagePath.'/millwright/opcache-reset');
+
+        return is_file($storagePath.'/millwright/opcache-reset');
+    }
+
+    /**
+     * On a web request: one stat, and when the flag is there, take it (a rename,
+     * so only one worker acts) and reset.
+     */
+    public static function honourWebReset(string $storagePath): void
+    {
+        $flag = $storagePath.'/millwright/opcache-reset';
+
+        if (! is_file($flag) || ! @rename($flag, $flag.'.'.getmypid())) {
+            return;
+        }
+
+        @unlink($flag.'.'.getmypid());
+
+        if (function_exists('opcache_reset')) {
+            @opcache_reset();
+        }
+    }
 }

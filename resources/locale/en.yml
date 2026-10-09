@@ -10,7 +10,9 @@ ernestdefoe-millwright:
     # check knows the first and cannot know the second, and a badge that
     # overstates itself is one people stop reading.
     none_newer: Everything checkable is up to date.
-    some_newer: "{count} package(s) have a newer version."
+    some_newer: "{count, plural, one {# extension has} other {# extensions have}} a newer version."
+    core_newer: Flarum itself has a newer version.
+    core_newer_too: So does Flarum itself.
     checked_ago: "Checked {when}."
     never_checked: Not checked yet.
     uncheckable: "{count} could not be checked — no repository this forum knows about lists them."
