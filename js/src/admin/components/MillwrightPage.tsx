@@ -549,6 +549,17 @@ export default class MillwrightPage extends ExtensionPage {
     const tracking = (this.updates?.tracking || []).length;
     const age = this.checkAge();
 
+    // Never checked: there is no result to state, only the prompt (ClaudiusH, 2026-10-09:
+    // "up to date" beside "check for updates" contradicted itself).
+    if (!this.updates?.checkedAt) {
+      return (
+        <div className="Millwright-checkline Millwright-checkline--overdue">
+          <p className="Millwright-checkPrompt">{t('check_overdue')}</p>
+          {this.checkButton(age)}
+        </div>
+      );
+    }
+
     return (
       <div className={'Millwright-checkline Millwright-checkline--' + age}>
         {age === 'overdue' ? <p className="Millwright-checkPrompt">{t('check_overdue')}</p> : null}
@@ -560,7 +571,7 @@ export default class MillwrightPage extends ExtensionPage {
                 ? t('core_newer')
                 : t('some_newer', { count: n }) + (this.coreHasUpdate() ? ' ' + t('core_newer_too') : '')}
           </b>{' '}
-          {this.updates?.checkedAt ? t('checked_ago', { when: this.ago(this.updates.checkedAt) }) : t('never_checked')}
+          {t('checked_ago', { when: this.ago(this.updates.checkedAt) })}
           {uncheckable > 0 ? ' ' + t('uncheckable', { count: uncheckable }) : ''}
           {tracking > 0 ? ' ' + t('tracking', { count: tracking }) : ''}
         </span>

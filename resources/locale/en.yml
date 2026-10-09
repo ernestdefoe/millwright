@@ -14,7 +14,6 @@ ernestdefoe-millwright:
     core_newer: Flarum itself has a newer version.
     core_newer_too: So does Flarum itself.
     checked_ago: "Checked {when}."
-    never_checked: Not checked yet.
     uncheckable: "{count} could not be checked — no repository this forum knows about lists them."
     tracking: "{count} track a branch, so there is no version to compare."
     check_now: Check now
