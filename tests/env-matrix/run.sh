@@ -19,6 +19,7 @@
 #   tests/env-matrix/run.sh                       # on this machine (needs Docker)
 #   tests/env-matrix/run.sh --remote root@host    # pack this checkout, run there
 #   options: --only fiab,zip   --keep   --package acpl/mobile-tab --from 2.0.0-beta.12
+#            --constraint '*'  (the requirement left in composer.json; default '>=<from>')
 #            --zip-url <url>   (default: the newest 2.x package Flarum publishes)
 #
 # Exit status: 0 when every check passed, 1 otherwise. See README.md.
@@ -32,6 +33,7 @@ ONLY="fiab,docker,zip,composer-cli,composer-web,core-nightly,core-nightly-zip"
 KEEP=0
 PKG=acpl/mobile-tab
 FROM=2.0.0-beta.12
+CONSTRAINT=""
 ZIP_URL=""
 CODE=""
 REMOTE=""
@@ -43,6 +45,7 @@ while [ $# -gt 0 ]; do
     --keep)    KEEP=1 ;;
     --package) PKG=$2; shift ;;
     --from)    FROM=$2; shift ;;
+    --constraint) CONSTRAINT=$2; shift ;;
     --zip-url) ZIP_URL=$2; shift ;;
     --code)    CODE=$2; shift ;;
     -h|--help) sed -n '2,25p' "$0"; exit 0 ;;
@@ -67,6 +70,8 @@ if [ -n "$REMOTE" ]; then
   args="--only $ONLY --package $PKG --from $FROM"
   [ "$KEEP" = 1 ] && args="$args --keep"
   [ -n "$ZIP_URL" ] && args="$args --zip-url $ZIP_URL"
+  # Quoted for the remote shell: an unquoted '*' would expand there.
+  [ -n "$CONSTRAINT" ] && args="$args --constraint $(printf %q "$CONSTRAINT")"
   ssh -t "$REMOTE" "bash /tmp/$P-run/run.sh --code /tmp/$P-run/code.tgz $args; s=\$?; rm -rf /tmp/$P-run; exit \$s"
   exit $?
 fi
@@ -119,6 +124,7 @@ version() {
 }
 
 ext_id() { echo "$PKG" | tr '/' '-'; }
+requirement() { x "php -r 'echo json_decode(file_get_contents(\"composer.json\"), true)[\"require\"][\"$PKG\"] ?? \"(none)\";'" 2>/dev/null; }
 
 migrations_ran() { # how many of the extension's migrations Flarum's log holds
   x "php -r '\$a=(require \"site.php\")->bootApp(); echo \$a->getContainer()->make(\"db\")->table(\"migrations\")->where(\"extension\", \"$(ext_id)\")->count();'" 2>/dev/null
@@ -152,8 +158,9 @@ plant_root_cache() {
 install_millwright() { # composer command prefix
   local composer="$1"
   x "COMPOSER_MEMORY_LIMIT=-1 $composer require ernestdefoe/millwright $PKG:$FROM -q --no-interaction" >/dev/null 2>&1
-  # Loosen the pin so the update has somewhere to go.
-  x "COMPOSER_MEMORY_LIMIT=-1 $composer require '$PKG:>=$FROM' --no-update -q" >/dev/null 2>&1
+  # Loosen the pin so the update has somewhere to go. `--constraint '*'` is
+  # what most extensions' install instructions tell people to run.
+  x "COMPOSER_MEMORY_LIMIT=-1 $composer require '$PKG:${CONSTRAINT:->=$FROM}' --no-update -q" >/dev/null 2>&1
   put "$CODE" /tmp/mwm-code.tgz
   x "tar xzf /tmp/mwm-code.tgz -C vendor/ernestdefoe/millwright 2>/dev/null; php flarum extension:enable ernestdefoe-millwright >/dev/null; php flarum extension:enable $(echo "$PKG" | tr '/' '-') >/dev/null; php flarum assets:publish >/dev/null; php flarum cache:clear >/dev/null 2>&1; true"
   # The stale-code window after a CLI change (opcache revalidate_freq) is not Millwright's to judge.
@@ -174,6 +181,7 @@ roll_back() { # api key
   check "$ENV" "undo: run state ($n root-owned)" "$([ "$state" = rolled-back ] && echo 1)" "$state"
   check "$ENV" "undo: version restored" "$([ "$after" = "$FROM" ] && echo 1)" "$after"
   check "$ENV" "undo: site answers" "$([ "$(code /)" = 200 ] && echo 1)" "home $(code /)"
+  check "$ENV" "undo: requirement kept" "$([ "$(requirement)" = "${CONSTRAINT:->=$FROM}" ] && echo 1)" "$(requirement)"
   check "$ENV" "undo: db changes reversed" "$([ "$(( m0 - $(migrations_ran) ))" = "${MIGRATED:-0}" ] && echo 1)" "${MIGRATED:-0} to reverse, $(( m0 - $(migrations_ran) )) reversed"
 }
 
@@ -188,6 +196,7 @@ update_cli() {
   check "$ENV" "update (cli): health check ran" "$(echo "$out" | grep -q 'answering normally after the update' && echo 1)" "$(echo "$out" | grep -iE 'answering|not answering' | tail -1 | cut -c1-90)"
   check "$ENV" "update (cli): version moved" "$([ -n "$v" ] && [ "$v" != "$FROM" ] && echo 1)" "$FROM → $v"
   check "$ENV" "update (cli): site answers" "$([ "$(code /)" = 200 ] && echo 1)" "home $(code /)"
+  check "$ENV" "update (cli): requirement kept" "$([ "$(requirement)" = "${CONSTRAINT:->=$FROM}" ] && echo 1)" "$(requirement)"
   m1=$(migrations_ran); MIGRATED=$((m1 - m0))
   check "$ENV" "update (cli): db changes recorded" "$([ "$(recorded)" = "$MIGRATED" ] && echo 1)" "$MIGRATED ran, $(recorded) recorded"
 }
@@ -210,6 +219,7 @@ update_web() { # api key
   check "$ENV" "update (web): health check ran" "$(echo "$log" | grep -q 'answering normally after the update' && echo 1)" "$(echo "$log" | grep -iE 'answering' | tail -1 | cut -c1-90)"
   check "$ENV" "update (web): version moved" "$([ -n "$v" ] && [ "$v" != "$FROM" ] && echo 1)" "$FROM → $v"
   check "$ENV" "update (web): site answers" "$([ "$(code /)" = 200 ] && echo 1)" "home $(code /)"
+  check "$ENV" "update (web): requirement kept" "$([ "$(requirement)" = "${CONSTRAINT:->=$FROM}" ] && echo 1)" "$(requirement)"
   m1=$(migrations_ran); MIGRATED=$((m1 - m0))
   check "$ENV" "update (web): db changes recorded" "$([ "$(recorded)" = "$MIGRATED" ] && echo 1)" "$MIGRATED ran, $(recorded) recorded"
 }
