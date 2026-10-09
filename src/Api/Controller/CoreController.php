@@ -88,11 +88,15 @@ class CoreController implements RequestHandlerInterface
      */
     private function newestCore(): ?array
     {
-        $cache = (array) json_decode(
-            (string) @file_get_contents($this->paths->storage.'/millwright/updates.json'),
-            true
-        );
+        /*
+         * 🚨 Measured against what is installed, as the extension cards are.
+         * The raw saved check still listed rc.8 → 2.0.0 after core had moved,
+         * so the panel read "This forum runs Flarum 2.0.0" above "Update
+         * Flarum to v2.0.0" until the next check (ClaudiusH, 2026-10-09).
+         */
+        $updates = (new \ErnestDefoe\Millwright\Work\UpdateCheck($this->paths->storage.'/millwright/updates.json'))
+            ->current($this->paths->base.'/composer.lock')['updates'] ?? [];
 
-        return ($cache['updates'] ?? [])['flarum/core'] ?? null;
+        return $updates['flarum/core'] ?? null;
     }
 }
