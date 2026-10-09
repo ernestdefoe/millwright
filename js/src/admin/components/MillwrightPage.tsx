@@ -27,7 +27,7 @@ interface Installed {
   icon: { backgroundColor?: string; color?: string; name?: string } | null;
   enabled: boolean;
   /** A hint from the cheap check: a newer version exists. Not a promise. */
-  update: { from: string; to: string } | null;
+  update: { from: string; to: string; notes?: string } | null;
   /** Installed from a local path, i.e. a symlink into somebody's checkout. */
   pathInstall: boolean;
 }
@@ -48,7 +48,11 @@ export default class MillwrightPage extends ExtensionPage {
   installed: Installed[] = [];
   updates: any = { available: {}, checkedAt: null, stale: true, uncheckable: [], tracking: [] };
   checking = false;
-  tab: 'installed' | 'history' | 'discover' | 'sources' | 'host' = 'installed';
+  /*
+   * Finding extensions is what most people open this page for (ClaudiusH,
+   * 2026-10-09). The dashboard's update banner links here with ?tab=installed.
+   */
+  tab: 'installed' | 'history' | 'discover' | 'sources' | 'host' = 'discover';
   history: any[] = [];
   run: any = null;
   driver: string | null = null;
@@ -93,6 +97,8 @@ export default class MillwrightPage extends ExtensionPage {
 
   oninit(vnode: any) {
     super.oninit(vnode);
+
+    if (m.route.param('tab') === 'installed') this.tab = 'installed';
 
     /*
      * 🚨 The safety net is armed BEFORE the thing it protects against, and the
@@ -213,9 +219,9 @@ export default class MillwrightPage extends ExtensionPage {
           {this.hidesPage() ? null : (
           <div className="Millwright-tabs" role="tablist">
             {[
+              { id: 'discover', label: t('tab_discover'), badge: 0 },
               { id: 'installed', label: t('tab_installed', { count: this.installed.length }), badge: this.updateCount() },
               { id: 'history', label: t('tab_history'), badge: 0 },
-              { id: 'discover', label: t('tab_discover'), badge: 0 },
               { id: 'sources', label: t('tab_sources'), badge: 0 },
               { id: 'host', label: t('tab_host'), badge: 0 },
             ].map((tab: any) => (
@@ -456,7 +462,10 @@ export default class MillwrightPage extends ExtensionPage {
   }
 
   /**
-   * The installed tab: Flarum itself, then anything to update, then the cards.
+   * The installed tab: whether anything is newer, then Flarum itself, then
+   * anything to update, then the cards. The check comes first because it is
+   * what people come to this tab for; the sidebar already lists what is
+   * installed (ClaudiusH, 2026-10-09).
    *
    * 🚨 Every entry is keyed AND the falsy ones are removed, because Mithril
    * requires that in a fragment either every vnode has a key or none does — and
@@ -471,6 +480,7 @@ export default class MillwrightPage extends ExtensionPage {
    */
   installedTab() {
     return [
+      this.checkLine(),
       /*
        * 🚨 Above the extensions, because it is the thing whose blast radius is
        * the whole forum. It is also the one panel that disables its own button —
@@ -483,7 +493,6 @@ export default class MillwrightPage extends ExtensionPage {
         onnightly={() => this.start(['flarum/core'], 'update', false, true)}
       />,
       this.updateAll(),
-      this.checkLine(),
       this.grid(),
     ].filter(Boolean);
   }
@@ -502,21 +511,45 @@ export default class MillwrightPage extends ExtensionPage {
     const n = this.updateCount();
     const uncheckable = (this.updates?.uncheckable || []).length;
     const tracking = (this.updates?.tracking || []).length;
+    const age = this.checkAge();
 
     return (
-      <div className="Millwright-checkline">
+      <div className={'Millwright-checkline Millwright-checkline--' + age}>
+        {age === 'overdue' ? <p className="Millwright-checkPrompt">{t('check_overdue')}</p> : null}
         <span>
           <b>{n === 0 ? t('none_newer') : t('some_newer', { count: n })}</b>{' '}
           {this.updates?.checkedAt ? t('checked_ago', { when: this.ago(this.updates.checkedAt) }) : t('never_checked')}
           {uncheckable > 0 ? ' ' + t('uncheckable', { count: uncheckable }) : ''}
           {tracking > 0 ? ' ' + t('tracking', { count: tracking }) : ''}
         </span>
-        <button className="Button Button--link Millwright-checkNow" disabled={this.checking} onclick={() => this.checkNow()}>
-          {/* A spinner as well as the words: "Checking…" alone reads as a label. */}
-          {this.checking ? <i className="fas fa-circle-notch fa-spin" aria-hidden="true" /> : null}
-          {this.checking ? t('checking') : t('check_now')}
-        </button>
+        {this.checkButton(age)}
       </div>
+    );
+  }
+
+  /**
+   * How hard to ask, by how old the last check is (ClaudiusH, 2026-10-09):
+   * checked today, a quiet link to check again; within the week, an ordinary
+   * button; older than that, or never, a prompt that says why it matters.
+   */
+  checkAge(): 'fresh' | 'recent' | 'overdue' {
+    const at = this.updates?.checkedAt;
+    if (!at) return 'overdue';
+
+    const days = (Date.now() / 1000 - at) / 86400;
+
+    return days < 1 ? 'fresh' : days <= 7 ? 'recent' : 'overdue';
+  }
+
+  checkButton(age: 'fresh' | 'recent' | 'overdue') {
+    const className = age === 'fresh' ? 'Button Button--link' : age === 'recent' ? 'Button' : 'Button Button--primary';
+
+    return (
+      <button className={className + ' Millwright-checkNow'} disabled={this.checking} onclick={() => this.checkNow()}>
+        {/* A spinner as well as the words: "Checking…" alone reads as a label. */}
+        {this.checking ? <i className="fas fa-circle-notch fa-spin" aria-hidden="true" /> : null}
+        {this.checking ? t('checking') : age === 'fresh' ? t('check_now') : t('check_for_updates')}
+      </button>
     );
   }
 
@@ -619,6 +652,21 @@ export default class MillwrightPage extends ExtensionPage {
               </span>
 
               <span className="Millwright-actions">
+                {/*
+                  * What the update gives you, from the release on GitHub: not
+                  * every author posts changelogs anywhere else.
+                  */}
+                {e.update?.notes ? (
+                  <a
+                    className="Button Button--link Button--sm Millwright-notes"
+                    href={e.update.notes}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={t('release_notes_title', { version: e.update.to })}
+                  >
+                    {t('release_notes')}
+                  </a>
+                ) : null}
                 {cardOffers(e).update ? (
                   <button
                     className="Button Button--primary Button--sm"

@@ -104,7 +104,7 @@ export default class UpdateBanner extends Component {
         </div>
         <div className="Millwright-banner-actions">
           {LinkButton.component(
-            { className: 'Button Button--primary', href: app.route('extension', { id: 'ernestdefoe-millwright' }) },
+            { className: 'Button Button--primary', href: app.route('extension', { id: 'ernestdefoe-millwright', tab: 'installed' }) },
             t('banner_open')
           )}
           {Button.component({ className: 'Button Button--link', onclick: () => this.dismiss() }, t('banner_dismiss'))}

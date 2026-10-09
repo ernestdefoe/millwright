@@ -16,6 +16,10 @@ ernestdefoe-millwright:
     uncheckable: "{count} could not be checked — no repository this forum knows about lists them."
     tracking: "{count} track a branch, so there is no version to compare."
     check_now: Check now
+    check_for_updates: Check for updates
+    check_overdue: Check for updates to get the latest security fixes and features for your extensions.
+    release_notes: Release notes
+    release_notes_title: "What's new in {version}, on GitHub"
     checking: Checking…
 
     banner_title: "{count} package(s) have a newer version"
@@ -27,9 +31,9 @@ ernestdefoe-millwright:
     banner_more: "and {count} more"
     banner_open: Take a look
     banner_dismiss: Not now
-    ago_minutes: "{count} minutes ago"
-    ago_hours: "{count} hours ago"
-    ago_days: "{count} days ago"
+    ago_minutes: "{count, plural, one {# minute} other {# minutes}} ago"
+    ago_hours: "{count, plural, one {# hour} other {# hours}} ago"
+    ago_days: "{count, plural, one {# day} other {# days}} ago"
 
     # 🚨 "Update", never "Upgrade". An upgrade sounds like a decision; an update
     # sounds like maintenance, and this is maintenance.

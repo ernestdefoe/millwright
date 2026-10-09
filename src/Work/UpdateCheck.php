@@ -25,6 +25,15 @@ namespace ErnestDefoe\Millwright\Work;
  */
 class UpdateCheck
 {
+    /**
+     * Where each version's release notes live, as read from Packagist while
+     * checking: package => version => URL. Filled by fromPackagist(), so a
+     * check costs no request beyond the one it already makes.
+     *
+     * @var array<string,array<string,string>>
+     */
+    private array $releaseNotes = [];
+
     public function __construct(
         private string $cachePath,
         private int $freshFor = 21600,        // six hours
@@ -119,6 +128,13 @@ class UpdateCheck
 
             if ($newest !== null && $this->isNewer($newest, $version)) {
                 $found[$name] = ['from' => $version, 'to' => $newest];
+
+                // "What does this update give me?" (ClaudiusH, 2026-10-09). A
+                // link to the release, never a guess: absent when the package
+                // is not on GitHub.
+                if (isset($this->releaseNotes[$name][$newest])) {
+                    $found[$name]['notes'] = $this->releaseNotes[$name][$newest];
+                }
             }
         }
 
@@ -278,9 +294,74 @@ class UpdateCheck
             return null;
         }
 
-        return array_values(array_filter(array_map(
-            fn ($v) => isset($v['version']) ? (string) $v['version'] : null,
-            $versions
-        )));
+        [$list, $notes] = self::readP2($versions);
+        $this->releaseNotes[$name] = $notes;
+
+        return $list;
+    }
+
+    /**
+     * The versions in a Packagist p2 response, and each one's GitHub release.
+     *
+     * 🚨 p2 is MINIFIED: each entry repeats only what changed since the one
+     * before it, and `__unset` removes a key. `source` is usually given once, on
+     * the first entry, so reading each entry on its own found a repository for
+     * the newest version and nothing for the rest. Expanded here as Composer's
+     * MetadataMinifier does.
+     *
+     * The tag is the version as written (`v1.2.0` or `1.2.0`), which is the
+     * name Packagist read from the repository.
+     *
+     * @param list<array<string,mixed>> $entries
+     * @return array{0: list<string>, 1: array<string,string>}
+     */
+    public static function readP2(array $entries): array
+    {
+        $versions = [];
+        $notes = [];
+        $current = [];
+
+        foreach ($entries as $entry) {
+            if (! is_array($entry)) {
+                continue;
+            }
+
+            foreach ($entry as $key => $value) {
+                if ($value === '__unset') {
+                    unset($current[$key]);
+                } else {
+                    $current[$key] = $value;
+                }
+            }
+
+            if (! isset($current['version'])) {
+                continue;
+            }
+
+            $version = (string) $current['version'];
+            $versions[] = $version;
+
+            $url = self::releaseUrl((string) ($current['source']['url'] ?? ''), $version);
+
+            if ($url !== null) {
+                $notes[$version] = $url;
+            }
+        }
+
+        return [$versions, $notes];
+    }
+
+    /**
+     * A tagged version's release page on GitHub, or null for anything else: a
+     * branch has no release, and other hosts lay their pages out differently.
+     */
+    public static function releaseUrl(string $sourceUrl, string $version): ?string
+    {
+        if (self::tracksABranch($version)
+            || ! preg_match('#^(?:https?://|git@)github\.com[/:]([\w.-]+)/([\w.-]+?)(?:\.git)?/?$#', $sourceUrl, $m)) {
+            return null;
+        }
+
+        return 'https://github.com/'.$m[1].'/'.$m[2].'/releases/tag/'.rawurlencode($version);
     }
 }

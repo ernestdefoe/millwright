@@ -1650,6 +1650,9 @@
 
 .Millwright-checkNow .fa-spin { margin-right: 6px; }
 
+.Millwright-checkPrompt { flex-basis: 100%; margin: 0; font-weight: 600; color: var(--text-color); }
+.Millwright-checkline--overdue { border-color: var(--primary-color); }
+
 // ── recent updates ───────────────────────────────────────────────────────────
 
 .Millwright-history { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
@@ -1691,8 +1694,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px 16px;
-  margin-top: 14px;
-  padding-top: 14px;
+  // Inside .Millwright-core, which has no padding of its own: each part pads
+  // itself. Without this the text sat against the panel's border (ClaudiusH).
+  padding: 14px @mw-pad;
   border-top: 1px solid var(--control-bg);
   color: var(--muted-color);
   font-size: 13px;

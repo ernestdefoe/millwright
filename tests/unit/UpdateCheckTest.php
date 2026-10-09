@@ -246,4 +246,57 @@ class UpdateCheckTest extends TestCase
         // Part of the way there: still offered, from where it really is now.
         $this->assertSame(['from' => '2.0.0', 'to' => '2.0.2'], $updates['fof/upload']);
     }
+
+    public function test_p2_is_expanded_so_every_version_gets_its_release_link(): void
+    {
+        // As Packagist sends it: source on the first entry only, inherited after.
+        [$versions, $notes] = UpdateCheck::readP2([
+            ['version' => 'v1.2.0', 'source' => ['url' => 'https://github.com/acme/widget.git', 'type' => 'git']],
+            ['version' => 'v1.1.0'],
+            ['version' => 'dev-main'],
+        ]);
+
+        $this->assertSame(['v1.2.0', 'v1.1.0', 'dev-main'], $versions);
+        $this->assertSame([
+            'v1.2.0' => 'https://github.com/acme/widget/releases/tag/v1.2.0',
+            'v1.1.0' => 'https://github.com/acme/widget/releases/tag/v1.1.0',
+        ], $notes);
+    }
+
+    public function test_an_unset_source_stops_being_inherited(): void
+    {
+        [, $notes] = UpdateCheck::readP2([
+            ['version' => '2.0.0', 'source' => ['url' => 'https://github.com/acme/widget.git']],
+            ['version' => '1.0.0', 'source' => '__unset'],
+        ]);
+
+        $this->assertSame(['2.0.0'], array_keys($notes));
+    }
+
+    public function test_only_github_tags_get_a_release_link(): void
+    {
+        $this->assertSame('https://github.com/a/b/releases/tag/1.0.0', UpdateCheck::releaseUrl('git@github.com:a/b.git', '1.0.0'));
+        $this->assertSame('https://github.com/a/b.c/releases/tag/1.0.0', UpdateCheck::releaseUrl('https://github.com/a/b.c', '1.0.0'));
+        $this->assertNull(UpdateCheck::releaseUrl('https://gitlab.com/a/b.git', '1.0.0'));
+        $this->assertNull(UpdateCheck::releaseUrl('https://github.com/a/b.git', 'dev-main'));
+        $this->assertNull(UpdateCheck::releaseUrl('https://github.com.evil.example/a/b.git', '1.0.0'));
+    }
+
+    public function test_an_update_carries_its_release_link_and_keeps_it_after_a_partial_update(): void
+    {
+        $check = $this->check();
+        $notes = new \ReflectionProperty(UpdateCheck::class, 'releaseNotes');
+        $notes->setValue($check, ['a/b' => ['3.0.0' => 'https://github.com/a/b/releases/tag/3.0.0']]);
+
+        $result = $check->refresh(['a/b' => '1.0.0'], $this->feed(['a/b' => ['1.0.0', '2.0.0', '3.0.0']]));
+
+        $this->assertSame('https://github.com/a/b/releases/tag/3.0.0', $result['updates']['a/b']['notes']);
+
+        $lock = $this->cache.'.lock';
+        file_put_contents($lock, json_encode(['packages' => [['name' => 'a/b', 'version' => '2.0.0', 'type' => 'flarum-extension']]]));
+        $current = $check->current($lock);
+        @unlink($lock);
+
+        $this->assertSame(['from' => '2.0.0', 'to' => '3.0.0', 'notes' => 'https://github.com/a/b/releases/tag/3.0.0'], $current['updates']['a/b']);
+    }
 }
