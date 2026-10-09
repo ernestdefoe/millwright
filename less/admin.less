@@ -1703,3 +1703,32 @@
 
   b { color: var(--text-color); }
 }
+
+// ── release notes modal ──────────────────────────────────────────────────────
+
+.Millwright-release {
+  & + & { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--control-bg); }
+
+  h4 {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0 0 8px;
+    font-size: 16px;
+
+    time { color: var(--muted-color); font-size: 12px; font-weight: normal; }
+  }
+}
+
+.Millwright-releaseBody {
+  overflow-wrap: anywhere;
+
+  h1, h2, h3 { font-size: 15px; margin: 14px 0 6px; }
+  h4, h5, h6 { font-size: 14px; margin: 12px 0 4px; }
+  ul, ol { padding-left: 22px; }
+  pre { white-space: pre-wrap; }
+  table { display: block; overflow-x: auto; }
+}
+
+.Millwright-releaseEmpty { color: var(--muted-color); }
+.Millwright-notesLink { margin: 18px 0 0; }

@@ -299,4 +299,15 @@ class UpdateCheckTest extends TestCase
 
         $this->assertSame(['from' => '2.0.0', 'to' => '3.0.0', 'notes' => 'https://github.com/a/b/releases/tag/3.0.0'], $current['updates']['a/b']);
     }
+
+    public function test_a_private_package_gets_its_release_link_from_the_second_source(): void
+    {
+        $result = $this->check()->refresh(
+            ['acme/paid' => '1.0.0'],
+            $this->feed(['acme/paid' => ['1.0.0', '1.1.0']]),
+            fn (string $name) => $name === 'acme/paid' ? ['1.1.0' => 'https://github.com/acme/paid/releases/tag/1.1.0'] : [],
+        );
+
+        $this->assertSame('https://github.com/acme/paid/releases/tag/1.1.0', $result['updates']['acme/paid']['notes']);
+    }
 }

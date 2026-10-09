@@ -81,9 +81,11 @@ class UpdateCheck
      * @param array<string,string> $installed package => installed version
      * @param callable(string):?array $fetch  overridable so this is testable
      *                                        without a network
+     * @param callable(string):array<string,string>|null $notesFor release links
+     *        for packages Packagist does not know, version => URL
      * @return array<string,mixed>
      */
-    public function refresh(array $installed, ?callable $fetch = null): array
+    public function refresh(array $installed, ?callable $fetch = null, ?callable $notesFor = null): array
     {
         $fetch ??= fn (string $name) => $this->fromPackagist($name);
 
@@ -132,8 +134,11 @@ class UpdateCheck
                 // "What does this update give me?" (ClaudiusH, 2026-10-09). A
                 // link to the release, never a guess: absent when the package
                 // is not on GitHub.
-                if (isset($this->releaseNotes[$name][$newest])) {
-                    $found[$name]['notes'] = $this->releaseNotes[$name][$newest];
+                $notes = $this->releaseNotes[$name][$newest]
+                    ?? ($notesFor ? ($notesFor($name)[$newest] ?? null) : null);
+
+                if ($notes !== null) {
+                    $found[$name]['notes'] = $notes;
                 }
             }
         }
@@ -162,6 +167,26 @@ class UpdateCheck
         @file_put_contents($this->cachePath, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
         return $result;
+    }
+
+    /**
+     * Packagist first, then the site's own private repositories: the check the
+     * console command and "Check now" both run.
+     *
+     * 🚨 One place, because they drifted. "Check now" asked Packagist alone,
+     * so pressing it dropped every private extension's update that the nightly
+     * check had found, until the next night put them back.
+     *
+     * @param array<string,string> $installed
+     * @return array<string,mixed>
+     */
+    public function refreshWith(array $installed, PrivateIndex $private): array
+    {
+        return $this->refresh(
+            $installed,
+            fn (string $name) => $this->fromPackagist($name) ?? $private->versionsFor($name),
+            fn (string $name) => $private->releaseNotesFor($name),
+        );
     }
 
     /** @return array<string,mixed> */

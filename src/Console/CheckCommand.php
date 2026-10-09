@@ -75,10 +75,7 @@ class CheckCommand extends AbstractCommand
             new AuthTokens(new JsonFile($this->paths->base.'/auth.json')),
         );
 
-        $result = $check->refresh(
-            $installed,
-            fn (string $name) => $check->fromPackagist($name) ?? $private->versionsFor($name)
-        );
+        $result = $check->refreshWith($installed, $private);
         $count = count($result['updates']);
 
         $this->info($count === 0

@@ -3,6 +3,7 @@
 use ErnestDefoe\Millwright\Api\Controller;
 use ErnestDefoe\Millwright\Console\CheckCommand;
 use ErnestDefoe\Millwright\Console\PruneCommand;
+use ErnestDefoe\Millwright\Console\RebuildAssetsCommand;
 use ErnestDefoe\Millwright\Console\RepairFormatterCommand;
 use ErnestDefoe\Millwright\Console\UpdateCommand;
 use ErnestDefoe\Millwright\MillwrightServiceProvider;
@@ -25,6 +26,7 @@ return [
          * loads a half-old class map.
          */
         ->command(RepairFormatterCommand::class)
+        ->command(RebuildAssetsCommand::class)
         /*
          * 🚨 The same run the admin screen drives, with a terminal turning the
          * handle instead of a browser. Deliberately not scheduled, and never
@@ -67,6 +69,7 @@ return [
     (new Extend\Routes('api'))
         ->get('/millwright/state', 'millwright.state', Controller\StateController::class)
         ->post('/millwright/check', 'millwright.check', Controller\CheckController::class)
+        ->get('/millwright/release-notes', 'millwright.release-notes', Controller\ReleaseNotesController::class)
         ->post('/millwright/update', 'millwright.update', Controller\StartController::class)
         ->post('/millwright/step', 'millwright.step', Controller\StepController::class)
         ->post('/millwright/rollback', 'millwright.rollback', Controller\RollbackController::class)

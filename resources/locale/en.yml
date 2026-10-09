@@ -18,8 +18,12 @@ ernestdefoe-millwright:
     check_now: Check now
     check_for_updates: Check for updates
     check_overdue: Check for updates to get the latest security fixes and features for your extensions.
-    release_notes: Release notes
-    release_notes_title: "What's new in {version}, on GitHub"
+    learn_more: Learn more
+    notes_title: "{name}: what's new since {from}"
+    notes_on_github: See the releases on GitHub
+    notes_none: No release notes were published on GitHub for these versions.
+    notes_empty_release: No notes were written for this release.
+    notes_failed: The release notes could not be loaded from GitHub just now.
     checking: Checking…
 
     banner_title: "{count} package(s) have a newer version"

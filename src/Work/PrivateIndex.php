@@ -37,6 +37,9 @@ class PrivateIndex
     /** @var array<string, string|null> vcs url => the package it publishes */
     private array $packageNames = [];
 
+    /** @var array<string, array<string,string>> package => version => release URL */
+    private array $releaseNotes = [];
+
     public function __construct(
         private Repositories $repositories,
         private AuthTokens $auth,
@@ -87,10 +90,28 @@ class PrivateIndex
 
             foreach ($this->tags($repo) ?? [] as $tag) {
                 $found[$tag] = true;
+
+                $url = UpdateCheck::releaseUrl('https://github.com/'.$repo, $tag);
+
+                if ($url !== null) {
+                    $this->releaseNotes[$package][$tag] = $url;
+                }
             }
         }
 
         return $found === [] ? null : array_keys($found);
+    }
+
+    /**
+     * Release links for what versionsFor() found, version => URL. Only for
+     * repositories on GitHub; from a Composer index, only where it names the
+     * package's source.
+     *
+     * @return array<string,string>
+     */
+    public function releaseNotesFor(string $package): array
+    {
+        return $this->releaseNotes[$package] ?? [];
     }
 
     /**
@@ -274,6 +295,12 @@ class PrivateIndex
 
                 if ($version !== null && $version !== '') {
                     $list[] = $version;
+
+                    $url = UpdateCheck::releaseUrl((string) ($meta['source']['url'] ?? ''), $version);
+
+                    if ($url !== null) {
+                        $this->releaseNotes[(string) $name][$version] = $url;
+                    }
                 }
             }
 

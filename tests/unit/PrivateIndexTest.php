@@ -246,6 +246,34 @@ class PrivateIndexTest extends TestCase
         $this->assertNull($method->invoke($index, 'https://example.test/not-github'));
     }
 
+    /** A GitHub vcs repository's tags each get their release page, by tag name. */
+    public function test_github_tags_carry_their_release_links(): void
+    {
+        $index = $this->index(['repositories' => [['type' => 'vcs', 'url' => 'https://github.com/ernestdefoe/fantasy-flarum']]]);
+        $reflection = new ReflectionClass($index);
+        $reflection->getProperty('packageNames')->setValue($index, ['https://github.com/ernestdefoe/fantasy-flarum' => 'ernestdefoe/fantasy']);
+        $reflection->getProperty('tagLists')->setValue($index, ['ernestdefoe/fantasy-flarum' => ['v1.1.0', 'v1.0.0']]);
+
+        $this->assertSame(['v1.1.0', 'v1.0.0'], $index->versionsFor('ernestdefoe/fantasy'));
+        $this->assertSame([
+            'v1.1.0' => 'https://github.com/ernestdefoe/fantasy-flarum/releases/tag/v1.1.0',
+            'v1.0.0' => 'https://github.com/ernestdefoe/fantasy-flarum/releases/tag/v1.0.0',
+        ], $index->releaseNotesFor('ernestdefoe/fantasy'));
+        $this->assertSame([], $index->releaseNotesFor('ernestdefoe/unknown'));
+    }
+
+    /** A Composer index gives a release link only where it names a GitHub source. */
+    public function test_a_composer_index_links_releases_only_from_a_github_source(): void
+    {
+        $index = $this->index([]);
+        $this->parse($index, ['packages' => ['vendor/paid' => [
+            '1.1.0' => ['version' => '1.1.0', 'source' => ['url' => 'https://github.com/vendor/paid.git']],
+            '1.0.0' => ['version' => '1.0.0', 'dist' => ['url' => 'https://vendor.example/paid-1.0.0.zip']],
+        ]]]);
+
+        $this->assertSame(['1.1.0' => 'https://github.com/vendor/paid/releases/tag/1.1.0'], $index->releaseNotesFor('vendor/paid'));
+    }
+
     /** @return array<string, list<string>> */
     private function parse(PrivateIndex $index, array $payload): array
     {

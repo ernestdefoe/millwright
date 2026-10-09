@@ -2,6 +2,10 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use ErnestDefoe\Millwright\Config\AuthTokens;
+use ErnestDefoe\Millwright\Config\JsonFile;
+use ErnestDefoe\Millwright\Config\Repositories;
+use ErnestDefoe\Millwright\Work\PrivateIndex;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
@@ -42,7 +46,12 @@ class CheckController implements RequestHandlerInterface
             ], 500);
         }
 
-        $result = $check->refresh($check->interesting($packages));
+        // 🚨 The same check as the console command, private repositories
+        // included: see UpdateCheck::refreshWith().
+        $result = $check->refreshWith($check->interesting($packages), new PrivateIndex(
+            new Repositories(new JsonFile($this->paths->base.'/composer.json')),
+            new AuthTokens(new JsonFile($this->paths->base.'/auth.json')),
+        ));
 
         return new JsonResponse([
             'updates' => [
@@ -50,6 +59,7 @@ class CheckController implements RequestHandlerInterface
                 'checkedAt' => $result['checkedAt'],
                 'stale' => false,
                 'uncheckable' => $result['uncheckable'],
+                'tracking' => $result['tracking'],
             ],
         ]);
     }

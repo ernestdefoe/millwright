@@ -6,6 +6,7 @@ import { cardOffers, dismissalApplies, hidesPage, runIsLive, showingRun, sortFor
 import ExtensionPage from 'flarum/admin/components/ExtensionPage';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Link from 'flarum/common/components/Link';
+import ReleaseNotesModal from './ReleaseNotesModal';
 import HostPanel from './HostPanel';
 import TrashPanel from './TrashPanel';
 import RunPanel from './RunPanel';
@@ -657,15 +658,12 @@ export default class MillwrightPage extends ExtensionPage {
                   * every author posts changelogs anywhere else.
                   */}
                 {e.update?.notes ? (
-                  <a
+                  <button
                     className="Button Button--link Button--sm Millwright-notes"
-                    href={e.update.notes}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title={t('release_notes_title', { version: e.update.to })}
+                    onclick={() => app.modal.show(ReleaseNotesModal, { name: e.name, package: e.package, from: e.update!.from, to: e.update!.to })}
                   >
-                    {t('release_notes')}
-                  </a>
+                    {t('learn_more')}
+                  </button>
                 ) : null}
                 {cardOffers(e).update ? (
                   <button

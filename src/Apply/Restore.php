@@ -153,6 +153,8 @@ class Restore
             ['assets:publish', []],
             ['cache:clear', []],
             ['millwright:repair-formatter', $inProcess ? ['--flush-only' => true] : []],
+            // Or the browser keeps the undone version's JavaScript and strings.
+            ['millwright:rebuild-assets', $inProcess ? ['--mark-dirty' => true] : []],
         ];
 
         foreach ($commands as [$command, $options]) {
@@ -165,7 +167,7 @@ class Restore
             if ($result['code'] !== 0) {
                 return "The files are back, but `php flarum $command` failed, so the forum may still be serving "
                     .'the newer version\'s assets. Run `php flarum assets:publish`, `php flarum cache:clear` and '
-                    .'`php flarum millwright:repair-formatter` to finish.';
+                    .'`php flarum millwright:repair-formatter` and `php flarum millwright:rebuild-assets` to finish.';
             }
         }
 

@@ -772,8 +772,11 @@ class ComposerSteps implements Steps
     {
         $this->flarum('cache:clear', 'cleared');
         $this->flarum('millwright:repair-formatter', 'formatter rebuilt');
+        // Before Flarum 2.0.0, cache:clear leaves the compiled bundles as they
+        // were: the update's new screen never reached the browser.
+        $this->flarum('millwright:rebuild-assets', 'assets rebuilt');
 
-        return 'caches cleared and the formatter rebuilt';
+        return 'caches cleared, the formatter and the compiled assets rebuilt';
     }
 
     /**
