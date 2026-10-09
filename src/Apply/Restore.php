@@ -171,7 +171,7 @@ class Restore
             }
         }
 
-        $undone[] = 'assets and caches rebuilt';
+        $undone[] = 'Assets and caches rebuilt';
 
         /*
          * 🚨 And the web server's compiled-code cache, as an update's finish

@@ -18,6 +18,13 @@ import HistoryTab from './HistoryTab';
 /** This extension's own package: updating it means this page's code is out of date. */
 const SELF_PACKAGE = 'ernestdefoe/millwright';
 
+/** Flarum's id for an extension package, as core derives it (Extension::nameToId). */
+function extensionId(name: string): string {
+  const at = name.indexOf('/');
+  const pkg = at < 0 ? name : name.slice(at + 1);
+  return (at < 0 ? name : name.slice(0, at)) + '-' + pkg.replace(/flarum-ext-|flarum-/g, '');
+}
+
 declare const m: any;
 
 interface Installed {
@@ -297,7 +304,14 @@ export default class MillwrightPage extends ExtensionPage {
   private reloadIfSelf(run: any) {
     // Flarum core too: the page's own JavaScript and version are core's.
     const reloads = (run?.packages || []).some((p: string) => p === SELF_PACKAGE || p === 'flarum/core');
-    if (!run || !['done', 'rolled-back'].includes(run.state) || !reloads) return;
+    /*
+     * 🚨 And after an install. A new extension is missing from the admin
+     * sidebar until the page reloads, so it could not be opened and switched
+     * on, which is the obvious next step (ClaudiusH, 2026-10-09). Like
+     * Extension Manager, reload onto its own page.
+     */
+    const installed = run?.state === 'done' && run.mode === 'install' && (run.packages || []).length === 1 ? run.packages[0] : null;
+    if (!run || !['done', 'rolled-back'].includes(run.state) || (!reloads && !installed)) return;
 
     const key = 'millwright.reloaded.' + run.id + '.' + run.state;
 
@@ -306,6 +320,15 @@ export default class MillwrightPage extends ExtensionPage {
       sessionStorage.setItem(key, '1');
     } catch (e) {
       return; // No way to remember it: better a stale page than a reload loop.
+    }
+
+    if (installed) {
+      // The run is dismissed first, or its panel would greet them on the way back.
+      this.dismissed = true;
+      this.rememberDismissed(run.id);
+      // app.route() is a route path ("/extension/x"), not a URL; the admin
+      // routes on the hash. Set synchronously, so the reload lands on it.
+      window.location.hash = app.route('extension', { id: this.installed.find((e) => e.package === installed)?.id ?? extensionId(installed) });
     }
 
     window.location.reload();
@@ -374,7 +397,8 @@ export default class MillwrightPage extends ExtensionPage {
           disabled={this.starting}
           onclick={() => (pinned.length ? this.confirmRepin(pinned, names) : this.start(names))}
         >
-          {this.starting ? t('starting') : t('update_all', { count: names.length })}
+          {/* "Update all 1" read oddly (ClaudiusH): one update is named. */}
+          {this.starting ? t('starting') : names.length === 1 ? t('update_one', { name: updatable[0].name }) : t('update_all', { count: names.length })}
         </button>
       </div>
     );

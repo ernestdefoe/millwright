@@ -545,7 +545,7 @@ class ComposerSteps implements Steps
 
         $this->fetcher->fetch($package, $source);
 
-        return "downloaded $package";
+        return "Downloaded $package";
     }
 
     /**
@@ -707,7 +707,7 @@ class ComposerSteps implements Steps
         return match ($item) {
             'register' => $this->register(),
             'migrations' => $this->migrate(),
-            'assets' => $this->flarum('assets:publish', 'assets published'),
+            'assets' => $this->flarum('assets:publish', 'Assets published'),
             'caches' => $this->clearCaches(),
             'check the site again' => $this->verify($run),
             'tidy the trash' => $this->tidyTrash(),
@@ -776,7 +776,7 @@ class ComposerSteps implements Steps
         // were: the update's new screen never reached the browser.
         $this->flarum('millwright:rebuild-assets', 'assets rebuilt');
 
-        return 'caches cleared, the formatter and the compiled assets rebuilt';
+        return 'Caches cleared; the formatter and the compiled assets rebuilt';
     }
 
     /**
@@ -1015,7 +1015,7 @@ class ComposerSteps implements Steps
     private function checkPermissions(): string
     {
         if ($this->vendorPath === '' || $this->storagePath === '') {
-            return 'file permissions not checked on this host';
+            return 'File permissions not checked on this host';
         }
 
         // A root-owned cache is moved aside rather than refused; see StaleCache.
@@ -1037,7 +1037,7 @@ class ComposerSteps implements Steps
             throw new RuntimeException($permissions->explain($blocked));
         }
 
-        return 'every file this update changes is writable'.($setAside !== '' ? '. '.$setAside : '');
+        return 'Every file this update changes is writable'.($setAside !== '' ? '. '.$setAside : '');
     }
 
     /**
@@ -1175,7 +1175,7 @@ class ComposerSteps implements Steps
         $this->flarum('migrate', 'migrations run');
         $added = $ledger->after($db, resolve(ExtensionManager::class), $this->vendorPath);
 
-        return $added === [] ? 'migrations run (no database changes)' : 'migrations run: '.count($added).' database change(s), which undoing this update reverses';
+        return $added === [] ? 'Migrations run (no database changes)' : 'Migrations run: '.count($added).' database change(s), which undoing this update reverses';
     }
 
     private function flarum(string $command, string $note): string

@@ -49,6 +49,8 @@ ernestdefoe-millwright:
       composer.json will be updated to require the new version before anything
       is downloaded. A rollback puts the requirement back too.
     update_all: "Update all {count}"
+    update_one: "Update {name}"
+    run_details: Update details
     starting: Starting…
     start_failed: >-
       The update could not be started, and the forum did not say why. Nothing has

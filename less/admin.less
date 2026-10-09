@@ -1732,3 +1732,8 @@
 
 .Millwright-releaseEmpty { color: var(--muted-color); }
 .Millwright-notesLink { margin: 18px 0 0; }
+
+.Millwright-details {
+  > summary { cursor: pointer; padding: 10px @mw-pad; color: var(--muted-color); font-size: 13px; }
+  &[open] > summary { padding-bottom: 4px; }
+}

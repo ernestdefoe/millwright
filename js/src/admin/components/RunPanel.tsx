@@ -226,11 +226,19 @@ export default class RunPanel extends Component<RunPanelAttrs> {
           </div>
         ) : null}
 
-        <ol className="Millwright-log">
-          {(run.log || []).map((line: string, i: number) => (
-            <li key={i}>{line}</li>
-          ))}
-        </ol>
+        {/*
+          * The step-by-step log, for the curious: the phases and the bar above
+          * already say what is happening (ClaudiusH, 2026-10-09). Open on a
+          * failure, where it is the evidence.
+          */}
+        <details className="Millwright-details" open={failed || rolled}>
+          <summary>{t('run_details')}</summary>
+          <ol className="Millwright-log">
+            {(run.log || []).map((line: string, i: number) => (
+              <li key={i}>{line}</li>
+            ))}
+          </ol>
+        </details>
       </div>
     );
   }
