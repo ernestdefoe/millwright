@@ -73,7 +73,10 @@ export function hidesPage(run: RunLike | null | undefined, dismissed: boolean): 
  * never restored for a live one — dismissing must not become a way to hide an
  * update that is halfway through applying itself.
  */
-export function dismissalApplies(run: RunLike | null | undefined, storedId: string | null): boolean {
+export function dismissalApplies(
+  run: RunLike | null | undefined,
+  storedId: string | null
+): boolean {
   if (!run || !run.id || !storedId) return false;
   if (runIsLive(run)) return false;
 
@@ -143,10 +146,12 @@ export function pollOutcome(status: number | null, misses: number): PollOutcome 
 
 export interface CardLike {
   update?: { from: string; to: string } | null;
-  enabled?: boolean;
+  enabled?: boolean | null;
   pathInstall?: boolean;
   /** What composer.json requires, e.g. "3.5.1", "^3.5", "dev-main". */
   constraint?: string | null;
+  /** A Composer library the forum requires itself: no settings, nothing to enable. */
+  library?: boolean;
 }
 
 /**
@@ -189,7 +194,11 @@ export function cardOffers(card: CardLike) {
      * the button a no-op that reports success.
      */
     repin: canAct && isExactPin(card.constraint),
-    remove: !card.enabled && !card.pathInstall,
+    /*
+     * Not for a library: nothing says whether the forum's config relies on it
+     * (fof/redis is wired in config.php), so removing one could take the site down.
+     */
+    remove: !card.library && !card.enabled && !card.pathInstall,
   };
 }
 

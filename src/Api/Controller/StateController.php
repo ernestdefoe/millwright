@@ -113,6 +113,36 @@ class StateController implements RequestHandlerInterface
             ];
         }
 
+        /*
+         * 🚨 Libraries the forum requires itself, beside its extensions. They
+         * have no settings page, so they never had a card, and an update to
+         * one (fof/redis 2.0.0) went unseen. Dependencies pulled in by other
+         * packages are left out: nobody chose those.
+         */
+        $extensions = array_flip(array_column($out, 'package'));
+        $lock = $this->readJson($this->paths->base.'/composer.lock');
+
+        foreach (array_merge((array) ($lock['packages'] ?? []), (array) ($lock['packages-dev'] ?? [])) as $package) {
+            $name = (string) ($package['name'] ?? '');
+
+            if ($name === '' || $name === 'flarum/core' || isset($extensions[$name]) || ! isset($require[$name])) {
+                continue;
+            }
+
+            $out[] = [
+                'id' => $name,
+                'name' => $name,
+                'package' => $name,
+                'version' => (string) ($package['version'] ?? ''),
+                'icon' => null,
+                'enabled' => null,
+                'library' => true,
+                'update' => $updates[$name] ?? null,
+                'constraint' => $require[$name],
+                'pathInstall' => is_link($this->paths->vendor.'/'.$name),
+            ];
+        }
+
         usort($out, fn ($a, $b) => strcasecmp($a['name'], $b['name']));
 
         return $out;

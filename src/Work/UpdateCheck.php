@@ -41,6 +41,20 @@ class UpdateCheck
     }
 
     /**
+     * The packages a composer.json requires itself: names with a vendor, so
+     * not php, ext-* or lib-*.
+     *
+     * @return list<string>
+     */
+    public static function directRequires(string $composerJson): array
+    {
+        $data = is_file($composerJson) ? json_decode((string) file_get_contents($composerJson), true) : null;
+        $names = array_keys((array) (is_array($data) ? ($data['require'] ?? []) : []));
+
+        return array_values(array_filter($names, fn ($name) => is_string($name) && str_contains($name, '/')));
+    }
+
+    /**
      * 🚨 Only things the site actually chose.
      *
      * Running this against a real forum returned 59 "updates", of which nearly
@@ -54,11 +68,20 @@ class UpdateCheck
      * limited to Flarum extensions and Flarum itself — the things somebody
      * deliberately installed and might deliberately update.
      *
+     * 🚨 And to anything the forum's own composer.json requires. fof/redis is
+     * a Composer library, not an extension, so it has no settings page and
+     * was never reported: its stable release went unseen (Ernest,
+     * 2026-10-10). Required directly means somebody chose it; pulled in by
+     * another package means nobody did, and those stay quiet.
+     *
      * @param list<array{name:string,version:string,type?:string}> $packages
+     * @param list<string> $direct packages the root composer.json requires
      * @return array<string,string>
      */
-    public function interesting(array $packages): array
+    public function interesting(array $packages, array $direct = []): array
     {
+        $direct = array_flip($direct);
+
         $out = [];
 
         foreach ($packages as $package) {
@@ -69,7 +92,7 @@ class UpdateCheck
                 continue;
             }
 
-            if ($type === 'flarum-extension' || $name === 'flarum/core') {
+            if ($type === 'flarum-extension' || $name === 'flarum/core' || isset($direct[$name])) {
                 $out[$name] = (string) ($package['version'] ?? '');
             }
         }
@@ -215,7 +238,10 @@ class UpdateCheck
     {
         $cached = $this->cached();
         $lock = (array) json_decode((string) @file_get_contents($lockPath), true);
-        $now = $this->interesting(array_merge((array) ($lock['packages'] ?? []), (array) ($lock['packages-dev'] ?? [])));
+        $now = $this->interesting(
+            array_merge((array) ($lock['packages'] ?? []), (array) ($lock['packages-dev'] ?? [])),
+            self::directRequires(dirname($lockPath).'/composer.json')
+        );
 
         $updates = [];
 

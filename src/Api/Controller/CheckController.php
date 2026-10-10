@@ -48,7 +48,7 @@ class CheckController implements RequestHandlerInterface
 
         // 🚨 The same check as the console command, private repositories
         // included: see UpdateCheck::refreshWith().
-        $result = $check->refreshWith($check->interesting($packages), new PrivateIndex(
+        $result = $check->refreshWith($check->interesting($packages, UpdateCheck::directRequires($this->paths->base.'/composer.json')), new PrivateIndex(
             new Repositories(new JsonFile($this->paths->base.'/composer.json')),
             new AuthTokens(new JsonFile($this->paths->base.'/auth.json')),
         ));

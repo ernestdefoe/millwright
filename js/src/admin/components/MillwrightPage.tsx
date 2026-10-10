@@ -2,7 +2,14 @@ import app from 'flarum/admin/app';
 import t from '../t';
 import extractText from 'flarum/common/utils/extractText';
 import apiUrl from '../apiUrl';
-import { cardOffers, dismissalApplies, hidesPage, runIsLive, showingRun, sortForGrid } from '../runState';
+import {
+  cardOffers,
+  dismissalApplies,
+  hidesPage,
+  runIsLive,
+  showingRun,
+  sortForGrid,
+} from '../runState';
 import ExtensionPage from 'flarum/admin/components/ExtensionPage';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Link from 'flarum/common/components/Link';
@@ -33,13 +40,14 @@ interface Installed {
   package: string;
   version: string;
   icon: { backgroundColor?: string; color?: string; name?: string } | null;
-  enabled: boolean;
+  enabled: boolean | null;
+  /** A Composer library composer.json requires itself, e.g. fof/redis: no settings page. */
+  library?: boolean;
   /** A hint from the cheap check: a newer version exists. Not a promise. */
   update: { from: string; to: string; notes?: string } | null;
   /** Installed from a local path, i.e. a symlink into somebody's checkout. */
   pathInstall: boolean;
 }
-
 
 export default class MillwrightPage extends ExtensionPage {
   /*
@@ -217,52 +225,57 @@ export default class MillwrightPage extends ExtensionPage {
           {this.notice ? <div className="Millwright-notice">{this.notice}</div> : null}
 
           {/*
-            * 🚨 While a run is live the panel is the ONLY thing on screen, and
-            * the tabs go away. A grid of Update buttons beside a running update
-            * invites somebody to start a second one, and the honest answer to
-            * the second press is a refusal — better not to offer it.
-            */}
+           * 🚨 While a run is live the panel is the ONLY thing on screen, and
+           * the tabs go away. A grid of Update buttons beside a running update
+           * invites somebody to start a second one, and the honest answer to
+           * the second press is a refusal — better not to offer it.
+           */}
           {this.showingRun() ? this.runPanel() : null}
 
           {this.hidesPage() ? null : (
-          <div className="Millwright-tabs" role="tablist">
-            {[
-              { id: 'discover', label: t('tab_discover'), badge: 0 },
-              { id: 'installed', label: t('tab_installed', { count: this.installed.length }), badge: this.updateCount() },
-              { id: 'history', label: t('tab_history'), badge: 0 },
-              { id: 'sources', label: t('tab_sources'), badge: 0 },
-              { id: 'host', label: t('tab_host'), badge: 0 },
-            ].map((tab: any) => (
-              <button
-                key={tab.id}
-                role="tab"
-                aria-selected={this.tab === tab.id}
-                className={'Millwright-tab' + (this.tab === tab.id ? ' is-active' : '')}
-                onclick={() => (this.tab = tab.id)}
-              >
-                {tab.label}
-                {tab.badge > 0 ? <span className="Millwright-count">{tab.badge}</span> : null}
-              </button>
-            ))}
-          </div>
+            <div className="Millwright-tabs" role="tablist">
+              {[
+                { id: 'discover', label: t('tab_discover'), badge: 0 },
+                {
+                  id: 'installed',
+                  label: t('tab_installed', { count: this.installed.length }),
+                  badge: this.updateCount(),
+                },
+                { id: 'history', label: t('tab_history'), badge: 0 },
+                { id: 'sources', label: t('tab_sources'), badge: 0 },
+                { id: 'host', label: t('tab_host'), badge: 0 },
+              ].map((tab: any) => (
+                <button
+                  key={tab.id}
+                  role="tab"
+                  aria-selected={this.tab === tab.id}
+                  className={'Millwright-tab' + (this.tab === tab.id ? ' is-active' : '')}
+                  onclick={() => (this.tab = tab.id)}
+                >
+                  {tab.label}
+                  {tab.badge > 0 ? <span className="Millwright-count">{tab.badge}</span> : null}
+                </button>
+              ))}
+            </div>
           )}
 
-          {this.hidesPage()
-            ? null
-            : this.tab === 'host'
-              ? (
-                <div>
-                  <HostPanel host={this.host} onchange={() => this.load()} />
-                  <TrashPanel />
-                </div>
-              )
-              : this.tab === 'sources'
-                ? <SourcesTab />
-                : this.tab === 'history'
-                ? <HistoryTab history={this.history} installed={this.installed} />
-                : this.tab === 'discover'
-                ? <DiscoverTab starting={this.starting} oninstall={(name: string) => this.start([name], 'install')} />
-                : this.installedTab()}
+          {this.hidesPage() ? null : this.tab === 'host' ? (
+            <div>
+              <HostPanel host={this.host} onchange={() => this.load()} />
+              <TrashPanel />
+            </div>
+          ) : this.tab === 'sources' ? (
+            <SourcesTab />
+          ) : this.tab === 'history' ? (
+            <HistoryTab history={this.history} installed={this.installed} />
+          ) : this.tab === 'discover' ? (
+            <DiscoverTab
+              starting={this.starting}
+              oninstall={(name: string) => this.start([name], 'install')}
+            />
+          ) : (
+            this.installedTab()
+          )}
         </div>
       </div>
     );
@@ -303,14 +316,19 @@ export default class MillwrightPage extends ExtensionPage {
    */
   private reloadIfSelf(run: any) {
     // Flarum core too: the page's own JavaScript and version are core's.
-    const reloads = (run?.packages || []).some((p: string) => p === SELF_PACKAGE || p === 'flarum/core');
+    const reloads = (run?.packages || []).some(
+      (p: string) => p === SELF_PACKAGE || p === 'flarum/core'
+    );
     /*
      * 🚨 And after an install. A new extension is missing from the admin
      * sidebar until the page reloads, so it could not be opened and switched
      * on, which is the obvious next step (ClaudiusH, 2026-10-09). Like
      * Extension Manager, reload onto its own page.
      */
-    const installed = run?.state === 'done' && run.mode === 'install' && (run.packages || []).length === 1 ? run.packages[0] : null;
+    const installed =
+      run?.state === 'done' && run.mode === 'install' && (run.packages || []).length === 1
+        ? run.packages[0]
+        : null;
     if (!run || !['done', 'rolled-back'].includes(run.state) || (!reloads && !installed)) return;
 
     const key = 'millwright.reloaded.' + run.id + '.' + run.state;
@@ -328,7 +346,9 @@ export default class MillwrightPage extends ExtensionPage {
       this.rememberDismissed(run.id);
       // app.route() is a route path ("/extension/x"), not a URL; the admin
       // routes on the hash. Set synchronously, so the reload lands on it.
-      window.location.hash = app.route('extension', { id: this.installed.find((e) => e.package === installed)?.id ?? extensionId(installed) });
+      window.location.hash = app.route('extension', {
+        id: this.installed.find((e) => e.package === installed)?.id ?? extensionId(installed),
+      });
     }
 
     window.location.reload();
@@ -398,7 +418,11 @@ export default class MillwrightPage extends ExtensionPage {
           onclick={() => (pinned.length ? this.confirmRepin(pinned, names) : this.start(names))}
         >
           {/* "Update all 1" read oddly (ClaudiusH): one update is named. */}
-          {this.starting ? t('starting') : names.length === 1 ? t('update_one', { name: updatable[0].name }) : t('update_all', { count: names.length })}
+          {this.starting
+            ? t('starting')
+            : names.length === 1
+              ? t('update_one', { name: updatable[0].name })
+              : t('update_all', { count: names.length })}
         </button>
       </div>
     );
@@ -443,7 +467,12 @@ export default class MillwrightPage extends ExtensionPage {
    *        and exits 0, so a run in the wrong mode would pass every phase,
    *        change nothing, and report success.
    */
-  start(packages: string[], mode: 'update' | 'install' | 'remove' = 'update', repin = false, nightly = false) {
+  start(
+    packages: string[],
+    mode: 'update' | 'install' | 'remove' = 'update',
+    repin = false,
+    nightly = false
+  ) {
     this.starting = true;
     this.notice = null;
     this.rollbackNote = null;
@@ -569,7 +598,8 @@ export default class MillwrightPage extends ExtensionPage {
               ? t('none_newer')
               : n === 0
                 ? t('core_newer')
-                : t('some_newer', { count: n }) + (this.coreHasUpdate() ? ' ' + t('core_newer_too') : '')}
+                : t('some_newer', { count: n }) +
+                  (this.coreHasUpdate() ? ' ' + t('core_newer_too') : '')}
           </b>{' '}
           {t('checked_ago', { when: this.ago(this.updates.checkedAt) })}
           {uncheckable > 0 ? ' ' + t('uncheckable', { count: uncheckable }) : ''}
@@ -595,10 +625,19 @@ export default class MillwrightPage extends ExtensionPage {
   }
 
   checkButton(age: 'fresh' | 'recent' | 'overdue') {
-    const className = age === 'fresh' ? 'Button Button--link' : age === 'recent' ? 'Button' : 'Button Button--primary';
+    const className =
+      age === 'fresh'
+        ? 'Button Button--link'
+        : age === 'recent'
+          ? 'Button'
+          : 'Button Button--primary';
 
     return (
-      <button className={className + ' Millwright-checkNow'} disabled={this.checking} onclick={() => this.checkNow()}>
+      <button
+        className={className + ' Millwright-checkNow'}
+        disabled={this.checking}
+        onclick={() => this.checkNow()}
+      >
         {/* A spinner as well as the words: "Checking…" alone reads as a label. */}
         {this.checking ? <i className="fas fa-circle-notch fa-spin" aria-hidden="true" /> : null}
         {this.checking ? t('checking') : age === 'fresh' ? t('check_now') : t('check_for_updates')}
@@ -641,39 +680,63 @@ export default class MillwrightPage extends ExtensionPage {
     return sortForGrid(this.installed);
   }
 
+  cardTop(e: Installed) {
+    return [
+      <div
+        className="Millwright-icon"
+        style={{ background: e.icon?.backgroundColor || 'var(--primary-color)' }}
+      >
+        {e.library ? (
+          <i className="fas fa-box" />
+        ) : e.icon?.name ? (
+          <i className={e.icon.name} />
+        ) : (
+          e.name.charAt(0)
+        )}
+      </div>,
+      <div className="Millwright-cardId">
+        <div className="Millwright-name">{e.name}</div>
+        <div className="Millwright-pkg">{e.library ? t('library') : e.package}</div>
+      </div>,
+      /*
+       * 🚨 The words, at the top, where the eye lands — not only the version
+       * pair in the foot.
+       *
+       * "1.1.0 → 1.1.1" is precise and it is not a signal: it reads as metadata
+       * like every other version string on the page, so a grid of thirty cards
+       * gave no way to find the one card that needed attention without reading
+       * all of them.
+       */
+      cardOffers(e).badge && e.update ? (
+        <span className="Millwright-badge" title={e.update.from + ' → ' + e.update.to}>
+          {t('update_available')}
+        </span>
+      ) : null,
+    ];
+  }
+
   grid() {
     return (
       <div className="Millwright-grid">
         {this.sorted().map((e) => (
-          <div className={'Millwright-card' + (cardOffers(e).badge ? ' Millwright-card--update' : '')} key={e.id}>
-            {/* The extension's own settings page, the way the Extensions list opens it. */}
-            <Link className="Millwright-cardTop" href={app.route('extension', { id: e.id })} title={extractText(t('open_settings', { name: e.name }))}>
-              <div
-                className="Millwright-icon"
-                style={{ background: e.icon?.backgroundColor || 'var(--primary-color)' }}
+          <div
+            className={'Millwright-card' + (cardOffers(e).badge ? ' Millwright-card--update' : '')}
+            key={e.id}
+          >
+            {/* The extension's own settings page, the way the Extensions list opens it. A library has none. */}
+            {e.library ? (
+              <div className="Millwright-cardTop" title={extractText(t('library_why'))}>
+                {this.cardTop(e)}
+              </div>
+            ) : (
+              <Link
+                className="Millwright-cardTop"
+                href={app.route('extension', { id: e.id })}
+                title={extractText(t('open_settings', { name: e.name }))}
               >
-                {e.icon?.name ? <i className={e.icon.name} /> : e.name.charAt(0)}
-              </div>
-              <div className="Millwright-cardId">
-                <div className="Millwright-name">{e.name}</div>
-                <div className="Millwright-pkg">{e.package}</div>
-              </div>
-
-              {/*
-                * 🚨 The words, at the top, where the eye lands — not only the
-                * version pair in the foot.
-                *
-                * "1.1.0 → 1.1.1" is precise and it is not a signal: it reads as
-                * metadata like every other version string on the page, so a
-                * grid of thirty cards gave no way to find the one card that
-                * needed attention without reading all of them.
-                */}
-              {cardOffers(e).badge && e.update ? (
-                <span className="Millwright-badge" title={e.update.from + ' → ' + e.update.to}>
-                  {t('update_available')}
-                </span>
-              ) : null}
-            </Link>
+                {this.cardTop(e)}
+              </Link>
+            )}
 
             <div className="Millwright-meta">
               <span>{e.version || t('version_unknown')}</span>
@@ -681,16 +744,23 @@ export default class MillwrightPage extends ExtensionPage {
 
             <div className="Millwright-foot">
               {/*
-                * 🚨 Always two groups: what is TRUE about this extension on the
-                * left, what you can DO with it on the right. The foot is
-                * space-between, so loose chips get pushed to opposite ends of
-                * the card and read as unrelated — which is what "enabled" and
-                * "local checkout" did.
-                */}
+               * 🚨 Always two groups: what is TRUE about this extension on the
+               * left, what you can DO with it on the right. The foot is
+               * space-between, so loose chips get pushed to opposite ends of
+               * the card and read as unrelated — which is what "enabled" and
+               * "local checkout" did.
+               */}
               <span className="Millwright-tags">
                 {e.update ? (
                   <span className="Millwright-tag Millwright-tag--warn">
                     {e.update.from} → {e.update.to}
+                  </span>
+                ) : e.library ? (
+                  <span
+                    className="Millwright-tag Millwright-tag--muted"
+                    title={extractText(t('library_why'))}
+                  >
+                    {t('library')}
                   </span>
                 ) : (
                   <span className={'Millwright-tag' + (e.enabled ? ' Millwright-tag--ok' : '')}>
@@ -698,7 +768,10 @@ export default class MillwrightPage extends ExtensionPage {
                   </span>
                 )}
                 {e.pathInstall ? (
-                  <span className="Millwright-tag Millwright-tag--muted" title={t('path_install_why')}>
+                  <span
+                    className="Millwright-tag Millwright-tag--muted"
+                    title={t('path_install_why')}
+                  >
                     {t('path_install')}
                   </span>
                 ) : null}
@@ -706,13 +779,20 @@ export default class MillwrightPage extends ExtensionPage {
 
               <span className="Millwright-actions">
                 {/*
-                  * What the update gives you, from the release on GitHub: not
-                  * every author posts changelogs anywhere else.
-                  */}
+                 * What the update gives you, from the release on GitHub: not
+                 * every author posts changelogs anywhere else.
+                 */}
                 {e.update?.notes ? (
                   <button
                     className="Button Button--link Button--sm Millwright-notes"
-                    onclick={() => app.modal.show(ReleaseNotesModal, { name: e.name, package: e.package, from: e.update!.from, to: e.update!.to })}
+                    onclick={() =>
+                      app.modal.show(ReleaseNotesModal, {
+                        name: e.name,
+                        package: e.package,
+                        from: e.update!.from,
+                        to: e.update!.to,
+                      })
+                    }
                   >
                     {t('learn_more')}
                   </button>
@@ -721,13 +801,19 @@ export default class MillwrightPage extends ExtensionPage {
                   <button
                     className="Button Button--primary Button--sm"
                     disabled={this.starting}
-                    onclick={() => (cardOffers(e).repin ? this.confirmRepin(e) : this.start([e.package]))}
+                    onclick={() =>
+                      cardOffers(e).repin ? this.confirmRepin(e) : this.start([e.package])
+                    }
                   >
                     {t('update')}
                   </button>
                 ) : null}
                 {cardOffers(e).remove ? (
-                  <button className="Button Button--sm" disabled={this.starting} onclick={() => this.confirmRemove(e)}>
+                  <button
+                    className="Button Button--sm"
+                    disabled={this.starting}
+                    onclick={() => this.confirmRemove(e)}
+                  >
                     {t('remove')}
                   </button>
                 ) : null}

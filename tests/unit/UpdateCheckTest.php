@@ -141,6 +141,40 @@ class UpdateCheckTest extends TestCase
         );
     }
 
+    public function test_a_library_the_forum_requires_itself_is_checked_and_its_dependencies_are_not(): void
+    {
+        /*
+         * fof/redis is a Composer library, not an extension, so it went
+         * unreported and its stable release unseen (Ernest, 2026-10-10). The
+         * forum requires it in its own composer.json; predis/predis arrives
+         * with it, and nobody chose that.
+         */
+        $interesting = $this->check()->interesting([
+            ['name' => 'fof/redis', 'version' => 'v2.0.0-rc.3', 'type' => 'library'],
+            ['name' => 'predis/predis', 'version' => 'v2.4.0', 'type' => 'library'],
+            ['name' => 'ernestdefoe/page-builder', 'version' => '3.5.0', 'type' => 'flarum-extension'],
+        ], ['fof/redis', 'ernestdefoe/page-builder']);
+
+        $this->assertSame(['fof/redis', 'ernestdefoe/page-builder'], array_keys($interesting));
+    }
+
+    public function test_direct_requires_are_packages_not_platform_requirements(): void
+    {
+        $dir = sys_get_temp_dir().'/mw-req-'.bin2hex(random_bytes(6));
+        mkdir($dir);
+        file_put_contents($dir.'/composer.json', json_encode(['require' => [
+            'php' => '^8.3', 'ext-json' => '*', 'lib-pcre' => '*', 'flarum/core' => '^2.0', 'fof/redis' => '^2.0',
+        ]]));
+
+        try {
+            $this->assertSame(['flarum/core', 'fof/redis'], UpdateCheck::directRequires($dir.'/composer.json'));
+            $this->assertSame([], UpdateCheck::directRequires($dir.'/missing.json'));
+        } finally {
+            unlink($dir.'/composer.json');
+            rmdir($dir);
+        }
+    }
+
     public function test_a_never_checked_cache_reads_as_empty_rather_than_erroring(): void
     {
         $cached = $this->check()->cached();

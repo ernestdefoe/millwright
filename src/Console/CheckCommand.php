@@ -54,8 +54,8 @@ class CheckCommand extends AbstractCommand
             return 1;
         }
 
-        // 🚨 Extensions and Flarum only — see UpdateCheck::interesting().
-        $installed = $check->interesting($packages);
+        // 🚨 Extensions, Flarum, and what composer.json requires itself — see UpdateCheck::interesting().
+        $installed = $check->interesting($packages, UpdateCheck::directRequires($this->paths->base.'/composer.json'));
 
         /*
          * 🚨 Packagist first, then the site's own private repositories.

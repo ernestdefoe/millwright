@@ -5,6 +5,8 @@ ernestdefoe-millwright:
     enabled: enabled
     disabled: disabled
     version_unknown: version unknown
+    library: Composer package
+    library_why: A library this forum requires in its own composer.json. It has no settings page, and Millwright never offers to remove it.
 
     # 🚨 "A newer version exists" — never "an update is available". The cheap
     # check knows the first and cannot know the second, and a badge that
