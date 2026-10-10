@@ -197,8 +197,13 @@ export function cardOffers(card: CardLike) {
     /*
      * Not for a library: nothing says whether the forum's config relies on it
      * (fof/redis is wired in config.php), so removing one could take the site down.
+     *
+     * Not beside an update either: Update and Remove together wrapped the
+     * card's foot onto a second line, and with a newer version waiting the
+     * update is the action that matters. Remove comes back once it is current
+     * (ClaudiusH, 2026-10-10).
      */
-    remove: !card.library && !card.enabled && !card.pathInstall,
+    remove: !card.library && !card.enabled && !card.pathInstall && !hasUpdate,
   };
 }
 

@@ -141,6 +141,12 @@ describe('what a card in the grid offers', () => {
     expect(offers.badge).toBe(true);
   });
 
+  it('does not offer to remove a disabled extension while an update is waiting', () => {
+    expect(cardOffers({ enabled: false, update: { from: '1.0.0', to: '1.1.0' } }).remove).toBe(false);
+    expect(cardOffers({ enabled: false, update: { from: '1.0.0', to: '1.1.0' } }).update).toBe(true);
+    expect(cardOffers({ enabled: false, update: null }).remove).toBe(true);
+  });
+
   it('only offers to remove something that is switched off', () => {
     expect(cardOffers({ enabled: true }).remove).toBe(false);
     expect(cardOffers({ enabled: false }).remove).toBe(true);
