@@ -135,6 +135,28 @@ class UpdateCommandTest extends TestCase
         $this->assertSame(['a/thing' => 'v1.0.1'], (new WorkDir($this->dir, $this->store()->latest()?->id ?? ''))->repin());
     }
 
+    /**
+     * 🚨 The check is saved when it runs, and an update does not re-run it, so
+     * straight after moving to v1.0.1 it still says "→ v1.0.1". That is not a
+     * target: raising v1.0.1 to v1.0.1 moved nothing (live box, 2026-10-13).
+     */
+    public function test_a_check_that_names_the_version_already_pinned_counts_as_no_target(): void
+    {
+        $this->site(
+            require: ['a/thing' => 'v1.0.1'],
+            installed: ['a/thing' => 'v1.0.1'],
+            updates: ['a/thing' => ['from' => 'v1.0.0', 'to' => 'v1.0.1']]
+        );
+
+        $tester = $this->runCommand(['packages' => ['a/thing'], '--repin' => true], recheck: function (): void {
+            $this->writeCheck(['a/thing' => ['from' => 'v1.0.1', 'to' => 'v1.0.2']]);
+        });
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertStringContainsString('checking again first', $tester->getDisplay());
+        $this->assertStringContainsString('Raising a/thing from v1.0.1 to v1.0.2', $tester->getDisplay());
+    }
+
     /** Still nothing newer after asking again: refused, never a green run that moved nothing. */
     public function test_a_pin_with_nothing_newer_even_after_checking_again_is_refused(): void
     {

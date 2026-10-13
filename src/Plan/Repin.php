@@ -53,7 +53,13 @@ final class Repin
         foreach ($this->pinned($packages) as $package => $constraint) {
             $to = $available[$package]['to'] ?? null;
 
-            if (! is_string($to) || $to === '') {
+            /*
+             * 🚨 Only a target NEWER than the pin. The check is saved when it
+             * runs and an update does not re-run it, so straight after moving
+             * to v1.21.3 it still said "→ v1.21.3": --repin "raised" v1.21.3 to
+             * v1.21.3 and the run moved nothing (live box, 2026-10-13).
+             */
+            if (! is_string($to) || version_compare(ltrim($to, 'v'), ltrim($constraint, 'v'), '<=')) {
                 continue;
             }
 
