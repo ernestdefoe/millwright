@@ -698,20 +698,6 @@ export default class MillwrightPage extends ExtensionPage {
         <div className="Millwright-name">{e.name}</div>
         <div className="Millwright-pkg">{e.library ? t('library') : e.package}</div>
       </div>,
-      /*
-       * 🚨 The words, at the top, where the eye lands — not only the version
-       * pair in the foot.
-       *
-       * "1.1.0 → 1.1.1" is precise and it is not a signal: it reads as metadata
-       * like every other version string on the page, so a grid of thirty cards
-       * gave no way to find the one card that needed attention without reading
-       * all of them.
-       */
-      cardOffers(e).badge && e.update ? (
-        <span className="Millwright-badge" title={e.update.from + ' → ' + e.update.to}>
-          {t('update_available')}
-        </span>
-      ) : null,
     ];
   }
 
@@ -720,7 +706,7 @@ export default class MillwrightPage extends ExtensionPage {
       <div className="Millwright-grid">
         {this.sorted().map((e) => (
           <div
-            className={'Millwright-card' + (cardOffers(e).badge ? ' Millwright-card--update' : '')}
+            className={'Millwright-card' + (cardOffers(e).highlight ? ' Millwright-card--update' : '')}
             key={e.id}
           >
             {/* The extension's own settings page, the way the Extensions list opens it. A library has none. */}
@@ -738,8 +724,16 @@ export default class MillwrightPage extends ExtensionPage {
               </Link>
             )}
 
+            {/*
+             * One place for the version: the pair when there is a newer one,
+             * else the version installed. The border and the Update button
+             * already say an update is waiting — a badge saying it a third
+             * time only crowded the package name out (ClaudiusH, 2026-10-13).
+             */}
             <div className="Millwright-meta">
-              <span>{e.version || t('version_unknown')}</span>
+              <span>
+                {e.update ? `${e.update.from} → ${e.update.to}` : e.version || t('version_unknown')}
+              </span>
             </div>
 
             <div className="Millwright-foot">
@@ -751,11 +745,7 @@ export default class MillwrightPage extends ExtensionPage {
                * "local checkout" did.
                */}
               <span className="Millwright-tags">
-                {e.update ? (
-                  <span className="Millwright-tag Millwright-tag--warn">
-                    {e.update.from} → {e.update.to}
-                  </span>
-                ) : e.library ? (
+                {e.library ? (
                   <span
                     className="Millwright-tag Millwright-tag--muted"
                     title={extractText(t('library_why'))}

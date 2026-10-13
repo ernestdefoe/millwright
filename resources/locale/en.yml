@@ -45,7 +45,6 @@ ernestdefoe-millwright:
     # 🚨 "Update", never "Upgrade". An upgrade sounds like a decision; an update
     # sounds like maintenance, and this is maintenance.
     update: Update
-    update_available: Update available
     repin_confirm: >-
       This forum requires an exact version of {count} extension(s), so a newer
       one cannot be installed until that requirement is changed. Continue, and

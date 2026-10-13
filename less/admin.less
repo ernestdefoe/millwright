@@ -232,7 +232,7 @@
  *
  * A card carries a name, a package, a version, up to two tags and two buttons.
  * At four columns on a wide admin the package name is the width of the card and
- * the "Update available" badge has nowhere to go; three gives every one of them
+ * the Update button has nowhere to go; three gives every one of them
  * room on one line. Below this the auto-fill above takes over and steps down to
  * two and then one on its own.
  */
@@ -265,11 +265,6 @@
 
 .Millwright-cardTop {
   display: flex;
-  /* 🚨 Wraps. The badge is nowrap and unshrinkable by design — a half-rendered
-     "UPDATE AV" is worse than none — so when the name, the package and the
-     badge cannot share a line, the badge takes its own instead of being cut
-     off by the card's overflow:hidden. */
-  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
   padding: 14px @mw-pad 0;
@@ -373,9 +368,10 @@
 
 // ── "update available" ───────────────────────────────────────────────────────
 //
-// 🚨 A word, not a colour. The badge names what it means, so it still reads on
-// a monochrome screen, to a colourblind admin, and in a screenshot pasted into
-// a support thread. The amber only reinforces it.
+// 🚨 A word, not a colour. The Update button and the "from → to" pair say what
+// the card means, so it still reads on a monochrome screen, to a colourblind
+// admin, and in a screenshot pasted into a support thread. The border only
+// reinforces it.
 
 .Millwright-cardId {
   // 🚨 `flex: 1 1 0` with min-width:0, so a long package name can be narrower
@@ -391,28 +387,14 @@
   overflow-wrap: anywhere;
 }
 
-.Millwright-badge {
-  flex-shrink: 0;
-  /* Holds the right edge on one line, and the left edge once it wraps. */
-  margin-inline-start: auto;
-  align-self: flex-start;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .05em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  padding: 4px 9px;
-  border-radius: 20px;
-  background: color-mix(in srgb, #c77700 16%, transparent);
-  color: color-mix(in srgb, #8a5200 80%, var(--text-color));
-  border: 1px solid color-mix(in srgb, #c77700 34%, transparent);
-}
-
 // The card itself carries the state too, so a card needing attention is
-// findable by shape at a glance down a long grid — not only by reading badges.
-.Millwright-card--update {
-  border-color: color-mix(in srgb, #c77700 45%, transparent);
-  box-shadow: inset 3px 0 0 0 color-mix(in srgb, #c77700 70%, transparent);
+// findable by shape at a glance down a long grid.
+// 🚨 Two classes, not one: the plain `.Millwright-card` rule comes later in
+// this file and was overriding the border colour, so only the inset bar showed.
+// In the theme's own colour rather than a fixed orange (ClaudiusH, 2026-10-13).
+.Millwright-card.Millwright-card--update {
+  border-color: color-mix(in srgb, var(--button-primary-bg) 45%, transparent);
+  box-shadow: inset 3px 0 0 0 color-mix(in srgb, var(--button-primary-bg) 70%, transparent);
 }
 
 // ── the banner's list of what is actually out of date ────────────────────────

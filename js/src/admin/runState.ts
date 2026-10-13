@@ -186,7 +186,8 @@ export function cardOffers(card: CardLike) {
   const canAct = hasUpdate && !card.pathInstall;
 
   return {
-    badge: hasUpdate,
+    /** The card's border: a newer version exists, whether or not it can be acted on. */
+    highlight: hasUpdate,
     update: canAct,
     /*
      * 🚨 Pressing Update on a pinned package must say what it will really do.

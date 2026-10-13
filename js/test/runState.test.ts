@@ -116,14 +116,14 @@ describe('what a card in the grid offers', () => {
   it('offers the update, and says so, when there is one', () => {
     const offers = cardOffers({ update: { from: '1.0.0', to: '1.1.0' }, enabled: true });
 
-    expect(offers.badge).toBe(true);
+    expect(offers.highlight).toBe(true);
     expect(offers.update).toBe(true);
   });
 
   it('offers nothing to update when there is no newer version', () => {
     const offers = cardOffers({ update: null, enabled: true });
 
-    expect(offers.badge).toBe(false);
+    expect(offers.highlight).toBe(false);
     expect(offers.update).toBe(false);
   });
 
@@ -138,7 +138,7 @@ describe('what a card in the grid offers', () => {
     expect(offers.update).toBe(false);
     expect(offers.remove).toBe(false);
     // It still SAYS a newer version exists; it just will not act on it.
-    expect(offers.badge).toBe(true);
+    expect(offers.highlight).toBe(true);
   });
 
   it('does not offer to remove a disabled extension while an update is waiting', () => {
