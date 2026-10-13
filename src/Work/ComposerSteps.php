@@ -87,7 +87,15 @@ class ComposerSteps implements Steps
              * housekeeping run first. Its copies would be kept anyway — this
              * run is the newest — but there is no reason to find out.
              */
-            'finalise' => ['register', 'migrations', 'assets', 'caches', 'code cache', 'check the site again', 'tidy the trash'],
+            /*
+             * 🚨 Nothing, when the plan moved nothing. Migrating, publishing
+             * assets and clearing every cache on a site that did not change is
+             * all cost and no update, and it is what let a run that moved
+             * nothing look exactly like one that did (live box, 2026-10-13).
+             */
+            'finalise' => is_file($this->workDir.'/plan.json') && $this->plan() === []
+                ? []
+                : ['register', 'migrations', 'assets', 'caches', 'code cache', 'check the site again', 'tidy the trash'],
             default => [],
         };
     }
