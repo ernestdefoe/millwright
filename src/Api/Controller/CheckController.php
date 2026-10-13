@@ -2,10 +2,6 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
-use ErnestDefoe\Millwright\Config\AuthTokens;
-use ErnestDefoe\Millwright\Config\JsonFile;
-use ErnestDefoe\Millwright\Config\Repositories;
-use ErnestDefoe\Millwright\Work\PrivateIndex;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
@@ -33,25 +29,15 @@ class CheckController implements RequestHandlerInterface
 
         $check = new UpdateCheck($this->paths->storage.'/millwright/updates.json');
 
-        $lock = (array) json_decode((string) @file_get_contents($this->paths->base.'/composer.lock'), true);
+        // 🚨 The same check as the console command, private repositories
+        // included: see UpdateCheck::refreshSite().
+        $result = $check->refreshSite($this->paths->base);
 
-        $packages = array_merge(
-            array_values((array) ($lock['packages'] ?? [])),
-            array_values((array) ($lock['packages-dev'] ?? []))
-        );
-
-        if ($packages === []) {
+        if ($result === null) {
             return new JsonResponse([
                 'error' => 'Millwright could not read composer.lock, so it cannot tell what is installed.',
             ], 500);
         }
-
-        // 🚨 The same check as the console command, private repositories
-        // included: see UpdateCheck::refreshWith().
-        $result = $check->refreshWith($check->interesting($packages, UpdateCheck::directRequires($this->paths->base.'/composer.json')), new PrivateIndex(
-            new Repositories(new JsonFile($this->paths->base.'/composer.json')),
-            new AuthTokens(new JsonFile($this->paths->base.'/auth.json')),
-        ));
 
         return new JsonResponse([
             'updates' => [

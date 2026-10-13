@@ -48,20 +48,12 @@ final class Repin
     public function pins(array $packages): array
     {
         $available = (array) $this->cachedUpdates();
-        $require = (array) ($this->readJson($this->composerJsonPath)['require'] ?? []);
-
         $out = [];
 
-        foreach ($packages as $package) {
+        foreach ($this->pinned($packages) as $package => $constraint) {
             $to = $available[$package]['to'] ?? null;
-            $constraint = $require[$package] ?? null;
 
-            if (! is_string($to) || $to === '' || ! is_string($constraint)) {
-                continue;
-            }
-
-            // An exact version, and nothing with a range operator anywhere in it.
-            if (! preg_match('/^v?\d+\.\d+\.\d+/', $constraint) || preg_match('/[\^~*|]|\s-\s/', $constraint)) {
+            if (! is_string($to) || $to === '') {
                 continue;
             }
 
@@ -69,6 +61,34 @@ final class Repin
                 'from' => $constraint,
                 'to' => str_starts_with($constraint, 'v') && ! str_starts_with($to, 'v') ? 'v'.$to : $to,
             ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Which of these composer.json holds at an exact version, whether or not
+     * the check knows of anything newer.
+     *
+     * 🚨 A pinned package with no target is one an update CANNOT move: Composer
+     * answers "Nothing to modify in lock file" and the run goes green. The
+     * console asks this so it can re-check, or refuse, instead of starting it.
+     *
+     * @param list<string> $packages
+     * @return array<string,string> package => its exact constraint
+     */
+    public function pinned(array $packages): array
+    {
+        $require = (array) ($this->readJson($this->composerJsonPath)['require'] ?? []);
+        $out = [];
+
+        foreach ($packages as $package) {
+            $constraint = $require[$package] ?? null;
+
+            // An exact version, and nothing with a range operator anywhere in it.
+            if (is_string($constraint) && preg_match('/^v?\d+\.\d+\.\d+/', $constraint) && ! preg_match('/[\^~*|]|\s-\s/', $constraint)) {
+                $out[$package] = $constraint;
+            }
         }
 
         return $out;

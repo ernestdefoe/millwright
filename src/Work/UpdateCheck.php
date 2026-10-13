@@ -2,6 +2,10 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Config\AuthTokens;
+use ErnestDefoe\Millwright\Config\JsonFile;
+use ErnestDefoe\Millwright\Config\Repositories;
+
 /**
  * Whether anything newer exists, asked cheaply.
  *
@@ -210,6 +214,31 @@ class UpdateCheck
             fn (string $name) => $this->fromPackagist($name) ?? $private->versionsFor($name),
             fn (string $name) => $private->releaseNotesFor($name),
         );
+    }
+
+    /**
+     * The whole check for a forum: what its lock says is installed, filtered
+     * as {@see interesting()}, asked of Packagist and then its private
+     * repositories. Null when composer.lock cannot be read.
+     *
+     * 🚨 One place for "Check now", millwright:check and the re-check
+     * millwright:update makes before giving up on a pin.
+     *
+     * @return array<string,mixed>|null
+     */
+    public function refreshSite(string $base): ?array
+    {
+        $lock = (array) json_decode((string) @file_get_contents($base.'/composer.lock'), true);
+        $packages = array_merge(array_values((array) ($lock['packages'] ?? [])), array_values((array) ($lock['packages-dev'] ?? [])));
+
+        if ($packages === []) {
+            return null;
+        }
+
+        return $this->refreshWith($this->interesting($packages, self::directRequires($base.'/composer.json')), new PrivateIndex(
+            new Repositories(new JsonFile($base.'/composer.json')),
+            new AuthTokens(new JsonFile($base.'/auth.json')),
+        ));
     }
 
     /** @return array<string,mixed> */

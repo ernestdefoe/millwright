@@ -2,10 +2,6 @@
 
 namespace ErnestDefoe\Millwright\Console;
 
-use ErnestDefoe\Millwright\Config\AuthTokens;
-use ErnestDefoe\Millwright\Config\JsonFile;
-use ErnestDefoe\Millwright\Config\Repositories;
-use ErnestDefoe\Millwright\Work\PrivateIndex;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 use Flarum\Console\AbstractCommand;
 use Flarum\Foundation\Paths;
@@ -46,36 +42,22 @@ class CheckCommand extends AbstractCommand
             return 0;
         }
 
-        $packages = $this->lockPackages();
+        /*
+         * 🚨 Extensions, Flarum, and what composer.json requires itself, asked
+         * of Packagist first and then the site's own private repositories — see
+         * UpdateCheck::interesting() and refreshWith(). A premium extension is
+         * not on Packagist, so it used to come back "uncheckable" and its owner
+         * was never told a new version existed. Packagist stays FIRST so a
+         * private repository can never shadow a public package.
+         */
+        $result = $check->refreshSite($this->paths->base);
 
-        if ($packages === []) {
+        if ($result === null) {
             $this->error('Could not read composer.lock, so there is nothing to check.');
 
             return 1;
         }
 
-        // 🚨 Extensions, Flarum, and what composer.json requires itself — see UpdateCheck::interesting().
-        $installed = $check->interesting($packages, UpdateCheck::directRequires($this->paths->base.'/composer.json'));
-
-        /*
-         * 🚨 Packagist first, then the site's own private repositories.
-         *
-         * A premium extension is not on Packagist, so it used to come back
-         * "uncheckable" and its owner was never told a new version existed —
-         * the check was silently useless for precisely the extensions somebody
-         * paid for. Anything Packagist cannot answer is now asked of whatever
-         * `composer` repositories the forum has configured, with the
-         * credentials it already holds for them.
-         *
-         * Packagist stays FIRST so the common case is unchanged and a private
-         * repository can never shadow a public package.
-         */
-        $private = new PrivateIndex(
-            new Repositories(new JsonFile($this->paths->base.'/composer.json')),
-            new AuthTokens(new JsonFile($this->paths->base.'/auth.json')),
-        );
-
-        $result = $check->refreshWith($installed, $private);
         $count = count($result['updates']);
 
         $this->info($count === 0
@@ -104,22 +86,5 @@ class CheckCommand extends AbstractCommand
         }
 
         return 0;
-    }
-
-    /** @return list<array<string,mixed>> */
-    private function lockPackages(): array
-    {
-        $lock = @file_get_contents($this->paths->base.'/composer.lock');
-
-        if ($lock === false) {
-            return [];
-        }
-
-        $data = (array) json_decode($lock, true);
-
-        return array_merge(
-            array_values((array) ($data['packages'] ?? [])),
-            array_values((array) ($data['packages-dev'] ?? []))
-        );
     }
 }

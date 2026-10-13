@@ -115,6 +115,84 @@ class UpdateCommandTest extends TestCase
         $this->assertNull($this->store()->latest(), 'Nothing may be started.');
     }
 
+    /**
+     * 🚨 Live box, 2026-10-13: `--repin` straight after v1.21.2 was published.
+     * The stored check predated the release, so there was nothing to raise the
+     * pin to; the run went through every step, printed "Done." and moved
+     * nothing. A pin with no known target is checked again first.
+     */
+    public function test_repin_with_a_check_that_predates_the_release_checks_again_and_raises_it(): void
+    {
+        $this->site(require: ['a/thing' => 'v1.0.0'], installed: ['a/thing' => 'v1.0.0']);
+
+        $tester = $this->runCommand(['packages' => ['a/thing'], '--repin' => true], recheck: function (): void {
+            $this->writeCheck(['a/thing' => ['from' => 'v1.0.0', 'to' => 'v1.0.1']]);
+        });
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertStringContainsString('checking again first', $tester->getDisplay());
+        $this->assertStringContainsString('Raising a/thing from v1.0.0 to v1.0.1', $tester->getDisplay());
+        $this->assertSame(['a/thing' => 'v1.0.1'], (new WorkDir($this->dir, $this->store()->latest()?->id ?? ''))->repin());
+    }
+
+    /** Still nothing newer after asking again: refused, never a green run that moved nothing. */
+    public function test_a_pin_with_nothing_newer_even_after_checking_again_is_refused(): void
+    {
+        $this->site(require: ['a/thing' => '1.0.0'], installed: ['a/thing' => '1.0.0']);
+        $rechecked = 0;
+
+        $tester = $this->runCommand(['packages' => ['a/thing'], '--repin' => true], recheck: function () use (&$rechecked): void {
+            $rechecked++;
+        });
+
+        $this->assertSame(1, $rechecked, 'Asked again exactly once.');
+        $this->assertSame(1, $tester->getStatusCode());
+        $this->assertStringContainsString('pinned at 1.0.0 and no newer version was found', $tester->getDisplay());
+        $this->assertNull($this->store()->latest(), 'Nothing may be started.');
+    }
+
+    /** Without --repin, the fresh answer still ends in the refusal that names the flag. */
+    public function test_a_pin_found_newer_on_checking_again_still_needs_repin(): void
+    {
+        $this->site(require: ['a/thing' => '1.0.0'], installed: ['a/thing' => '1.0.0']);
+
+        $tester = $this->runCommand(['packages' => ['a/thing']], recheck: function (): void {
+            $this->writeCheck(['a/thing' => ['from' => '1.0.0', 'to' => '1.1.0']]);
+        });
+
+        $this->assertSame(1, $tester->getStatusCode());
+        $this->assertStringContainsString('raised to 1.1.0', $tester->getDisplay());
+        $this->assertStringContainsString('--repin', $tester->getDisplay());
+        $this->assertNull($this->store()->latest());
+    }
+
+    /** A range with nothing in the check is Composer's to answer: no extra request. */
+    public function test_a_range_is_not_checked_again(): void
+    {
+        $this->site(require: ['a/thing' => '^1.0'], installed: ['a/thing' => '1.0.0']);
+
+        $tester = $this->runCommand(['packages' => ['a/thing']], recheck: function (): void {
+            $this->fail('A range must not trigger a re-check.');
+        });
+
+        $this->assertSame(0, $tester->getStatusCode());
+    }
+
+    /**
+     * 🚨 A run whose plan came to nothing finished green and printed "Done.".
+     * The exit code is what a script reads, so it must say nothing moved.
+     */
+    public function test_a_run_that_moved_nothing_exits_non_zero(): void
+    {
+        $this->site(require: ['a/thing' => '^1.0'], installed: ['a/thing' => '1.0.0']);
+
+        $tester = $this->runCommand(['packages' => ['a/thing']], ['plan' => ['work out the change'], 'finalise' => ['caches']], planChanges: []);
+
+        $this->assertSame(1, $tester->getStatusCode());
+        $this->assertStringContainsString('nothing moved', $tester->getDisplay());
+        $this->assertStringNotContainsString('Done.', $tester->getDisplay());
+    }
+
     // ── what it does ─────────────────────────────────────────────────────────
 
     /**
@@ -269,6 +347,12 @@ class UpdateCommandTest extends TestCase
             ),
         ]));
 
+        $this->writeCheck($updates);
+    }
+
+    /** @param array<string,array{from:string,to:string}> $updates */
+    private function writeCheck(array $updates): void
+    {
         file_put_contents($this->dir.'/millwright/updates.json', json_encode([
             'checkedAt' => time(), 'updates' => $updates, 'uncheckable' => [], 'tracking' => [],
         ]));
@@ -277,16 +361,33 @@ class UpdateCommandTest extends TestCase
     /**
      * @param array<string,mixed> $input
      * @param array<string,list<string>> $plan what each phase consists of
+     * @param (callable():void)|null $recheck stands in for asking Packagist again
+     * @param list<array<string,mixed>>|null $planChanges written as the run's plan.json
      */
-    private function runCommand(array $input, array $plan = [], ?string $failOn = null): CommandTester
+    private function runCommand(array $input, array $plan = [], ?string $failOn = null, ?callable $recheck = null, ?array $planChanges = null): CommandTester
     {
         $store = $this->store();
 
-        $command = new UpdateCommand(
+        $command = new class(
             new Paths(['base' => $this->dir, 'public' => $this->dir, 'storage' => $this->dir, 'vendor' => $this->dir]),
             $store,
-            new StepRunner($store, $this->steps($plan, $failOn), fn (): int => time())
-        );
+            new StepRunner($store, $this->steps($plan, $failOn, $planChanges, $this->dir), fn (): int => time()),
+            $recheck ?? fn () => throw new \LogicException('No re-check expected.'),
+        ) extends UpdateCommand {
+            /** @var callable():void */
+            private $recheckWith;
+
+            public function __construct(Paths $paths, RunStore $runs, StepRunner $runner, callable $recheck)
+            {
+                $this->recheckWith = $recheck;
+                parent::__construct($paths, $runs, $runner);
+            }
+
+            protected function recheck(): void
+            {
+                ($this->recheckWith)();
+            }
+        };
 
         $tester = new CommandTester($command);
         $tester->execute($input);
@@ -300,11 +401,11 @@ class UpdateCommandTest extends TestCase
     }
 
     /** @param array<string,list<string>> $plan */
-    private function steps(array $plan, ?string $failOn): Steps
+    private function steps(array $plan, ?string $failOn, ?array $planChanges, string $dir): Steps
     {
-        return new class($plan, $failOn) implements Steps {
+        return new class($plan, $failOn, $planChanges, $dir) implements Steps {
             /** @param array<string,list<string>> $plan */
-            public function __construct(private array $plan, private ?string $failOn)
+            public function __construct(private array $plan, private ?string $failOn, private ?array $planChanges, private string $dir)
             {
             }
 
@@ -317,6 +418,10 @@ class UpdateCommandTest extends TestCase
             {
                 if ($this->failOn === "$phase:$item") {
                     throw new \RuntimeException('the disk filled up');
+                }
+
+                if ($phase === 'plan' && $this->planChanges !== null) {
+                    file_put_contents((new WorkDir($this->dir, $run->id))->root().'/plan.json', json_encode(['changes' => $this->planChanges]));
                 }
 
                 return "$phase $item";

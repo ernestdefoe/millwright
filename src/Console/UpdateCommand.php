@@ -168,7 +168,33 @@ class UpdateCommand extends AbstractCommand
             return 1;
         }
 
-        $pins = (new Repin($this->paths->base.'/composer.json', $this->storagePath('updates.json')))->pins($named);
+        $repinner = new Repin($this->paths->base.'/composer.json', $this->storagePath('updates.json'));
+        $pins = $repinner->pins($named);
+
+        if (array_diff_key($repinner->pinned($named), $pins) !== []) {
+            /*
+             * 🚨 A pin with no newer version in the stored check. Straight
+             * after a release the check still predates it, so --repin had
+             * nothing to raise to: the run went through every step, said
+             * "Done." and moved nothing (live box, 2026-10-13, v1.21.2). Ask
+             * again before deciding; refuse if there is still nothing newer.
+             */
+            $this->info('The last check knows of nothing newer for '
+                .implode(', ', array_keys(array_diff_key($repinner->pinned($named), $pins))).', so checking again first.');
+            $this->recheck();
+            $pins = $repinner->pins($named);
+
+            if (($stuck = array_diff_key($repinner->pinned($named), $pins)) !== []) {
+                foreach ($stuck as $package => $constraint) {
+                    $this->error("$package is pinned at $constraint and no newer version was found, so an update cannot move it.");
+                }
+
+                $this->error('Nothing was started.');
+
+                return 1;
+            }
+        }
+
         $repin = [];
 
         if ($pins !== []) {
@@ -277,6 +303,17 @@ class UpdateCommand extends AbstractCommand
             }
         }
 
+        if ($run->state === Run::DONE && $this->movedNothing($run)) {
+            /*
+             * 🚨 Green, and nothing changed. Whatever the reason — a dependency
+             * holding it back, a constraint — the exit code must not say this
+             * update happened. The plan's own sentence is in the log above.
+             */
+            $this->error("Finished, but nothing moved: {$run->id} changed no package. See the log above for why.");
+
+            return 1;
+        }
+
         if ($run->state === Run::DONE) {
             $this->info('Done.');
 
@@ -368,6 +405,23 @@ class UpdateCommand extends AbstractCommand
         $this->info('Moving '.count($targets).' Flarum package(s) to '.reset($targets).': '.implode(', ', array_keys($targets)));
 
         return $this->pump($this->runner->begin($id));
+    }
+
+    /** An update whose plan was worked out and came to nothing. */
+    private function movedNothing(Run $run): bool
+    {
+        $plan = (new WorkDir($this->paths->storage, $run->id))->root().'/plan.json';
+
+        return is_file($plan) && (((array) json_decode((string) file_get_contents($plan), true))['changes'] ?? null) === [];
+    }
+
+    /**
+     * Ask Packagist and the site's private repositories again, as
+     * millwright:check --force does. Overridable so the tests need no network.
+     */
+    protected function recheck(): void
+    {
+        $this->check()->refreshSite($this->paths->base);
     }
 
     private function check(): UpdateCheck
