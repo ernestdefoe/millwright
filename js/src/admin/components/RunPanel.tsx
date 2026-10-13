@@ -10,6 +10,27 @@ declare const m: any;
 
 const PHASES = ['plan', 'fetch', 'apply', 'finalise'];
 
+/**
+ * A step's name for people. The runner's own names ("register", "code cache")
+ * are its internal keys; a package name is shown as it is.
+ */
+function stepLabel(item: string): string {
+  const key = 'step_' + String(item).replace(/ /g, '_');
+  const label = extractText(t(key));
+
+  return label && !label.endsWith(key) ? label : item;
+}
+
+/** "finalise → register" from the runner, as "Finishing up → Telling Composer…". */
+function whereLabel(where: string | null): string {
+  if (!where) return '';
+  const [raw, item] = String(where).split(' → ');
+  const phase = raw.replace(/ \(planning\)$/, '');
+  const named = PHASES.includes(phase) ? extractText(t('phase_' + phase)) : phase;
+
+  return item ? named + ' → ' + stepLabel(item) : named;
+}
+
 interface RunPanelAttrs {
   run: any;
   driver: string | null;
@@ -122,7 +143,7 @@ export default class RunPanel extends Component<RunPanelAttrs> {
 
         {failed ? (
           <div className="Millwright-error">
-            <div className="Millwright-errorWhere">{t('failed_at', { step: run.errorStep })}</div>
+            <div className="Millwright-errorWhere">{t('failed_at', { step: whereLabel(run.errorStep) })}</div>
             <pre className="Millwright-errorText">{run.error}</pre>
             {/*
               * 🚨 Offered on a FAILURE, not just on a finished run. The journal
@@ -151,7 +172,7 @@ export default class RunPanel extends Component<RunPanelAttrs> {
           */}
         {rolled && run.error ? (
           <div className="Millwright-error">
-            <div className="Millwright-errorWhere">{t('failed_at', { step: run.errorStep })}</div>
+            <div className="Millwright-errorWhere">{t('failed_at', { step: whereLabel(run.errorStep) })}</div>
             <pre className="Millwright-errorText">{run.error}</pre>
           </div>
         ) : null}
@@ -243,12 +264,24 @@ export default class RunPanel extends Component<RunPanelAttrs> {
     );
   }
 
+  /**
+   * A removal only takes things away (it resolves with
+   * `--no-update-with-dependencies`), so it has no Downloading step. Shown and
+   * then skipped, it read as something that had gone wrong (ClaudiusH,
+   * 2026-10-13).
+   */
+  shownPhases(run: any): string[] {
+    return run.mode === 'remove' ? PHASES.filter((p) => p !== 'fetch') : PHASES;
+  }
+
   phases(run: any) {
-    const at = PHASES.indexOf(run.phase);
+    const shown = this.shownPhases(run);
+    // Where the run is, in the list as shown; a hidden phase counts as passed.
+    const at = shown.indexOf(run.phase) === -1 ? shown.indexOf('apply') : shown.indexOf(run.phase);
 
     return (
       <ol className="Millwright-phases">
-        {PHASES.map((p, i) => (
+        {shown.map((p, i) => (
           // A check on what is behind, a spinner on what is happening: a row of
           // pills with one highlighted read to a tester as tabs (ClaudiusH).
           <li key={p} className={'Millwright-phase' + (i < at ? ' is-done' : i === at ? ' is-now' : '')}>
@@ -262,7 +295,7 @@ export default class RunPanel extends Component<RunPanelAttrs> {
 
   bar(run: any) {
     const total = (run.items || []).length;
-    const item = total ? run.items[Math.min(run.index, total - 1)] : null;
+    const item = total ? stepLabel(run.items[Math.min(run.index, total - 1)]) : null;
 
     return (
       <div className="Millwright-progress">

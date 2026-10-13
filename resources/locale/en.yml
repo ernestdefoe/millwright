@@ -82,6 +82,17 @@ ernestdefoe-millwright:
 
     working_out: Asking Composer what this involves. This is the slow part.
     working_on: "{item} — {index} of {total}"
+    # The runner's own step names, as shown under the progress bar.
+    step_check_the_site: Checking the site
+    step_work_out_what_changes: Working out what changes
+    step_check_file_permissions: Checking file permissions
+    step_register: Updating Composer's records
+    step_migrations: Running database migrations
+    step_assets: Publishing assets
+    step_caches: Clearing caches
+    step_code_cache: Clearing PHP's code cache
+    step_check_the_site_again: Checking the site again
+    step_tidy_the_trash: Tidying old copies
 
     failed_at: "It stopped during: {step}"
     roll_back: Undo this update

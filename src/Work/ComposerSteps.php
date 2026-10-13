@@ -174,8 +174,14 @@ class ComposerSteps implements Steps
              * happens through the same journalled apply as everything else, so
              * the files go to the trash rather than being deleted and an
              * uninstall is as reversible as an update.
+             *
+             * 🚨 `--no-update-with-dependencies`: a removal only takes things
+             * away. Composer's default lets the removed package's dependencies
+             * update too, so taking one extension out could move a library it
+             * shared with another, which is a download and a change nobody
+             * asked for (Ernest + ClaudiusH, 2026-10-13).
              */
-            'remove' => array_merge(['remove'], $this->requested, ['--no-install', '--no-scripts']),
+            'remove' => array_merge(['remove'], $this->requested, ['--no-install', '--no-scripts', '--no-update-with-dependencies']),
             /*
              * 🚨 `-w`, NOT `-W`.
              *
