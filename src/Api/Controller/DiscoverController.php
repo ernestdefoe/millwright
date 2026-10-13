@@ -48,7 +48,7 @@ class DiscoverController implements RequestHandlerInterface
          * The page number is clamped: it reaches an outbound URL, and twenty
          * pages is more than anybody browses before searching instead.
          */
-        $found = (new Packagist($this->cache()))->search($query, 12, $page);
+        $found = (new Packagist($this->cache()))->search($query, 12, $page, (string) ($params['category'] ?? ''));
 
         /*
          * 🚨 Marked rather than filtered out. Somebody searching for an

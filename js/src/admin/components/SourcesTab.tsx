@@ -1,3 +1,4 @@
+import extractText from 'flarum/common/utils/extractText';
 import app from 'flarum/admin/app';
 import t from '../t';
 import Component from 'flarum/common/Component';
@@ -363,8 +364,7 @@ export default class SourcesTab extends Component {
     const st = this.data.stability || {};
     const current: string = st.minimumStability || 'stable';
     const levels: string[] = st.levels || LADDER;
-    const explains: Record<string, string> = {};
-    (st.explains || []).forEach((e: any) => (explains[e.level] = e.means));
+    const means = (l: string) => extractText(t('level_' + l.toLowerCase() + '_means'));
 
     return (
       <section className="Millwright-src-card" id="mw-src-stability">
@@ -392,7 +392,7 @@ export default class SourcesTab extends Component {
                   type="button"
                   role="radio"
                   aria-checked={on ? 'true' : 'false'}
-                  title={explains[l] || ''}
+                  title={means(l)}
                   disabled={this.saving}
                   className={'Millwright-src-step' + (on ? ' is-on' : accepted ? ' is-accepted' : '')}
                   onclick={() => !on && this.send({ action: 'set-stability', minimumStability: l, preferStable: st.preferStable })}
@@ -406,7 +406,7 @@ export default class SourcesTab extends Component {
 
           <div className="Millwright-src-callout">
             <i className="fas fa-lightbulb" aria-hidden="true" />
-            <span>{st.consequence}</span>
+            <span>{means(current)}</span>
           </div>
 
           <label className="Millwright-src-switch">

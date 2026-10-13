@@ -17,6 +17,24 @@ namespace ErnestDefoe\Millwright\Discover;
  */
 class Packagist
 {
+    /**
+     * What each category adds to the search, the way Extension Manager splits its
+     * list. Packagist has no category field, so each is the nearest thing it
+     * does have, chosen by measuring what comes back (2026-10-13):
+     *
+     * - themes by the word, not the tag: `tags=theme` finds 24 and misses Asirem
+     *   and Fluent; the word finds 78, and every one of those 24.
+     * - languages and widgets by tag, which Packagist ORs: 319 and 37, against
+     *   137 for Extension Manager's `flarum-lang` (one vendor's packs only).
+     *
+     * @var array<string,array{q?:string,tags?:list<string>}>
+     */
+    public const CATEGORIES = [
+        'theme' => ['q' => 'theme'],
+        'language' => ['tags' => ['locale', 'language']],
+        'widget' => ['tags' => ['widget', 'widgets']],
+    ];
+
     /** @param ?callable(string):?string $get overridable so tests never touch a network */
     public function __construct(
         private Cache $cache,
@@ -37,11 +55,19 @@ class Packagist
      *
      * @return array{results:list<array<string,mixed>>, total:int, error:?string, more:bool}
      */
-    public function search(string $query, int $perPage = 12, int $page = 1): array
+    public function search(string $query, int $perPage = 12, int $page = 1, string $category = ''): array
     {
+        // An unknown category is no category, so the parameter cannot reach the URL as typed.
+        $narrow = self::CATEGORIES[$category] ?? [];
+        $query = trim($query.' '.($narrow['q'] ?? ''));
+
         $url = 'https://packagist.org/search.json?type=flarum-extension&per_page='.$perPage
             .'&page='.max(1, $page)
             .($query === '' ? '' : '&q='.rawurlencode($query));
+
+        foreach ($narrow['tags'] ?? [] as $tag) {
+            $url .= '&tags[]='.rawurlencode($tag);
+        }
 
         $body = ($this->get)($url);
 

@@ -7,11 +7,12 @@ use RuntimeException;
 /**
  * How finished a release has to be before Composer will install it.
  *
- * 🚨 On a Flarum 2 forum this is not optional. Every 2.0 release so far is a
- * release candidate, so a site with the default `stable` cannot install a single
- * one of them — and the error it gets says the package "could not be found in
- * any version", which sounds like the package is missing rather than like a
- * setting is wrong. The site this was built for runs `beta`.
+ * 🚨 Flarum 2 itself is stable since 2.0.0, but many of its extensions are still
+ * betas or release candidates, and a site on the default `stable` cannot install
+ * those — the error says the package "could not be found in any version", which
+ * sounds like the package is missing rather than like a setting is wrong.
+ *
+ * What each level means, in words, lives in the locale (`level_*_means`).
  */
 class Stability
 {
@@ -46,24 +47,5 @@ class Stability
         $data['prefer-stable'] = $preferStable;
 
         $this->file->write($data);
-    }
-
-    /**
-     * What changing this actually means, in words.
-     *
-     * 🚨 Said before the change, not after. "minimum-stability: dev" is a setting;
-     * "Composer may install unreleased code from a branch" is the consequence,
-     * and the consequence is the part somebody is deciding about.
-     */
-    public function consequence(string $level): string
-    {
-        return match ($level) {
-            'stable' => 'Only finished releases. On Flarum 2 this currently rules out Flarum itself, which is still a release candidate.',
-            'RC' => 'Release candidates as well as finished releases. This is the minimum that can install Flarum 2 today.',
-            'beta' => 'Betas too. Most Flarum 2 extensions are published as betas or release candidates, so this is the usual choice.',
-            'alpha' => 'Alphas as well — early code that is expected to change.',
-            'dev' => 'Unreleased code straight from a branch, which can change under you without a version number changing.',
-            default => '',
-        };
     }
 }

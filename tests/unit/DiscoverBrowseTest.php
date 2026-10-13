@@ -100,6 +100,31 @@ class DiscoverBrowseTest extends TestCase
         $this->assertStringContainsString('page=3', $urls[0] ?? '');
     }
 
+    public function test_a_category_narrows_the_search_the_way_packagist_can(): void
+    {
+        [$p, $urls] = $this->packagist($this->body(3));
+
+        $p->search('', 12, 1, 'widget');
+        $p->search('dark', 12, 1, 'theme');
+        $p->search('', 12, 1, 'language');
+
+        $this->assertStringContainsString('&tags[]=widget&tags[]=widgets', $urls[0] ?? '');
+        $this->assertStringNotContainsString('&q=', $urls[0] ?? '');
+        // Themes are found by the word, alongside whatever was typed.
+        $this->assertStringContainsString('q=dark%20theme', $urls[1] ?? '');
+        $this->assertStringContainsString('&tags[]=locale&tags[]=language', $urls[2] ?? '');
+    }
+
+    public function test_an_unknown_category_never_reaches_the_url(): void
+    {
+        [$p, $urls] = $this->packagist($this->body(3));
+
+        $p->search('', 12, 1, '&evil=1');
+
+        $this->assertStringNotContainsString('evil', $urls[0] ?? '');
+        $this->assertStringNotContainsString('tags', $urls[0] ?? '');
+    }
+
     public function test_an_unreachable_packagist_is_reported_not_silently_empty(): void
     {
         /*

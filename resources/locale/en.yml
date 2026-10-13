@@ -147,6 +147,12 @@ ernestdefoe-millwright:
       The search could not be run. Packagist may be unreachable from this server.
 
     downloads: "{count} downloads"
+    open_packagist: "{name} on Packagist"
+    category_label: Show
+    category_all: All
+    category_theme: Themes
+    category_language: Languages
+    category_widget: Widgets
     install: Install
     already_installed: installed
     abandoned: abandoned by its author
@@ -312,6 +318,19 @@ ernestdefoe-millwright:
     level_alpha_short: early previews
     level_dev: Dev
     level_dev_short: unreleased code
+    # What each level means, said before the change: the consequence is the part
+    # somebody is deciding about.
+    level_stable_means: >-
+      Only finished releases. Flarum 2 itself is stable, but many of its extensions
+      are still betas or release candidates, and this cannot install those.
+    level_rc_means: Release candidates as well as finished releases.
+    level_beta_means: >-
+      Betas too. Many Flarum 2 extensions are still published as betas or release
+      candidates, so this is the usual choice.
+    level_alpha_means: Alphas as well — early code that is expected to change.
+    level_dev_means: >-
+      Unreleased code straight from a branch, which can change under you without
+      a version number changing.
 
     auth_title: Credentials
     auth_help: >-

@@ -64,6 +64,8 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
   }
 
   private query = '';
+  /** '' is everything; the rest are the keys of Packagist::CATEGORIES. */
+  private category = '';
   private searching = false;
   private searched = false;
   private page = 1;
@@ -118,6 +120,30 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
             {this.searching ? t('searching') : t('search')}
           </button>
         </form>
+
+        {/*
+          * Under the search rather than as tabs: the tab row above is already the
+          * page's own navigation, and a second row of tabs reads as a level of it.
+          * A row of chips, so every category is visible without opening anything.
+          */}
+        <div className="Millwright-chips" role="radiogroup" aria-label={t('category_label')}>
+          {['', 'theme', 'language', 'widget'].map((c) => (
+            <button
+              type="button"
+              role="radio"
+              aria-checked={this.category === c ? 'true' : 'false'}
+              className={'Millwright-chip' + (this.category === c ? ' is-on' : '')}
+              onclick={() => {
+                if (this.category === c) return;
+                this.category = c;
+                this.stopTyping();
+                this.search();
+              }}
+            >
+              {t('category_' + (c || 'all'))}
+            </button>
+          ))}
+        </div>
 
         <div className="Millwright-searchNote">
           {this.core ? t('discover_against', { version: this.core }) : t('discover_hint')}
@@ -182,6 +208,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
 
   card(r: Found) {
     const v = this.verdicts[r.name];
+    const instead = this.replacement(r, v);
     const [vendor, short] = r.name.split('/');
 
     return (
@@ -191,15 +218,26 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
             {(short || vendor || '?').charAt(0).toUpperCase()}
           </div>
           <div>
-            <div className="Millwright-name">{short}</div>
+            <a
+              className="Millwright-name"
+              href={'https://packagist.org/packages/' + r.name}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={t('open_packagist', { name: r.name })}
+            >
+              {short}
+            </a>
             <div className="Millwright-pkg">{r.name}</div>
           </div>
         </div>
 
-        <div className="Millwright-desc">{r.description}</div>
+        {/* Clamped to two lines, so the whole of it on hover. */}
+        <div className="Millwright-desc" title={r.description}>{r.description}</div>
 
         <div className="Millwright-meta">
-          <span>{t('downloads', { count: this.short(r.downloads) })}</span>
+          <span>
+            <i className="fas fa-circle-down" aria-hidden="true" /> {t('downloads', { count: this.short(r.downloads) })}
+          </span>
         </div>
 
         <div className="Millwright-foot">
@@ -210,9 +248,13 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
               * compatibility answer while still offering Install, so the tag
               * beside the button read like a verdict on the wrong question.
               */}
-            {this.replacement(r, v) ? (
+            {/*
+              * "Installed as X" already says it was replaced, and by what, so
+              * "replaced by X" beside it only said it twice (ClaudiusH, 2026-10-13).
+              */}
+            {instead && this.installedNames.includes(instead) ? null : instead ? (
               <span className="Millwright-tag Millwright-tag--warn" title={t('replaced_why')}>
-                {t('replaced_by', { replacement: this.replacement(r, v) })}
+                {t('replaced_by', { replacement: instead })}
               </span>
             ) : v?.replaced ? (
               <span className="Millwright-tag Millwright-tag--warn" title={t('replaced_why')}>
@@ -356,7 +398,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
     m.redraw();
 
     app
-      .request({ method: 'GET', url: apiUrl() + '/millwright/discover?q=' + encodeURIComponent(q) })
+      .request({ method: 'GET', url: apiUrl() + '/millwright/discover?q=' + encodeURIComponent(q) + '&category=' + this.category })
       .then((data: any) => {
         if (mine !== this.seq) return;
 
@@ -400,7 +442,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
     app
       .request({
         method: 'GET',
-        url: apiUrl() + '/millwright/discover?page=' + (this.page + 1) + '&q=' + encodeURIComponent(this.query.trim()),
+        url: apiUrl() + '/millwright/discover?page=' + (this.page + 1) + '&q=' + encodeURIComponent(this.query.trim()) + '&category=' + this.category,
       })
       .then((data: any) => {
         if (mine !== this.seq) return;

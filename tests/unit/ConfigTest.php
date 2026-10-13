@@ -185,13 +185,15 @@ class ConfigTest extends TestCase
     public function test_every_level_explains_what_it_means(): void
     {
         // The consequence is what somebody is deciding about, not the word.
-        $s = new Stability($this->file('composer.json', []));
+        $locale = \Symfony\Component\Yaml\Yaml::parseFile(__DIR__.'/../../resources/locale/en.yml')['ernestdefoe-millwright']['admin'];
 
         foreach (Stability::LEVELS as $level) {
-            $this->assertNotSame('', $s->consequence($level), "$level has no explanation");
+            $key = 'level_'.strtolower($level).'_means';
+            $this->assertNotEmpty($locale[$key] ?? null, "$level has no explanation");
         }
 
-        $this->assertStringContainsString('release candidate', $s->consequence('stable'));
+        // 🚨 Flarum 2 is stable now; the old copy said it was still a release candidate.
+        $this->assertStringContainsString('Flarum 2 itself is stable', $locale['level_stable_means']);
     }
 
     // ── the file itself ─────────────────────────────────────────────────────

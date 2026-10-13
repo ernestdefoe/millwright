@@ -109,11 +109,6 @@ class ConfigController implements RequestHandlerInterface
             'repositories' => $this->repositories()->all(),
             'stability' => $current + [
                 'levels' => Stability::LEVELS,
-                'consequence' => $stability->consequence($current['minimumStability']),
-                'explains' => array_map(
-                    fn (string $l) => ['level' => $l, 'means' => $stability->consequence($l)],
-                    Stability::LEVELS
-                ),
             ],
             'auth' => [
                 'stored' => $this->auth()->all(),
