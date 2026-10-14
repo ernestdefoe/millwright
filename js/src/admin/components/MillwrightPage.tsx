@@ -543,6 +543,7 @@ export default class MillwrightPage extends ExtensionPage {
        */
       <CorePanel
         starting={this.starting}
+        checkedAt={this.updates?.checkedAt ?? null}
         onbegin={(pkgs: string[]) => this.start(pkgs)}
         onnightly={() => this.start(['flarum/core'], 'update', false, true)}
       />,

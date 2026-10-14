@@ -16,6 +16,8 @@ interface Row {
 
 interface CoreAttrs {
   starting: boolean;
+  /** When the page's update check last ran; a new one means this panel asks again. */
+  checkedAt: number | null;
   /*
    * 🚨 NOT `onupdate`. That is one of Mithril's component lifecycle hooks, so an
    * attr by that name is called by Mithril on every redraw — with a vnode, not a
@@ -53,9 +55,22 @@ export default class CorePanel extends Component<CoreAttrs> {
   private preflight: any = null;
   private checking = false;
   private error: string | null = null;
+  private seenCheck: number | null = null;
 
   oninit(vnode: any) {
     super.oninit(vnode);
+    this.seenCheck = this.attrs.checkedAt;
+    this.load();
+  }
+
+  /*
+   * 🚨 Asks again after every check. This panel loads once, so "Check now" found
+   * Flarum 2.0.1 in the line above while this box still said no newer Flarum had
+   * been published, until a reload (ClaudiusH, 2026-10-14).
+   */
+  onupdate() {
+    if (this.attrs.checkedAt === this.seenCheck) return;
+    this.seenCheck = this.attrs.checkedAt;
     this.load();
   }
 
@@ -197,6 +212,8 @@ export default class CorePanel extends Component<CoreAttrs> {
       .then((data: any) => {
         this.current = data.current;
         this.newest = data.newest || null;
+        // A pre-flight belongs to the version it was run against.
+        if (!this.newest || this.newest.to !== this.preflight?.target) this.preflight = null;
         this.loading = false;
         m.redraw();
 
