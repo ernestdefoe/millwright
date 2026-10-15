@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Run;
 
+use ErnestDefoe\Millwright\Lang;
 use RuntimeException;
 
 /**
@@ -36,7 +37,7 @@ class RunStore
         $handle = fopen($temp, 'wb');
 
         if ($handle === false) {
-            throw new RuntimeException("Cannot write the run state at $temp");
+            throw new RuntimeException(Lang::trans('run.state_write_failed', ['path' => $temp]));
         }
 
         fwrite($handle, $json);
@@ -49,7 +50,7 @@ class RunStore
         if (! @rename($temp, $path)) {
             @unlink($temp);
 
-            throw new RuntimeException("Cannot move the run state into place at $path");
+            throw new RuntimeException(Lang::trans('run.state_move_failed', ['path' => $path]));
         }
 
         // Every run that reaches an end is in the history, from this one place.
@@ -152,7 +153,7 @@ class RunStore
     private function ensureDir(): void
     {
         if (! is_dir($this->dir) && ! mkdir($this->dir, 0775, true) && ! is_dir($this->dir)) {
-            throw new RuntimeException("Could not create the run directory at {$this->dir}");
+            throw new RuntimeException(Lang::trans('run.dir_failed', ['path' => $this->dir]));
         }
     }
 }

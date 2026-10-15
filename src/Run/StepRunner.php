@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Run;
 
+use ErnestDefoe\Millwright\Lang;
 use Throwable;
 
 /**
@@ -287,7 +288,7 @@ class StepRunner
 
         $run = $next === null
             ? $run->finished($this->now())
-            : $run->enteredPhase($next, $this->now(), "Finished {$run->phase}");
+            : $run->enteredPhase($next, $this->now(), Lang::trans('run.finished_phase', ['phase' => $run->phase]));
 
         $this->store->save($run);
 

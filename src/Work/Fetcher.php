@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Lang;
 use RuntimeException;
 use ZipArchive;
 
@@ -53,7 +54,7 @@ class Fetcher
                  */
                 if (! hash_equals($source['shasum'], (string) $actual)) {
                     throw new RuntimeException(
-                        "The download of $package does not match its published checksum. It was not unpacked."
+                        Lang::trans('fetch.checksum', ['package' => $package])
                     );
                 }
             }
@@ -100,10 +101,10 @@ class Fetcher
              * to work out that the commit is fine and the token is not.
              */
             $hint = $code === 404 && $this->authHeaders($url) === []
-                ? ' If this package is private, Millwright found no credentials for it — check auth.json.'
+                ? ' '.Lang::trans('fetch.private_hint')
                 : '';
 
-            throw new RuntimeException("Could not download $url (HTTP $code).$hint".($err ? " $err" : ''));
+            throw new RuntimeException(Lang::trans('fetch.download_failed', ['url' => $url, 'code' => (string) $code]).$hint.($err ? " $err" : ''));
         }
 
         return $tmp;
@@ -167,14 +168,14 @@ class Fetcher
         $zip = new ZipArchive();
 
         if ($zip->open($archive) !== true) {
-            throw new RuntimeException("The download of $package is not a readable archive.");
+            throw new RuntimeException(Lang::trans('fetch.not_archive', ['package' => $package]));
         }
 
         $root = $this->commonRoot($zip);
         $this->deleteTree($target);
 
         if (! mkdir($target, 0775, true) && ! is_dir($target)) {
-            throw new RuntimeException("Could not create the staging directory for $package.");
+            throw new RuntimeException(Lang::trans('fetch.staging_failed', ['package' => $package]));
         }
 
         for ($i = 0; $i < $zip->numFiles; $i++) {
@@ -188,19 +189,19 @@ class Fetcher
             // 🚨 An archive is untrusted input, and "../" inside an entry name is
             // the oldest way out of a target directory there is.
             if (str_contains($rel, '..')) {
-                throw new RuntimeException("Refusing to unpack $package: the archive contains a path that escapes it.");
+                throw new RuntimeException(Lang::trans('fetch.path_escapes', ['package' => $package]));
             }
 
             $to = $target.'/'.$rel;
 
             if (! is_dir(dirname($to)) && ! mkdir(dirname($to), 0775, true) && ! is_dir(dirname($to))) {
-                throw new RuntimeException('Could not create '.dirname($to));
+                throw new RuntimeException(Lang::trans('fs.create_failed', ['path' => dirname($to)]));
             }
 
             $stream = $zip->getStream($name);
 
             if ($stream === false) {
-                throw new RuntimeException("Could not read $name out of the $package archive.");
+                throw new RuntimeException(Lang::trans('fetch.read_entry_failed', ['name' => $name, 'package' => $package]));
             }
 
             file_put_contents($to, $stream);

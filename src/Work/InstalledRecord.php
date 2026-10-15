@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Lang;
 use RuntimeException;
 
 /**
@@ -87,7 +88,7 @@ class InstalledRecord
         if ($json === false || file_put_contents($tmp, $json."\n") === false || ! rename($tmp, $recordPath)) {
             @unlink($tmp);
 
-            throw new RuntimeException('Could not rewrite vendor/composer/installed.json.');
+            throw new RuntimeException(Lang::trans('installed.rewrite_failed'));
         }
 
         return count($packages);
@@ -111,7 +112,7 @@ class InstalledRecord
         $data = json_decode((string) @file_get_contents($path), true);
 
         if (! is_array($data)) {
-            throw new RuntimeException("Could not read $path.");
+            throw new RuntimeException(Lang::trans('fs.read_failed', ['path' => $path]));
         }
 
         return $data;

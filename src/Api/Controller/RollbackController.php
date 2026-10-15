@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Apply\Restore;
 use ErnestDefoe\Millwright\Run\RunStore;
@@ -48,7 +49,7 @@ class RollbackController implements RequestHandlerInterface
         $run = $this->runs->latest();
 
         if ($run === null) {
-            return new JsonResponse(['error' => 'There is nothing to roll back.'], 404);
+            return new JsonResponse(['error' => Lang::trans('rollback.nothing')], 404);
         }
 
         $workDir = new WorkDir($this->paths->storage, $run->id);
@@ -73,7 +74,7 @@ class RollbackController implements RequestHandlerInterface
 
         if (! $journal->exists() && ! is_file($savedLock)) {
             return new JsonResponse([
-                'error' => 'That update never got as far as changing anything, so there is nothing to undo.',
+                'error' => Lang::trans('rollback.nothing_changed'),
             ], 422);
         }
 

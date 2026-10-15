@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Apply\Applier;
 use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Apply\Restore;
@@ -212,7 +213,7 @@ class ComposerSteps implements Steps
             // Composer's own words, not a summary of them: it is usually precise
             // about which constraint could not be satisfied, and paraphrasing
             // that loses the only part anyone can act on.
-            throw new RuntimeException("Composer could not work out an update:\n".$result['output']);
+            throw new RuntimeException(Lang::trans('composer.resolve_failed')."\n".$result['output']);
         }
 
         /*
@@ -234,15 +235,15 @@ class ComposerSteps implements Steps
 
         if ($changes === []) {
             return match ($this->mode) {
-                'install' => 'Nothing changed — that package is already installed at this version.',
-                'remove' => 'Nothing changed — that package was not a direct requirement of this site.',
+                'install' => Lang::trans('composer.nothing_changed_install'),
+                'remove' => Lang::trans('composer.nothing_changed_remove'),
                 default => $this->whyNothingMoved(),
             };
         }
 
         $shown = array_map(fn (Change $c) => $c->describe(), array_slice($changes, 0, 5));
-        $note = count($changes).' package(s) will change: '.implode(', ', $shown)
-            .(count($changes) > 5 ? ', and '.(count($changes) - 5).' more' : '');
+        $note = Lang::trans('composer.will_change', ['count' => count($changes), 'list' => implode(', ', $shown)])
+            .(count($changes) > 5 ? Lang::trans('composer.and_more', ['count' => count($changes) - 5]) : '');
 
         return $raised === [] ? $note : implode('; ', $raised).'. '.$note;
     }
@@ -273,7 +274,7 @@ class ComposerSteps implements Steps
                     self::replaceFile($saved, $live);
                 }
             } elseif (! copy($live, $saved)) {
-                throw new RuntimeException("Could not save a copy of $file before resolving, so nothing was started.");
+                throw new RuntimeException(Lang::trans('composer.save_before_resolve_failed', ['file' => $file]));
             }
         }
     }
@@ -314,8 +315,7 @@ class ComposerSteps implements Steps
                 $this->startFromSaved();
 
                 throw new RuntimeException(
-                    'Nothing was changed. '.$how.' — '.self::RESOLVE_ATTEMPTS.' times in a row, before Composer '
-                    .'finished working out this update. '.$this->limitAdvice($prev)
+                    Lang::trans('composer.resolve_gave_up', ['how' => $how, 'attempts' => self::RESOLVE_ATTEMPTS]).' '.$this->limitAdvice($prev)
                 );
             }
 
@@ -324,9 +324,7 @@ class ComposerSteps implements Steps
                 @file_put_contents($path, json_encode($prev));
 
                 throw new NotYet(
-                    $how.' before Composer finished. Nothing was changed. Trying again (attempt '
-                    .($attempts + 1).' of '.self::RESOLVE_ATTEMPTS.'); Composer kept what it had already '
-                    .'downloaded, so this attempt starts further along.'
+                    Lang::trans('composer.resolve_retrying', ['how' => $how, 'attempt' => $attempts + 1, 'attempts' => self::RESOLVE_ATTEMPTS])
                 );
             }
         }
@@ -378,11 +376,10 @@ class ComposerSteps implements Steps
         $seconds = (int) ($attempt['seconds'] ?? 0);
 
         return match ($attempt['stopped'] ?? null) {
-            'time' => 'This host stopped the request after '.(int) ($attempt['timeLimit'] ?? $seconds).' seconds',
-            'memory' => 'This host stopped the request when it reached its memory limit ('
-                .(string) ($attempt['memoryLimit'] ?? '?').')',
-            'unknown' => 'The web server stopped the request after about '.$seconds.' seconds',
-            default => 'The web server stopped the request',
+            'time' => Lang::trans('composer.stopped_time', ['seconds' => (int) ($attempt['timeLimit'] ?? $seconds)]),
+            'memory' => Lang::trans('composer.stopped_memory', ['limit' => (string) ($attempt['memoryLimit'] ?? '?')]),
+            'unknown' => Lang::trans('composer.stopped_unknown', ['seconds' => $seconds]),
+            default => Lang::trans('composer.stopped'),
         };
     }
 
@@ -390,11 +387,8 @@ class ComposerSteps implements Steps
     private function limitAdvice(array $attempt): string
     {
         return match ($attempt['stopped'] ?? null) {
-            'memory' => 'Ask your host to raise memory_limit for this site (256 MB is plenty), or update fewer '
-                .'extensions at once.',
-            default => 'Composer keeps what it downloads, so pressing Update again later often gets further. If it '
-                .'keeps stopping, ask your host to raise max_execution_time for this site (120 seconds is plenty), '
-                .'or to allow proc_open so Composer can run in its own process.',
+            'memory' => Lang::trans('composer.advice_memory'),
+            default => Lang::trans('composer.advice_time'),
         };
     }
 
@@ -451,7 +445,7 @@ class ComposerSteps implements Steps
             }
 
             $json['require'][$package] = $version;
-            $raised[] = sprintf('%s required at %s instead of %s', $package, $version, $current);
+            $raised[] = Lang::trans('composer.pin_raised', ['package' => $package, 'version' => $version, 'current' => $current]);
         }
 
         if ($raised === []) {
@@ -496,16 +490,15 @@ class ComposerSteps implements Steps
              * those genuinely can be "already newest".
              */
             if (preg_match('/^v?\d+\.\d+\.\d+/', $constraint) && ! preg_match('/[\^~*|]|\s-\s/', $constraint)) {
-                $pinned[] = $package.' is pinned to '.$constraint;
+                $pinned[] = Lang::trans('composer.pinned_to', ['package' => $package, 'constraint' => $constraint]);
             }
         }
 
         if ($pinned === []) {
-            return 'Nothing to update — everything is already at the newest version it can be.';
+            return Lang::trans('composer.nothing_to_update');
         }
 
-        return 'Nothing moved, because '.implode('; ', $pinned)
-            .'. A newer version cannot be installed until that requirement is changed.';
+        return Lang::trans('composer.nothing_moved_pinned', ['pins' => implode('; ', $pinned)]);
     }
 
     /**
@@ -553,13 +546,13 @@ class ComposerSteps implements Steps
 
         if ($source === null) {
             throw new RuntimeException(
-                "There is no downloadable archive for $package. It is probably installed from source or a path repository, which Millwright cannot fetch."
+                Lang::trans('composer.no_archive', ['package' => $package])
             );
         }
 
         $this->fetcher->fetch($package, $source);
 
-        return "Downloaded $package";
+        return Lang::trans('composer.downloaded', ['package' => $package]);
     }
 
     /**
@@ -600,7 +593,7 @@ class ComposerSteps implements Steps
             }
         }
 
-        throw new RuntimeException("$package is not in the plan.");
+        throw new RuntimeException(Lang::trans('composer.not_in_plan', ['package' => $package]));
     }
 
     /** @param list<Change> $plan */
@@ -643,7 +636,7 @@ class ComposerSteps implements Steps
          * on a host without proc_open Flarum's updater is not there to ask.
          */
         if ($was !== null && $was === CoreVersion::onDisk($this->vendorPath !== '' ? $this->vendorPath : $this->installPath.'/vendor')) {
-            return 'Flarum still records '.$was.', the version of its new code, so its database is brought up to date with the other migrations';
+            return Lang::trans('composer.core_same_version', ['version' => $was]);
         }
 
         try {
@@ -663,22 +656,21 @@ class ComposerSteps implements Steps
             $this->clearWebCache();
 
             if ($now === $was) {
-                throw new RuntimeException('the database still records Flarum '.$was.' after migrating.');
+                throw new RuntimeException(Lang::trans('composer.core_db_unchanged', ['version' => $was]));
             }
 
-            return 'Flarum moved from '.$was.' to '.$now.', so its database was brought up to date straight away';
+            return Lang::trans('composer.core_moved', ['from' => $was, 'to' => $now]);
         } catch (\Throwable $e) {
             $restore = $this->restore();
 
             if ($restore === null || ! $restore->possible()) {
-                throw new RuntimeException('Flarum\'s files were updated but its database could not be: '.$e->getMessage());
+                throw new RuntimeException(Lang::trans('composer.core_db_failed', ['error' => $e->getMessage()]));
             }
 
             $done = $restore->run();
 
             throw new Reverted(
-                'Flarum\'s files were updated but its database could not be ('.$e->getMessage().'), so the update was undone '
-                .'before the site could be left showing "Update Flarum".'.($done['note'] !== null ? ' '.$done['note'] : ''),
+                Lang::trans('composer.core_db_failed_undone', ['error' => $e->getMessage()]).($done['note'] !== null ? ' '.$done['note'] : ''),
                 $done['undone']
             );
         }
@@ -696,27 +688,22 @@ class ComposerSteps implements Steps
     private function tidyTrash(): string
     {
         if ($this->storagePath === '') {
-            return 'Old rollback copies were not tidied: no storage path is known here.';
+            return Lang::trans('composer.tidy_no_storage');
         }
 
         try {
             $dir = $this->storagePath.'/millwright';
             $summary = (new Pruner($dir, new Retention($dir)))->prune('finished update', 10.0);
         } catch (\Throwable $e) {
-            return 'Old rollback copies were left for the nightly tidy: '.$e->getMessage();
+            return Lang::trans('composer.tidy_left', ['error' => $e->getMessage()]);
         }
 
         if ($summary['removed'] === 0) {
-            return 'No old rollback copies to remove.';
+            return Lang::trans('composer.tidy_nothing');
         }
 
-        return sprintf(
-            'Removed %d old rollback %s, freeing %s.%s',
-            $summary['removed'],
-            $summary['removed'] === 1 ? 'copy' : 'copies',
-            Pruner::human((int) $summary['freed']),
-            $summary['complete'] ? '' : ' The rest will be tidied tonight.'
-        );
+        return Lang::trans('composer.tidy_removed', ['count' => $summary['removed'], 'size' => Pruner::human((int) $summary['freed'])])
+            .($summary['complete'] ? '' : ' '.Lang::trans('composer.tidy_rest_tonight'));
     }
 
     /** Longer than this and telling the truth beats parking the admin screen. */
@@ -727,7 +714,7 @@ class ComposerSteps implements Steps
         return match ($item) {
             'register' => $this->register(),
             'migrations' => $this->migrate(),
-            'assets' => $this->flarum('assets:publish', 'Assets published'),
+            'assets' => $this->flarum('assets:publish', Lang::trans('composer.assets_published')),
             'caches' => $this->clearCaches(),
             'check the site again' => $this->verify($run),
             'tidy the trash' => $this->tidyTrash(),
@@ -739,7 +726,7 @@ class ComposerSteps implements Steps
              * success and changed nothing anybody can see.
              */
             'code cache' => $this->codeCache(),
-            default => 'nothing to do',
+            default => Lang::trans('composer.nothing_to_do'),
         };
     }
 
@@ -801,7 +788,7 @@ class ComposerSteps implements Steps
             fn (string $line) => str_starts_with($line, 'Warning:')
         ));
 
-        return 'Caches cleared; the formatter and the compiled assets rebuilt'
+        return Lang::trans('composer.caches_cleared')
             .($warnings === [] ? '' : '. '.implode(' ', $warnings));
     }
 
@@ -833,16 +820,15 @@ class ComposerSteps implements Steps
         if ($health === null) {
             $this->rememberHealth('unchecked');
 
-            return 'No site address is configured, so this update will not be judged by whether the site answers.';
+            return Lang::trans('composer.health_no_address');
         }
 
         $result = $health->check(2);
         $this->rememberHealth($result['ok'] ? 'ok' : 'down');
 
         return $result['ok']
-            ? 'The site is answering before we start.'
-            : 'The site was already not answering before this update started ('.$result['why']
-                .'), so this update will not be judged by whether it answers afterwards.';
+            ? Lang::trans('composer.health_ok_before')
+            : Lang::trans('composer.health_down_before', ['why' => $result['why']]);
     }
 
     /**
@@ -859,7 +845,7 @@ class ComposerSteps implements Steps
         $before = $this->rememberedHealth();
 
         if ($health === null || $before === 'unchecked') {
-            return 'The site was not checked, because there is no way to reach it from here.';
+            return Lang::trans('composer.health_not_checked');
         }
 
         $result = $health->check(3);
@@ -876,20 +862,19 @@ class ComposerSteps implements Steps
             $freq = (int) ($situation['freq'] ?? 0);
 
             if ($situation['validates'] && $freq > 0 && $freq <= self::WAIT_CAP && time() < $this->codeLiveAt($freq) + $freq) {
-                throw new NotYet('The site answered 503 while the web server may still be re-reading the new files; looking again shortly.');
+                throw new NotYet(Lang::trans('composer.health_503_waiting'));
             }
         }
 
         switch (Verdict::from($before, $result['ok'])) {
             case Verdict::HEALTHY:
-                return 'The site is answering normally after the update.';
+                return Lang::trans('composer.health_ok_after');
 
             case Verdict::ALREADY_BROKEN:
-                return 'The site is still not answering, but it was not answering before this update either — '
-                    .'so this has been left in place rather than blamed for it.';
+                return Lang::trans('composer.health_still_down');
 
             case Verdict::NOT_JUDGED:
-                return 'The site was not checked, because there is no way to reach it from here.';
+                return Lang::trans('composer.health_not_checked');
         }
 
         /*
@@ -901,13 +886,13 @@ class ComposerSteps implements Steps
 
         $said = $why === null
             ? $result['why']
-            : $result['why'].' The error was: '.$why;
+            : $result['why'].' '.Lang::trans('composer.the_error_was', ['error' => $why]);
 
         $restore = $this->restore();
 
         if ($restore === null || ! $restore->possible()) {
             throw new RuntimeException(
-                'This update stopped the site from answering, and there is nothing saved to put back. '.$said
+                Lang::trans('composer.broke_site_no_restore').' '.$said
             );
         }
 
@@ -917,7 +902,7 @@ class ComposerSteps implements Steps
 
         $done = $restore->run();
 
-        $message = 'This update stopped the site from answering, so it has been put back. '.$said;
+        $message = Lang::trans('composer.broke_site_restored').' '.$said;
 
         if ($done['note'] !== null) {
             $message .= ' '.$done['note'];
@@ -1032,7 +1017,7 @@ class ComposerSteps implements Steps
     private function codeCache(): string
     {
         if ($this->clearWebCache()) {
-            return 'Cleared the web server\'s compiled-code cache, so the new files are used.';
+            return Lang::trans('composer.web_cache_cleared');
         }
 
         $opcache = new Opcache();
@@ -1063,17 +1048,15 @@ class ComposerSteps implements Steps
              * than telling the truth and letting them restart PHP.
              */
             if ($left > self::WAIT_CAP) {
-                return 'The files are updated. This host re-reads them only every '
-                    .$situation['freq'].' second(s), which is too long to wait here — '
-                    .'restart PHP-FPM to make the update take effect now.';
+                return Lang::trans('composer.wait_too_long', ['seconds' => $situation['freq']]);
             }
 
             throw new NotYet(
-                'Waiting '.$left.' more second(s) for the web server to re-read the new files.'
+                Lang::trans('composer.waiting_reread', ['seconds' => $left])
             );
         }
 
-        return 'The web server has re-read the new files.';
+        return Lang::trans('composer.reread_done');
     }
 
     /**
@@ -1117,7 +1100,7 @@ class ComposerSteps implements Steps
     private function checkPermissions(): string
     {
         if ($this->vendorPath === '' || $this->storagePath === '') {
-            return 'File permissions not checked on this host';
+            return Lang::trans('composer.permissions_not_checked');
         }
 
         // A root-owned cache is moved aside rather than refused; see StaleCache.
@@ -1139,7 +1122,7 @@ class ComposerSteps implements Steps
             throw new RuntimeException($permissions->explain($blocked));
         }
 
-        return 'Every file this update changes is writable'.($setAside !== '' ? '. '.$setAside : '');
+        return Lang::trans('composer.permissions_ok').($setAside !== '' ? '. '.$setAside : '');
     }
 
     /**
@@ -1181,20 +1164,19 @@ class ComposerSteps implements Steps
 
         $dry = $this->composer->run(['install', '--no-scripts', '--dry-run']);
         if ($dry['code'] !== 0) {
-            throw new RuntimeException("Composer failed:\n".$dry['output']);
+            throw new RuntimeException(Lang::trans('composer.composer_failed')."\n".$dry['output']);
         }
 
         $planned = InstalledRecord::plannedOperations($dry['output']);
         if ($planned > 0) {
             throw new RuntimeException(
-                "Composer still wants to change $planned package(s) after the update was applied, so it was stopped "
-                ."before touching any files. Nothing is broken; roll this run back from the Millwright screen.\n"
+                Lang::trans('composer.still_wants_changes', ['count' => $planned])."\n"
                 .$dry['output']
             );
         }
 
         if ($snapshot === null) {
-            return $this->composerCommand(['install', '--no-scripts'], 'Composer now knows about the change');
+            return $this->composerCommand(['install', '--no-scripts'], Lang::trans('composer.registered'));
         }
 
         /*
@@ -1213,7 +1195,7 @@ class ComposerSteps implements Steps
         });
 
         try {
-            return $this->composerCommand(['install', '--no-scripts'], 'Composer now knows about the change');
+            return $this->composerCommand(['install', '--no-scripts'], Lang::trans('composer.registered'));
         } finally {
             $done = true;
         }
@@ -1228,12 +1210,12 @@ class ComposerSteps implements Steps
         $source = $this->installPath.'/vendor/composer';
 
         if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
-            throw new RuntimeException('Could not save a copy of the autoloader, so Composer was not run.');
+            throw new RuntimeException(Lang::trans('composer.autoloader_copy_failed'));
         }
 
         foreach ([...(glob($source.'/*.php') ?: []), $source.'/installed.json', $this->installPath.'/vendor/autoload.php'] as $file) {
             if (is_file($file) && ! copy($file, $dir.'/'.$this->snapshotName($file))) {
-                throw new RuntimeException('Could not save a copy of the autoloader, so Composer was not run.');
+                throw new RuntimeException(Lang::trans('composer.autoloader_copy_failed'));
             }
         }
 
@@ -1264,7 +1246,7 @@ class ComposerSteps implements Steps
         $result = $this->composer->run($args);
 
         if ($result['code'] !== 0) {
-            throw new RuntimeException("Composer failed:\n".$result['output']);
+            throw new RuntimeException(Lang::trans('composer.composer_failed')."\n".$result['output']);
         }
 
         return $note;
@@ -1280,7 +1262,7 @@ class ComposerSteps implements Steps
         $this->flarum('migrate', 'migrations run');
         $added = $ledger->after($db, resolve(ExtensionManager::class), $this->vendorPath);
 
-        return $added === [] ? 'Migrations run (no database changes)' : 'Migrations run: '.count($added).' database change(s), which undoing this update reverses';
+        return $added === [] ? Lang::trans('composer.migrations_none') : Lang::trans('composer.migrations_run', ['count' => count($added)]);
     }
 
     private function flarum(string $command, string $note): string
@@ -1306,7 +1288,7 @@ class ComposerSteps implements Steps
         if ($result['code'] !== 0) {
             $lines = explode("\n", $result['output']);
 
-            throw new RuntimeException("`flarum $command` failed:\n".implode("\n", array_slice($lines, -12)));
+            throw new RuntimeException(Lang::trans('composer.flarum_command_failed', ['command' => $command])."\n".implode("\n", array_slice($lines, -12)));
         }
 
         return $note;

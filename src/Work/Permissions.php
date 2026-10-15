@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Plan\Change;
 use FilesystemIterator;
 use RecursiveCallbackFilterIterator;
@@ -80,18 +81,17 @@ class Permissions
     public function explain(array $blocked): string
     {
         $user = function_exists('posix_geteuid') && function_exists('posix_getpwuid')
-            ? (posix_getpwuid(posix_geteuid())['name'] ?? 'the web server user')
-            : 'the web server user';
+            ? (posix_getpwuid(posix_geteuid())['name'] ?? Lang::trans('permissions.web_user'))
+            : Lang::trans('permissions.web_user');
 
         $shown = array_slice($blocked, 0, self::SHOWN);
         $more = count($blocked) - count($shown);
 
-        return 'Nothing was changed: '.count($blocked)." path(s) this update needs to change are not writable by $user, "
-            .'usually because a command was run as root. Give them back to the web server user and run the update again, '
-            ."for example as root:\n  chown -R $user ".escapeshellarg($this->vendorPath).' '
+        return Lang::trans('permissions.blocked', ['count' => count($blocked), 'user' => $user])
+            ."\n  chown -R $user ".escapeshellarg($this->vendorPath).' '
             .escapeshellarg($this->storagePath)."\n"
             .implode("\n", array_map(fn ($p) => '  '.$p, $shown))
-            .($more > 0 ? "\n  … and $more more" : '');
+            .($more > 0 ? "\n  ".Lang::trans('permissions.and_more', ['count' => $more]) : '');
     }
 
     private function need(string $path, array &$blocked): void

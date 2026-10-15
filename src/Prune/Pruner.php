@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Prune;
 
+use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Plan\Change;
 use ErnestDefoe\Millwright\Run\Run;
@@ -433,14 +434,14 @@ class Pruner
 
         try {
             if (! is_readable($path)) {
-                throw new RuntimeException("$path is not readable.");
+                throw new RuntimeException(Lang::trans('prune.not_readable', ['path' => $path]));
             }
 
             $entries = (new Journal($path))->entries();
         } catch (Throwable $e) {
             if ($mustRead) {
                 throw new RuntimeException(
-                    "Nothing was removed: the journal of $id could not be read, and it may be needed for a rollback.",
+                    Lang::trans('prune.journal_unreadable', ['id' => $id]),
                     0,
                     $e
                 );

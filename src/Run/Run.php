@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Run;
 
+use ErnestDefoe\Millwright\Lang;
 /**
  * The state of one update, as a value.
  *
@@ -46,7 +47,7 @@ final class Run
 
     public static function start(string $id, int $now): self
     {
-        return new self($id, self::RUNNING, 'plan', [], 0, ['Starting'], null, null, $now, $now);
+        return new self($id, self::RUNNING, 'plan', [], 0, [Lang::trans('run.starting')], null, null, $now, $now);
     }
 
     /** What is being worked on right now, for the screen. */
@@ -146,7 +147,7 @@ final class Run
             'error' => $error,
             'errorStep' => $step,
             'movedAt' => $now,
-            'log' => [...$this->log, "Failed during $step: $error"],
+            'log' => [...$this->log, Lang::trans('run.failed_during', ['step' => $step, 'error' => $error])],
         ]);
     }
 
@@ -155,7 +156,7 @@ final class Run
         return $this->copy([
             'state' => self::DONE,
             'movedAt' => $now,
-            'log' => [...$this->log, 'Finished'],
+            'log' => [...$this->log, Lang::trans('run.finished')],
         ]);
     }
 
@@ -164,7 +165,7 @@ final class Run
         return $this->copy([
             'state' => self::ROLLBACK,
             'movedAt' => $now,
-            'log' => [...$this->log, 'Rolled back: '.(implode(', ', $undone) ?: 'nothing to undo')],
+            'log' => [...$this->log, Lang::trans('run.rolled_back', ['undone' => implode(', ', $undone) ?: Lang::trans('run.nothing_to_undo')])],
         ]);
     }
 
@@ -187,8 +188,8 @@ final class Run
             'movedAt' => $now,
             'log' => [
                 ...$this->log,
-                "Failed during $step: $why",
-                'Put back automatically: '.(implode(', ', $undone) ?: 'nothing to undo'),
+                Lang::trans('run.failed_during', ['step' => $step, 'error' => $why]),
+                Lang::trans('run.put_back', ['undone' => implode(', ', $undone) ?: Lang::trans('run.nothing_to_undo')]),
             ],
         ]);
     }

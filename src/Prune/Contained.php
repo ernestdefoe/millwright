@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Prune;
 
+use ErnestDefoe\Millwright\Lang;
 use RuntimeException;
 
 /**
@@ -32,7 +33,7 @@ class Contained
         $real = realpath($base);
 
         if ($real === false || ! is_dir($real)) {
-            throw new RuntimeException("Refusing to delete inside $base: it is not a directory.");
+            throw new RuntimeException(Lang::trans('prune.base_not_dir', ['path' => $base]));
         }
 
         $this->base = rtrim($real, DIRECTORY_SEPARATOR);
@@ -66,7 +67,7 @@ class Contained
         $parent = realpath(dirname($path));
 
         if ($parent === false || rtrim($parent, DIRECTORY_SEPARATOR) !== $this->base) {
-            throw new RuntimeException("Refusing to delete $path: it is not inside {$this->base}.");
+            throw new RuntimeException(Lang::trans('prune.not_inside', ['path' => $path, 'base' => $this->base]));
         }
 
         return $this->removePath($this->entry(basename($path)));
@@ -99,7 +100,7 @@ class Contained
         $names = @scandir($this->base);
 
         if ($names === false) {
-            throw new RuntimeException("Cannot list {$this->base}.");
+            throw new RuntimeException(Lang::trans('prune.cannot_list', ['path' => $this->base]));
         }
 
         return array_values(array_filter($names, fn ($n) => $n !== '.' && $n !== '..'));
@@ -109,7 +110,7 @@ class Contained
     {
         if ($name === '' || $name === '.' || $name === '..' || str_contains($name, '/')
             || str_contains($name, '\\') || str_contains($name, "\0")) {
-            throw new RuntimeException("Refusing to delete '$name': it is not a single name inside {$this->base}.");
+            throw new RuntimeException(Lang::trans('prune.not_single_name', ['name' => $name, 'base' => $this->base]));
         }
 
         return $this->base.DIRECTORY_SEPARATOR.$name;
@@ -127,7 +128,7 @@ class Contained
             $bytes = $this->bytes($stat);
 
             if (! @unlink($path) && (is_link($path) || file_exists($path))) {
-                throw new RuntimeException("Could not remove $path.");
+                throw new RuntimeException(Lang::trans('prune.remove_failed', ['path' => $path]));
             }
 
             return $bytes;
@@ -169,7 +170,7 @@ class Contained
         $bytes += $stat === false ? 0 : $this->bytes($stat);
 
         if (! @rmdir($dir) && is_dir($dir)) {
-            throw new RuntimeException("Could not remove $dir — something in it could not be deleted.");
+            throw new RuntimeException(Lang::trans('prune.remove_dir_failed', ['path' => $dir]));
         }
 
         return $bytes;
@@ -209,7 +210,7 @@ class Contained
         $real = realpath($dir);
 
         if ($real === false || ! str_starts_with($real, $this->base.DIRECTORY_SEPARATOR)) {
-            throw new RuntimeException("Refusing to delete $dir: it resolves outside {$this->base}.");
+            throw new RuntimeException(Lang::trans('prune.resolves_outside', ['path' => $dir, 'base' => $this->base]));
         }
     }
 

@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Discover;
 
+use ErnestDefoe\Millwright\Lang;
 /**
  * Finding extensions, in two cheap requests rather than one slow one.
  *
@@ -78,13 +79,13 @@ class Packagist
              * opposite things — the first ends a search, the second means try
              * again in a minute.
              */
-            return ['results' => [], 'total' => 0, 'error' => 'Packagist could not be reached.', 'more' => false];
+            return ['results' => [], 'total' => 0, 'error' => Lang::trans('discover.unreachable'), 'more' => false];
         }
 
         $data = json_decode($body, true);
 
         if (! is_array($data) || ! isset($data['results'])) {
-            return ['results' => [], 'total' => 0, 'error' => 'Packagist returned something unexpected.', 'more' => false];
+            return ['results' => [], 'total' => 0, 'error' => Lang::trans('discover.unexpected'), 'more' => false];
         }
 
         $results = [];

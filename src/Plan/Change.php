@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Plan;
 
+use ErnestDefoe\Millwright\Lang;
 use InvalidArgumentException;
 
 /**
@@ -75,8 +76,8 @@ class Change
     {
         return match ($this->op) {
             self::REPLACE => "{$this->package} {$this->from} → {$this->to}",
-            self::ADD => "{$this->package} {$this->to} (new)",
-            self::REMOVE => "{$this->package} {$this->from} (removed)",
+            self::ADD => Lang::trans('change.added', ['package' => $this->package, 'version' => $this->to]),
+            self::REMOVE => Lang::trans('change.removed', ['package' => $this->package, 'version' => $this->from]),
             default => $this->package,
         };
     }

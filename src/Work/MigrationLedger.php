@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Lang;
 use Flarum\Database\Migrator;
 use Flarum\Extension\ExtensionManager;
 use Illuminate\Database\ConnectionInterface;
@@ -136,8 +137,8 @@ final class MigrationLedger
                 call_user_func($down, $db->getSchemaBuilder());
             } catch (Throwable $e) {
                 throw new RuntimeException(
-                    'Undoing stopped while reversing '.$m['migration'].': '.$e->getMessage()
-                    .($done ? ' Already reversed: '.implode(', ', $done).'.' : ' Nothing had been reversed yet.')
+                    Lang::trans('migrations.undo_stopped', ['migration' => $m['migration'], 'error' => $e->getMessage()]).' '
+                    .($done ? Lang::trans('migrations.already_reversed', ['list' => implode(', ', $done)]) : Lang::trans('migrations.none_reversed'))
                 );
             }
 
@@ -149,7 +150,7 @@ final class MigrationLedger
         @unlink($this->workDir.'/migrations.json');
         @unlink($this->workDir.'/migrations.pending');
 
-        return array_map(fn ($name) => "reversed database change $name", $done);
+        return array_map(fn ($name) => Lang::trans('migrations.reversed', ['migration' => $name]), $done);
     }
 
     /**
@@ -169,9 +170,9 @@ final class MigrationLedger
 
             if (! isset($migration['down']) || ! is_callable($migration['down'])) {
                 throw new RuntimeException(
-                    'Nothing was undone: this update changed the database with '.$m['migration']
-                    .($m['extension'] ? ' ('.$m['extension'].')' : '').', which has no way to reverse itself. '
-                    .'Putting the old version back would leave it running on a database it was not written for.'
+                    $m['extension']
+                        ? Lang::trans('migrations.irreversible_ext', ['migration' => $m['migration'], 'extension' => $m['extension']])
+                        : Lang::trans('migrations.irreversible', ['migration' => $m['migration']])
                 );
             }
 

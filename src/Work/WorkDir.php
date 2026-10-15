@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Lang;
 use RuntimeException;
 
 /**
@@ -54,7 +55,7 @@ class WorkDir
     {
         foreach ([$this->root(), $this->staging(), $this->trash()] as $dir) {
             if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
-                throw new RuntimeException("Could not create $dir");
+                throw new RuntimeException(Lang::trans('fs.create_failed', ['path' => $dir]));
             }
         }
 

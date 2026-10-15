@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Apply;
 
+use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Plan\Change;
 use RuntimeException;
 
@@ -119,10 +120,10 @@ class Rollback
             }
 
             if (! @copy($saved, $this->installPath.'/'.$file)) {
-                throw new RuntimeException("Could not put $file back from $saved");
+                throw new RuntimeException(Lang::trans('rollback.put_back_failed', ['file' => $file, 'from' => $saved]));
             }
 
-            $done[] = "restored $file";
+            $done[] = Lang::trans('rollback.restored', ['file' => $file]);
         }
 
         return $done;
@@ -150,14 +151,14 @@ class Rollback
             Tree::delete($aside);
 
             if (! Tree::move($live, $aside)) {
-                throw new RuntimeException("Could not move $live aside during rollback");
+                throw new RuntimeException(Lang::trans('rollback.move_aside_failed', ['path' => $live]));
             }
         }
 
         $this->ensureDir(dirname($live));
 
         if (! Tree::move($stash, $live)) {
-            throw new RuntimeException("Could not restore $stash to $live");
+            throw new RuntimeException(Lang::trans('rollback.restore_failed', ['from' => $stash, 'to' => $live]));
         }
     }
 
@@ -176,7 +177,7 @@ class Rollback
         $this->ensureDir(dirname($aside));
 
         if (! Tree::move($live, $aside)) {
-            throw new RuntimeException("Could not remove $live during rollback");
+            throw new RuntimeException(Lang::trans('rollback.remove_failed', ['path' => $live]));
         }
 
         $this->tidyVendorDir(dirname($live));
@@ -212,7 +213,7 @@ class Rollback
     private function ensureDir(string $dir): void
     {
         if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
-            throw new RuntimeException("Could not create $dir");
+            throw new RuntimeException(Lang::trans('fs.create_failed', ['path' => $dir]));
         }
     }
 }

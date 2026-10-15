@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Config;
 
+use ErnestDefoe\Millwright\Lang;
 use RuntimeException;
 
 /**
@@ -53,13 +54,13 @@ class Repositories
     public function add(string $type, string $url, ?string $name = null): void
     {
         if (! in_array($type, self::TYPES, true)) {
-            throw new RuntimeException("Millwright does not add '$type' repositories. Choose vcs, composer or path.");
+            throw new RuntimeException(Lang::trans('config.repo_type_unsupported', ['type' => $type]));
         }
 
         $url = trim($url);
 
         if ($url === '') {
-            throw new RuntimeException('A repository needs a URL.');
+            throw new RuntimeException(Lang::trans('config.repo_needs_url'));
         }
 
         /*
@@ -70,10 +71,10 @@ class Repositories
          */
         if ($type === 'path') {
             if (! str_starts_with($url, '/') && ! str_starts_with($url, './') && ! str_starts_with($url, '../')) {
-                throw new RuntimeException('A path repository needs a filesystem path, not a URL.');
+                throw new RuntimeException(Lang::trans('config.repo_path_not_url'));
             }
         } elseif (! preg_match('#^(https?://|git@|ssh://|git://)#i', $url)) {
-            throw new RuntimeException('That does not look like a repository URL. Use https://, git@ or ssh://.');
+            throw new RuntimeException(Lang::trans('config.repo_bad_url'));
         }
 
         $data = $this->file->read();
@@ -81,7 +82,7 @@ class Repositories
 
         foreach ($repos as $existing) {
             if (is_array($existing) && rtrim((string) ($existing['url'] ?? ''), '/') === rtrim($url, '/')) {
-                throw new RuntimeException('That repository is already configured.');
+                throw new RuntimeException(Lang::trans('config.repo_exists'));
             }
         }
 
@@ -120,7 +121,7 @@ class Repositories
         }
 
         if (! $found) {
-            throw new RuntimeException('That repository is not in composer.json.');
+            throw new RuntimeException(Lang::trans('config.repo_missing'));
         }
 
         $data['repositories'] = $keep;

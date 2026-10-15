@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Lang;
 use RuntimeException;
 
 /**
@@ -50,7 +51,7 @@ final class FlarumCommand
         $container = \Illuminate\Container\Container::getInstance();
 
         if (! $container->bound('flarum.console.commands')) {
-            throw new RuntimeException("`flarum $command` could not be run: Flarum's console is not available here.");
+            throw new RuntimeException(Lang::trans('flarum_command.no_console', ['command' => $command]));
         }
 
         $found = null;
@@ -69,7 +70,7 @@ final class FlarumCommand
         }
 
         if ($found === null) {
-            throw new RuntimeException("`flarum $command` is not a command on this forum.");
+            throw new RuntimeException(Lang::trans('flarum_command.unknown', ['command' => $command]));
         }
 
         $output = new \Symfony\Component\Console\Output\BufferedOutput(

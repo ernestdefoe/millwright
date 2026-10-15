@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Host\Opcache;
 use ErnestDefoe\Millwright\Run\NeedsWebRequest;
 use ErnestDefoe\Millwright\Run\NotYet;
@@ -47,8 +48,7 @@ final class FreshCode
     {
         if (($this->sapi ?? PHP_SAPI) === 'cli') {
             throw new NeedsWebRequest(
-                'Waiting for the Millwright admin page to run this step: this host cannot start separate '
-                .'processes, and this long-running process still has the previous code loaded.'
+                Lang::trans('fresh.needs_web')
             );
         }
 
@@ -57,7 +57,7 @@ final class FreshCode
 
         // A request that began before the last write has the old code by definition.
         if ($start < $changed + 1) {
-            throw new NotYet('Waiting for a fresh request so the new code is the code that runs.');
+            throw new NotYet(Lang::trans('fresh.waiting_request'));
         }
 
         $opcache = $this->opcache;
@@ -82,7 +82,7 @@ final class FreshCode
         if ($situation['canReset'] && $opcache->clear()['done']) {
             @file_put_contents($marker, sprintf('%.6F', microtime(true)));
 
-            throw new NotYet('Cleared PHP\'s compiled-code cache; the next request runs this step with the new code.');
+            throw new NotYet(Lang::trans('fresh.cleared'));
         }
 
         if (! $situation['validates']) {
@@ -92,7 +92,7 @@ final class FreshCode
         $left = (int) ceil($changed + max(1, $situation['freq']) + 2 - $start);
 
         if ($left > 0 && $left <= self::WAIT_CAP) {
-            throw new NotYet('Waiting '.$left.' more second(s) for the web server to re-read the new files.');
+            throw new NotYet(Lang::trans('composer.waiting_reread', ['seconds' => $left]));
         }
     }
 

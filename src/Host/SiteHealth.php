@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Host;
 
+use ErnestDefoe\Millwright\Lang;
 /**
  * Does the site still answer?
  *
@@ -31,7 +32,7 @@ class SiteHealth
      */
     public function check(int $attempts = 3): array
     {
-        $last = ['ok' => false, 'status' => null, 'why' => 'The site was never reached.'];
+        $last = ['ok' => false, 'status' => null, 'why' => Lang::trans('health.never_reached')];
 
         for ($i = 0; $i < max(1, $attempts); $i++) {
             /*
@@ -108,7 +109,7 @@ class SiteHealth
             return $direct;
         }
 
-        return ['ok' => $local['ok'], 'status' => $local['status'], 'why' => $local['why'].' (asked this server directly; its own address is not reachable from here)'];
+        return ['ok' => $local['ok'], 'status' => $local['status'], 'why' => $local['why'].' '.Lang::trans('health.asked_directly')];
     }
 
     /**
@@ -123,7 +124,7 @@ class SiteHealth
              * answer before and after the update, and "cannot check" is a
              * perfectly good answer as long as it is the same one both times.
              */
-            return ['ok' => false, 'status' => null, 'why' => 'This host has no way to make an HTTP request.'];
+            return ['ok' => false, 'status' => null, 'why' => Lang::trans('health.no_http')];
         }
 
         $ch = curl_init($url);
@@ -150,7 +151,7 @@ class SiteHealth
          */
 
         if ($body === false || $status === 0) {
-            return ['ok' => false, 'status' => null, 'why' => 'The site did not answer at all ('.($error ?: 'no response').').'];
+            return ['ok' => false, 'status' => null, 'why' => Lang::trans('health.no_answer', ['error' => $error ?: Lang::trans('health.no_response')])];
         }
 
         /*
@@ -160,9 +161,9 @@ class SiteHealth
          * forum working exactly as configured.
          */
         if ($status >= 500) {
-            return ['ok' => false, 'status' => $status, 'why' => 'The site answered '.$status.'.'];
+            return ['ok' => false, 'status' => $status, 'why' => Lang::trans('health.answered', ['status' => (string) $status])];
         }
 
-        return ['ok' => true, 'status' => $status, 'why' => 'The site answered '.$status.'.', 'body' => (string) $body];
+        return ['ok' => true, 'status' => $status, 'why' => Lang::trans('health.answered', ['status' => (string) $status]), 'body' => (string) $body];
     }
 }

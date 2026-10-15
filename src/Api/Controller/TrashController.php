@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Prune\Pruner;
 use ErnestDefoe\Millwright\Prune\Retention;
 use Flarum\Foundation\Paths;
@@ -47,7 +48,7 @@ class TrashController implements RequestHandlerInterface
                 match ((string) Arr::get($body, 'action', '')) {
                     'prune' => $pruned = $pruner->prune('admin'),
                     'settings' => $retention->save(Arr::get($body, 'keepDays'), Arr::get($body, 'keepRuns')),
-                    default => throw new \InvalidArgumentException('Unknown action.'),
+                    default => throw new \InvalidArgumentException(Lang::trans('unknown_action')),
                 };
             }
 

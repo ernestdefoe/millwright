@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
@@ -35,7 +36,7 @@ class CheckController implements RequestHandlerInterface
 
         if ($result === null) {
             return new JsonResponse([
-                'error' => 'Millwright could not read composer.lock, so it cannot tell what is installed.',
+                'error' => Lang::trans('check.no_lock'),
             ], 500);
         }
 

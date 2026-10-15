@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Host\PhpBinary;
 use RuntimeException;
 
@@ -217,10 +218,7 @@ class ComposerRunner
     {
         for ($t = $e; $t !== null; $t = $t->getPrevious()) {
             if (str_contains($t->getMessage(), 'proc_open')) {
-                return 'Composer needed to run git (for a Git or path repository) and this host does not allow PHP '
-                    .'to start other programs. For a GitHub or GitLab repository, add an access token under '
-                    .'Millwright → Sources so Composer uses their API instead of git; otherwise install the '
-                    .'package from a Composer repository (Packagist, Private Packagist or Satis).';
+                return Lang::trans('composer.needs_git');
             }
         }
 
@@ -235,14 +233,14 @@ class ComposerRunner
         $parts = [];
 
         if (! $limits['memory']) {
-            $parts[] = 'this host does not let Millwright raise memory_limit ('.ini_get('memory_limit').')';
+            $parts[] = Lang::trans('composer.limit_memory', ['limit' => (string) ini_get('memory_limit')]);
         }
 
         if (! $limits['time']) {
-            $parts[] = 'this host does not let Millwright lift the '.ini_get('max_execution_time').'-second time limit';
+            $parts[] = Lang::trans('composer.limit_time', ['seconds' => (string) ini_get('max_execution_time')]);
         }
 
-        return 'Composer ran inside the web request, and '.implode(', and ', $parts).'.';
+        return Lang::trans('composer.limit_note', ['limits' => implode(Lang::trans('composer.limit_joiner'), $parts)]);
     }
 
     /**
@@ -288,7 +286,6 @@ class ComposerRunner
      */
     private function whyNot(): string
     {
-        return 'Composer itself could not be found. It ships with Millwright, so this usually means the '
-            .'install is incomplete — reinstalling the extension should restore it.';
+        return Lang::trans('composer.missing');
     }
 }

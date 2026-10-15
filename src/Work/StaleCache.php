@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Lang;
 /**
  * A cache somebody else owns, moved out of the way instead of refused.
  *
@@ -105,7 +106,7 @@ final class StaleCache
     /** One line for a step result, or '' when nothing moved. */
     public static function describe(array $moved): string
     {
-        return $moved === [] ? '' : 'Set aside a cache owned by another user, which Flarum rebuilds; delete it as root when convenient: rm -rf '
+        return $moved === [] ? '' : Lang::trans('stale_cache.set_aside').' rm -rf '
             .implode(' ', array_map('escapeshellarg', $moved));
     }
 

@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Config\AuthTokens;
 use ErnestDefoe\Millwright\Config\JsonFile;
 use ErnestDefoe\Millwright\Config\Repositories;
@@ -85,7 +86,7 @@ class ConfigController implements RequestHandlerInterface
                     (string) Arr::get($body, 'kind', ''),
                     (string) Arr::get($body, 'host', '')
                 ),
-                default => throw new RuntimeException('Unknown action.'),
+                default => throw new RuntimeException(Lang::trans('unknown_action')),
             };
         } catch (RuntimeException $e) {
             /*
@@ -122,7 +123,7 @@ class ConfigController implements RequestHandlerInterface
              * between somebody understanding why nothing happened and somebody
              * concluding the screen is broken.
              */
-            'note' => 'These take effect the next time something is installed or updated.',
+            'note' => Lang::trans('config.takes_effect_next_time'),
         ];
     }
 

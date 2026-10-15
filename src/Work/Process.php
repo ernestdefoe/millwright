@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Lang;
 use RuntimeException;
 
 /**
@@ -35,7 +36,7 @@ class Process
         $process = @proc_open($command, $descriptors, $pipes, $cwd, $env ?: null);
 
         if (! is_resource($process)) {
-            throw new RuntimeException('Could not start '.($command[0] ?? 'the command').'.');
+            throw new RuntimeException(Lang::trans('process.start_failed', ['command' => $command[0] ?? Lang::trans('process.the_command')]));
         }
 
         foreach ($pipes as $pipe) {
@@ -59,7 +60,7 @@ class Process
             if (time() > $deadline) {
                 proc_terminate($process, 9);
 
-                throw new RuntimeException(($command[0] ?? 'The command')." did not finish within {$timeout}s.");
+                throw new RuntimeException(Lang::trans('process.timeout', ['command' => $command[0] ?? Lang::trans('process.the_command_start'), 'seconds' => (string) $timeout]));
             }
 
             usleep(50000);

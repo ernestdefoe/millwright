@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Apply;
 
+use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Host\Opcache;
 use ErnestDefoe\Millwright\Work\ComposerRunner;
 use ErnestDefoe\Millwright\Work\FlarumCommand;
@@ -62,7 +63,7 @@ class Restore
             $this->vendorPath
         );
 
-        $undone = array_merge($pending ? ['database changes queued to be reversed on the next request'] : [], (new Rollback(
+        $undone = array_merge($pending ? [Lang::trans('restore.migrations_queued')] : [], (new Rollback(
             $this->vendorPath,
             $this->trashPath,
             $this->journal,
@@ -94,14 +95,12 @@ class Restore
                 $result = $this->composer->run(['install', '--no-scripts']);
 
                 if ($result['code'] === 0) {
-                    $undone[] = "Composer's record put back";
+                    $undone[] = Lang::trans('restore.record_put_back');
                 } else {
-                    $note = 'The files are back, but Composer could not update its own record. '
-                        .'Run `composer install` to finish putting things back.';
+                    $note = Lang::trans('restore.record_failed');
                 }
             } catch (Throwable $e) {
-                $note = 'The files are back, but Composer could not be run here ('.$e->getMessage().'). '
-                    .'Run `composer install` to finish putting things back.';
+                $note = Lang::trans('restore.composer_failed', ['error' => $e->getMessage()]);
             }
         }
 
@@ -165,13 +164,11 @@ class Restore
             }
 
             if ($result['code'] !== 0) {
-                return "The files are back, but `php flarum $command` failed, so the forum may still be serving "
-                    .'the newer version\'s assets. Run `php flarum assets:publish`, `php flarum cache:clear` and '
-                    .'`php flarum millwright:repair-formatter` and `php flarum millwright:rebuild-assets` to finish.';
+                return Lang::trans('restore.command_failed', ['command' => $command]);
             }
         }
 
-        $undone[] = 'Assets and caches rebuilt';
+        $undone[] = Lang::trans('restore.assets_rebuilt');
 
         /*
          * 🚨 And the web server's compiled-code cache, as an update's finish

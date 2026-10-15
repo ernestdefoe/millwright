@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Apply;
 
+use ErnestDefoe\Millwright\Lang;
 use RuntimeException;
 
 /**
@@ -81,7 +82,7 @@ class Journal
         $handle = fopen($this->path, 'rb');
 
         if ($handle === false) {
-            throw new RuntimeException("Cannot read the journal at {$this->path}");
+            throw new RuntimeException(Lang::trans('journal.read_failed', ['path' => $this->path]));
         }
 
         $bySeq = [];
@@ -172,13 +173,13 @@ class Journal
         $dir = dirname($this->path);
 
         if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
-            throw new RuntimeException("Cannot create the journal directory at $dir");
+            throw new RuntimeException(Lang::trans('journal.dir_failed', ['path' => $dir]));
         }
 
         $handle = fopen($this->path, 'ab');
 
         if ($handle === false) {
-            throw new RuntimeException("Cannot write the journal at {$this->path}");
+            throw new RuntimeException(Lang::trans('journal.write_failed', ['path' => $this->path]));
         }
 
         $line = json_encode($row, JSON_UNESCAPED_SLASHES)."\n";
@@ -186,7 +187,7 @@ class Journal
         if (fwrite($handle, $line) === false) {
             fclose($handle);
 
-            throw new RuntimeException("Cannot append to the journal at {$this->path}");
+            throw new RuntimeException(Lang::trans('journal.append_failed', ['path' => $this->path]));
         }
 
         fflush($handle);

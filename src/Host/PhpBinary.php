@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Host;
 
+use ErnestDefoe\Millwright\Lang;
 /**
  * Where the command-line PHP is — and, when it cannot be found, WHY.
  *
@@ -148,7 +149,7 @@ class PhpBinary
             $err = trim($run['err']) !== '' ? trim($run['err']) : trim($run['out']);
             $result['error'] = $err !== ''
                 ? mb_substr(strtok($err, "\n") ?: $err, 0, 300)
-                : ($sapi !== null && $sapi !== 'cli' ? "reports SAPI \"$sapi\", not cli" : 'exit code '.$run['code']);
+                : ($sapi !== null && $sapi !== 'cli' ? Lang::trans('php.wrong_sapi', ['sapi' => $sapi]) : Lang::trans('php.exit_code', ['code' => (string) $run['code']]));
         }
 
         return $this->probes[$candidate] = $result;

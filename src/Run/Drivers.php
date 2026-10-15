@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Run;
 
+use ErnestDefoe\Millwright\Lang;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Queue\SyncQueue;
@@ -96,7 +97,7 @@ class Drivers
     public function describe(): string
     {
         return $this->hasWorker()
-            ? 'A background worker is available, so this will carry on even if you close this page.'
-            : 'There is no background worker on this forum, so keep this page open until it finishes. It will pick up where it left off if you do close it.';
+            ? Lang::trans('run.worker_available')
+            : Lang::trans('run.no_worker');
     }
 }

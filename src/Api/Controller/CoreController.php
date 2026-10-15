@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Plan\CoreUpgrade;
 use Flarum\Foundation\Application;
 use Flarum\Foundation\Paths;
@@ -41,7 +42,7 @@ class CoreController implements RequestHandlerInterface
 
         if ($packages === []) {
             return new JsonResponse([
-                'error' => 'Millwright could not read composer.lock, so it cannot work out what an upgrade would involve.',
+                'error' => Lang::trans('core.no_lock'),
             ], 500);
         }
 

@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Lang;
 /**
  * The package sources Composer can only read by running git — which a host
  * that disables proc_open will not let it do.
@@ -89,18 +90,14 @@ final class NeedsGit
         $tokens = array_column(array_filter($blockers, fn ($b) => $b['why'] === self::WHY_TOKEN), 'url');
         $git = array_column(array_filter($blockers, fn ($b) => $b['why'] === self::WHY_GIT), 'url');
 
-        $out = 'Nothing was changed. This host does not allow PHP to start other programs, so Composer cannot run git, '
-            .'and some of this site\'s package sources need it.';
+        $out = Lang::trans('git.blocked');
 
         if ($tokens !== []) {
-            $out .= ' Add a GitHub token under Millwright → Sources so Composer reads these through GitHub\'s API '
-                .'instead: '.implode(', ', $tokens).'.';
+            $out .= ' '.Lang::trans('git.add_token', ['urls' => implode(', ', $tokens)]);
         }
 
         if ($git !== []) {
-            $out .= ' These can only be read with git: '.implode(', ', $git).'. Serve those packages from a '
-                .'Composer repository instead (Packagist, Private Packagist or Satis), or remove the source if nothing '
-                .'uses it.';
+            $out .= ' '.Lang::trans('git.git_only', ['urls' => implode(', ', $git)]);
         }
 
         return $out;

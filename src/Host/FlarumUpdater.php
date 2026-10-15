@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Host;
 
+use ErnestDefoe\Millwright\Lang;
 use RuntimeException;
 
 /**
@@ -37,7 +38,7 @@ final class FlarumUpdater
     public function migrate(): string
     {
         if (! function_exists('curl_init')) {
-            throw new RuntimeException('This host cannot make an HTTP request, so Flarum\'s updater could not be asked to update the database.');
+            throw new RuntimeException(Lang::trans('updater.no_http'));
         }
 
         $username = (string) ($this->database['username'] ?? '');
@@ -70,9 +71,9 @@ final class FlarumUpdater
         }
 
         throw new RuntimeException(
-            'Flarum\'s updater did not update the database ('
-            .($local['status'] === null ? 'it could not be reached: '.$local['error'] : 'it answered '.$local['status'].': '.mb_substr(trim(strip_tags($local['body'])), 0, 200))
-            .').'
+            $local['status'] === null
+                ? Lang::trans('updater.unreachable', ['error' => $local['error']])
+                : Lang::trans('updater.answered', ['status' => $local['status'], 'body' => mb_substr(trim(strip_tags($local['body'])), 0, 200)])
         );
     }
 

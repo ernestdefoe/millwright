@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Config;
 
+use ErnestDefoe\Millwright\Lang;
 use RuntimeException;
 
 /**
@@ -38,7 +39,7 @@ class JsonFile
         $raw = @file_get_contents($this->path);
 
         if ($raw === false) {
-            throw new RuntimeException("Could not read {$this->path}.");
+            throw new RuntimeException(Lang::trans('config.json_unreadable', ['path' => $this->path]));
         }
 
         $data = json_decode($raw, true);
@@ -51,8 +52,7 @@ class JsonFile
              * by hand into one whose contents are gone.
              */
             throw new RuntimeException(
-                basename($this->path).' is not valid JSON, so Millwright will not overwrite it. '
-                .'Fix it by hand first — '.(json_last_error_msg() ?: 'unknown error').'.'
+                Lang::trans('config.json_invalid', ['file' => basename($this->path), 'error' => json_last_error_msg() ?: Lang::trans('config.unknown_error')])
             );
         }
 
@@ -68,12 +68,12 @@ class JsonFile
         $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
         if ($json === false) {
-            throw new RuntimeException('Could not encode '.basename($this->path).': '.json_last_error_msg());
+            throw new RuntimeException(Lang::trans('config.json_encode_failed', ['file' => basename($this->path), 'error' => json_last_error_msg()]));
         }
 
         // 🚨 Prove it parses before it goes anywhere near the real path.
         if (json_decode($json, true) === null) {
-            throw new RuntimeException('Refusing to write '.basename($this->path).': the result does not parse.');
+            throw new RuntimeException(Lang::trans('config.json_refuse_write', ['file' => basename($this->path)]));
         }
 
         $this->backup();
@@ -82,7 +82,7 @@ class JsonFile
         $handle = @fopen($tmp, 'w');
 
         if ($handle === false) {
-            throw new RuntimeException("Could not write next to {$this->path}. Check the directory is writable.");
+            throw new RuntimeException(Lang::trans('config.json_write_failed', ['path' => $this->path]));
         }
 
         try {
@@ -100,7 +100,7 @@ class JsonFile
         if (! @rename($tmp, $this->path)) {
             @unlink($tmp);
 
-            throw new RuntimeException("Could not replace {$this->path}.");
+            throw new RuntimeException(Lang::trans('config.json_replace_failed', ['path' => $this->path]));
         }
     }
 

@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Config\AuthTokens;
 use ErnestDefoe\Millwright\Config\JsonFile;
 use ErnestDefoe\Millwright\Work\ReleaseNotes;
@@ -39,7 +40,7 @@ class ReleaseNotesController implements RequestHandlerInterface
             : null;
 
         if ($notes === null) {
-            return new JsonResponse(['error' => 'No release notes are known for that package.'], 404);
+            return new JsonResponse(['error' => Lang::trans('release_notes.none')], 404);
         }
 
         return new JsonResponse(['package' => $package, 'from' => $updates[$package]['from'], 'to' => $updates[$package]['to']] + $notes);

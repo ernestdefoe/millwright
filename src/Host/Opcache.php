@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Host;
 
+use ErnestDefoe\Millwright\Lang;
 /**
  * Whether the code this update writes will actually be the code that runs.
  *
@@ -119,7 +120,7 @@ class Opcache
         $situation = $this->situation();
 
         if ($situation['state'] === self::FINE) {
-            return ['done' => true, 'why' => 'No compiled-code cache is in the way here.'];
+            return ['done' => true, 'why' => Lang::trans('opcache.fine')];
         }
 
         if (PHP_SAPI === 'cli') {
@@ -132,12 +133,8 @@ class Opcache
             return [
                 'done' => false,
                 'why' => $situation['validates']
-                    ? 'This step ran from the command line, which cannot clear the web server\'s compiled-code cache. '
-                        .'The files are updated and PHP will pick them up within '
-                        .max(1, $situation['freq']).' second(s) on its own.'
-                    : 'This step ran from the command line, which cannot clear the web server\'s compiled-code cache. '
-                        .'The files are updated, but PHP on this host is set never to re-read them '
-                        .'(opcache.validate_timestamps is off), so restart PHP-FPM to make the update take effect.',
+                    ? Lang::trans('opcache.cli_delay', ['seconds' => max(1, $situation['freq'])])
+                    : Lang::trans('opcache.cli_restart'),
             ];
         }
 
@@ -151,20 +148,18 @@ class Opcache
              * most of the 60-second revalidate window, twice per update.
              */
             if ($this->resetPending()) {
-                return ['done' => true, 'why' => 'Cleared PHP\'s compiled-code cache so the new files are used.'];
+                return ['done' => true, 'why' => Lang::trans('opcache.cleared')];
             }
 
             return [
                 'done' => false,
                 'why' => $situation['validates']
-                    ? 'The files are updated. PHP\'s compiled-code cache could not be cleared from here, so the '
-                        .'change becomes live within '.max(1, $situation['freq']).' second(s).'
-                    : 'The files are updated, but PHP\'s compiled-code cache could not be cleared from here and '
-                        .'this host is set never to re-read files. Restart PHP-FPM to make the update take effect.',
+                    ? Lang::trans('opcache.not_cleared_delay', ['seconds' => max(1, $situation['freq'])])
+                    : Lang::trans('opcache.not_cleared_restart'),
             ];
         }
 
-        return ['done' => true, 'why' => 'Cleared PHP\'s compiled-code cache so the new files are used.'];
+        return ['done' => true, 'why' => Lang::trans('opcache.cleared')];
     }
 
     /** A reset has been asked for and not happened yet: the cache is bypassed meanwhile. */

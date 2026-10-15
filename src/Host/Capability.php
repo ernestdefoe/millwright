@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Host;
 
+use ErnestDefoe\Millwright\Lang;
 /**
  * What this host will and will not let Millwright do, established by looking
  * rather than by hoping.
@@ -149,17 +150,17 @@ class Capability
         }
 
         $tier = $this->resolveTier($bytes);
-        $mb = $bytes === -1 ? 'unlimited' : round($bytes / 1048576).' MB';
+        $mb = $bytes === -1 ? Lang::trans('capability.unlimited') : round($bytes / 1048576).' MB';
 
         return [
             'id' => 'memory',
             'ok' => $tier !== self::NONE,
             'warn' => $tier === self::TARGETED,
-            'what' => "Memory: $mb",
+            'what' => Lang::trans('capability.memory', ['memory' => $mb]),
             'why' => match ($tier) {
-                self::FULL => 'A resolve on a forum this size peaks around 165 MB, so everything works, including updating Flarum itself.',
-                self::TARGETED => 'Enough to update one extension at a time, but not to re-resolve everything at once. Updating Flarum needs about 192 MB.',
-                default => 'Below about 160 MB, Composer cannot resolve dependencies here at all. Ask your host to raise memory_limit — 256 MB is plenty.',
+                self::FULL => Lang::trans('capability.memory_full'),
+                self::TARGETED => Lang::trans('capability.memory_targeted'),
+                default => Lang::trans('capability.memory_none'),
             },
         ];
     }
@@ -196,10 +197,10 @@ class Capability
             'id' => 'time',
             'ok' => true,
             'warn' => false,
-            'what' => 'Execution limit: '.($limit === 0 ? 'none' : $limit.' seconds'),
+            'what' => $limit === 0 ? Lang::trans('capability.time_none') : Lang::trans('capability.time_limit', ['seconds' => $limit]),
             'why' => $limit === 0
-                ? 'Not that it matters — no single step needs more than a few seconds either way.'
-                : 'Not a problem. Millwright does one small step per request, so an update that takes ten minutes still finishes on a host that cuts every request at '.$limit.' seconds.',
+                ? Lang::trans('capability.time_none_why')
+                : Lang::trans('capability.time_limit_why', ['seconds' => $limit]),
         ];
     }
 
@@ -375,8 +376,8 @@ class Capability
         if (! $o['enabled']) {
             return [
                 'id' => 'opcache', 'ok' => true, 'warn' => false,
-                'what' => 'No compiled-code cache',
-                'why' => 'Nothing stands between the files an update writes and the code that runs.',
+                'what' => Lang::trans('capability.opcache_off'),
+                'why' => Lang::trans('capability.opcache_off_why'),
             ];
         }
 
@@ -393,16 +394,13 @@ class Capability
             'ok' => $handled,
             'warn' => ! $handled,
             'what' => $o['validates']
-                ? 'PHP re-reads changed files every '.max(1, $o['freq']).' second(s)'
-                : 'PHP caches compiled code and never re-reads files',
+                ? Lang::trans('capability.opcache_rereads', ['seconds' => max(1, $o['freq'])])
+                : Lang::trans('capability.opcache_never_rereads'),
             'why' => $handled
-                ? 'Millwright clears the compiled-code cache when an update finishes, so the new files are used '
-                    .'straight away rather than after a delay.'
+                ? Lang::trans('capability.opcache_handled')
                 : ($o['validates']
-                    ? 'The cache cannot be cleared from here, so an update becomes live within '
-                        .max(1, $o['freq']).' second(s) rather than immediately.'
-                    : 'This host never re-reads changed files and the cache cannot be cleared from here, so PHP-FPM '
-                        .'has to be restarted for an update to take effect.'),
+                    ? Lang::trans('capability.opcache_delay', ['seconds' => max(1, $o['freq'])])
+                    : Lang::trans('capability.opcache_restart')),
         ];
     }
 
@@ -415,17 +413,17 @@ class Capability
             'id' => 'disk',
             'ok' => $gb === null || $gb > 1,
             'warn' => $gb !== null && $gb <= 1,
-            'what' => 'Disk: '.($gb === null ? 'unknown' : $gb.' GB free'),
-            'why' => 'The previous version of anything replaced is kept so you can roll back. That needs room for what changed, not for a second copy of everything.',
+            'what' => $gb === null ? Lang::trans('capability.disk_unknown') : Lang::trans('capability.disk_free', ['gb' => $gb]),
+            'why' => Lang::trans('capability.disk_why'),
         ];
     }
 
     private function summary(int $bytes): string
     {
         return match ($this->resolveTier($bytes)) {
-            self::FULL => 'Everything works on this host. Updates replace one package at a time, which is safe and reversible.',
-            self::TARGETED => 'You can update extensions one at a time here. Updating Flarum itself needs a little more memory than this host allows.',
-            default => 'This host does not have enough memory for Composer to work out what an update involves. Everything else is ready — ask your host to raise memory_limit to 256 MB.',
+            self::FULL => Lang::trans('capability.summary_full'),
+            self::TARGETED => Lang::trans('capability.summary_targeted'),
+            default => Lang::trans('capability.summary_none'),
         };
     }
 

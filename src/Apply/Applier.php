@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Apply;
 
+use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Plan\Change;
 use RuntimeException;
 
@@ -68,7 +69,7 @@ class Applier
              * recoverable situation becomes a manual one.
              */
             throw new RuntimeException(
-                'A previous apply did not finish. Roll it back or resume it before starting another.'
+                Lang::trans('apply.previous_unfinished')
             );
         }
 
@@ -135,9 +136,7 @@ class Applier
 
         if (is_link($live)) {
             throw new RuntimeException(
-                "{$change->package} is installed from a local path — vendor/{$change->relativePath()} is a symlink "
-                .'into a checkout on this machine. Millwright will not replace it, because the copy you are editing '
-                .'would stop being the copy the forum uses. Update it with git instead.'
+                Lang::trans('apply.local_path', ['package' => $change->package, 'path' => 'vendor/'.$change->relativePath()])
             );
         }
     }
@@ -221,7 +220,7 @@ class Applier
         $this->ensureDir(dirname($target));
 
         if (! Tree::move($live, $target)) {
-            throw new RuntimeException("Could not move $live aside to $target");
+            throw new RuntimeException(Lang::trans('apply.move_aside_failed', ['from' => $live, 'to' => $target]));
         }
     }
 
@@ -253,7 +252,7 @@ class Applier
         $this->ensureDir(dirname($live));
 
         if (! Tree::move($staged, $live)) {
-            throw new RuntimeException("Could not move $staged into place at $live");
+            throw new RuntimeException(Lang::trans('apply.move_in_failed', ['from' => $staged, 'to' => $live]));
         }
     }
 
@@ -270,7 +269,7 @@ class Applier
     private function ensureDir(string $dir): void
     {
         if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
-            throw new RuntimeException("Could not create $dir");
+            throw new RuntimeException(Lang::trans('fs.create_failed', ['path' => $dir]));
         }
     }
 }

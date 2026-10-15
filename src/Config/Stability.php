@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Config;
 
+use ErnestDefoe\Millwright\Lang;
 use RuntimeException;
 
 /**
@@ -39,7 +40,7 @@ class Stability
     public function set(string $level, bool $preferStable): void
     {
         if (! in_array($level, self::LEVELS, true)) {
-            throw new RuntimeException('Minimum stability must be one of: '.implode(', ', self::LEVELS).'.');
+            throw new RuntimeException(Lang::trans('config.stability_invalid', ['levels' => implode(', ', self::LEVELS)]));
         }
 
         $data = $this->file->read();

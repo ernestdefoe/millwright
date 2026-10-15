@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Discover\Cache;
 use ErnestDefoe\Millwright\Discover\Compatibility;
 use ErnestDefoe\Millwright\Discover\Packagist;
@@ -60,8 +61,8 @@ class StartController implements RequestHandlerInterface
         foreach ($verdicts as $name => $verdict) {
             if (! empty($verdict['replaced'])) {
                 return $verdict['replacedBy']
-                    ? "$name has been replaced by {$verdict['replacedBy']}. Install {$verdict['replacedBy']} instead; installing the old name gives you the new extension under the wrong id."
-                    : "$name has been replaced by another package, so it was not installed. Its Packagist page or repository names the one to use now.";
+                    ? Lang::trans('start.replaced_by', ['name' => $name, 'replacement' => $verdict['replacedBy']])
+                    : Lang::trans('start.replaced', ['name' => $name]);
             }
         }
 
@@ -87,8 +88,7 @@ class StartController implements RequestHandlerInterface
              * dependency goes when that dependency goes, and not before.
              */
             if (! isset($direct[$package])) {
-                return "$package is not something this site requires directly — it was installed because another "
-                    .'extension depends on it. Removing that extension will take this one with it.';
+                return Lang::trans('start.not_direct', ['package' => $package]);
             }
 
             /*
@@ -99,8 +99,7 @@ class StartController implements RequestHandlerInterface
              * the removal safe.
              */
             if ($this->isEnabled($package)) {
-                return "$package is still enabled. Turn it off on the Extensions page first, check the forum is "
-                    .'happy without it, and then remove it.';
+                return Lang::trans('start.still_enabled', ['package' => $package]);
             }
         }
 
@@ -134,7 +133,7 @@ class StartController implements RequestHandlerInterface
             : null;
 
         if ($nightly === []) {
-            return new JsonResponse(['error' => 'There is no nightly build to move to: Packagist has no development branch for this Flarum, or could not be reached. Nothing was started.'], 422);
+            return new JsonResponse(['error' => Lang::trans('start.no_nightly')], 422);
         }
 
         if ($nightly !== null) {
@@ -147,14 +146,14 @@ class StartController implements RequestHandlerInterface
         foreach ($packages as $package) {
             // The only user-supplied value that reaches a command line.
             if (! preg_match('#^[a-z0-9]([_.-]?[a-z0-9]+)*/[a-z0-9](([_.]|-{1,2})?[a-z0-9]+)*$#', (string) $package)) {
-                return new JsonResponse(['error' => "That is not a package name: $package"], 422);
+                return new JsonResponse(['error' => Lang::trans('start.not_a_package', ['package' => (string) $package])], 422);
             }
         }
 
         $capability = new Capability($this->paths->base, \ErnestDefoe\Millwright\Host\PhpBinary::forStorage($this->paths->storage), $this->paths->storage.'/.composer');
 
         if ($packages === []) {
-            return new JsonResponse(['error' => 'Nothing was selected, so nothing was started.'], 422);
+            return new JsonResponse(['error' => Lang::trans('start.nothing_selected')], 422);
         }
 
         if ($mode === 'install' && ($refusal = $this->replaced($packages)) !== null) {
@@ -167,8 +166,7 @@ class StartController implements RequestHandlerInterface
 
         if ($capability->resolveTier() === Capability::NONE) {
             return new JsonResponse([
-                'error' => 'This host does not have enough memory for Composer to work out what an update involves. '
-                    .'Nothing was started. Ask your host to raise memory_limit to 256 MB and try again.',
+                'error' => Lang::trans('start.not_enough_memory'),
             ], 422);
         }
 
@@ -183,8 +181,9 @@ class StartController implements RequestHandlerInterface
             $age = time() - $existing->movedAt;
 
             return new JsonResponse([
-                'error' => 'An update is already in progress'
-                    .($age > 120 ? ', though nothing has moved for '.round($age / 60).' minutes.' : '.'),
+                'error' => $age > 120
+                    ? Lang::trans('start.in_progress_stale', ['minutes' => round($age / 60)])
+                    : Lang::trans('start.in_progress'),
                 'run' => $this->runs->present($existing),
                 'stale' => $existing->isStale(time()),
             ], 409);

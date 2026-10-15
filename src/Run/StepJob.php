@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Run;
 
+use ErnestDefoe\Millwright\Lang;
 use Flarum\Queue\AbstractJob;
 use Illuminate\Contracts\Bus\Dispatcher;
 
@@ -123,8 +124,8 @@ class StepJob extends AbstractJob
 
         if ($run !== null && ! $run->isFinished()) {
             $store->save($run->failed(
-                'The background worker running this update stopped: '.$e->getMessage(),
-                'queue worker',
+                Lang::trans('run.worker_stopped', ['error' => $e->getMessage()]),
+                Lang::trans('run.queue_worker'),
                 time()
             ));
         }
