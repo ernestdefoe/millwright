@@ -38,4 +38,17 @@ class WebResetFlagTest extends TestCase
 
         $this->assertDirectoryDoesNotExist($this->dir.'/millwright');
     }
+
+    /**
+     * 🚨 Taken before any extension boots, or a stale extend.php that registers
+     * a deleted class kills every request before the reset could fix it.
+     */
+    public function test_the_flag_is_taken_from_composer_autoload_not_only_the_provider(): void
+    {
+        $root = dirname(__DIR__, 2);
+        $files = json_decode((string) file_get_contents($root.'/composer.json'), true)['autoload']['files'] ?? [];
+
+        $this->assertContains('bootstrap/web-reset.php', $files);
+        $this->assertStringContainsString("'/millwright/opcache-reset'", (string) file_get_contents($root.'/bootstrap/web-reset.php'));
+    }
 }

@@ -33,7 +33,10 @@
     "autoload": {
         "psr-4": {
             "ErnestDefoe\\Millwright\\": "src/"
-        }
+        },
+        "files": [
+            "bootstrap/web-reset.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {

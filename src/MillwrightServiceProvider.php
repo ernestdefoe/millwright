@@ -15,16 +15,22 @@ use Illuminate\Contracts\Queue\Factory as QueueFactory;
 
 class MillwrightServiceProvider extends AbstractServiceProvider
 {
-    /** A CLI update asking the web server to drop its compiled code; see Opcache::requestWebReset(). */
-    public function boot(): void
-    {
-        if (PHP_SAPI !== 'cli') {
-            \ErnestDefoe\Millwright\Host\Opcache::honourWebReset($this->container->make(Paths::class)->storage);
-        }
-    }
-
     public function register(): void
     {
+        /*
+         * A CLI update asking the web server to drop its compiled code; see
+         * Opcache::requestWebReset(). bootstrap/web-reset.php takes it before any
+         * extension boots; this covers a site whose storage is not where that
+         * file looks, and is not a second stat everywhere else.
+         */
+        if (PHP_SAPI !== 'cli') {
+            $storage = $this->container->make(Paths::class)->storage;
+
+            if (! defined('MILLWRIGHT_EARLY_STORAGE') || $storage !== MILLWRIGHT_EARLY_STORAGE) {
+                \ErnestDefoe\Millwright\Host\Opcache::honourWebReset($storage);
+            }
+        }
+
         $this->container->singleton(RunStore::class, function ($container) {
             /*
              * Under storage/, which is already writable, already excluded from

@@ -589,6 +589,8 @@ class ComposerSteps implements Steps
             if ($change->package === $package) {
                 $done = $this->applier->applyOne($change);
 
+                $this->dropStaleCode();
+
                 // The last swap of an update that moved Flarum itself.
                 if ($package === end($plan)->package && $this->movesCore($plan)) {
                     $done .= '. '.$this->bridgeCore();
@@ -950,6 +952,24 @@ class ComposerSteps implements Steps
         return false;
     }
 
+    /**
+     * 🚨 Straight after the files change, not at the end of the run.
+     *
+     * With revalidate_freq=60 the web server kept running a package's OLD
+     * compiled extend.php against its NEW files for every step between the swap
+     * and 'code cache'. fof/best-answer 2.0.0 deleted a service provider its
+     * beta still registered, and every page and the admin panel on fbsfb.com
+     * answered "class not found" until the cache was cleared (2026-10-15).
+     */
+    private function dropStaleCode(): void
+    {
+        if (PHP_SAPI !== 'cli') {
+            (new Opcache())->clear();
+        } else {
+            $this->clearWebCache();
+        }
+    }
+
     private function health(): ?SiteHealth
     {
         return $this->siteUrl === '' ? null : new SiteHealth($this->siteUrl);
@@ -1142,7 +1162,10 @@ class ComposerSteps implements Steps
         $snapshot = $inProcess ? $this->snapshotAutoloader() : null;
 
         try {
-            return $this->registerWith($snapshot);
+            $done = $this->registerWith($snapshot);
+            $this->dropStaleCode();
+
+            return $done;
         } catch (\Throwable $e) {
             if ($snapshot !== null) {
                 $this->restoreAutoloader($snapshot);
