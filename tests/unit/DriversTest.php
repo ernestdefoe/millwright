@@ -28,7 +28,7 @@ class DriversTest extends TestCase
 {
     private function queue(mixed $connection): QueueFactory
     {
-        $q = $this->createMock(QueueFactory::class);
+        $q = $this->createStub(QueueFactory::class);
 
         if ($connection instanceof \Throwable) {
             $q->method('connection')->willThrowException($connection);
@@ -72,7 +72,7 @@ class DriversTest extends TestCase
     {
         $drivers = new Drivers(
             $this->queue(new RuntimeException('no connection')),
-            $this->createMock(Dispatcher::class)
+            $this->createStub(Dispatcher::class)
         );
 
         $this->assertFalse($drivers->hasWorker());
@@ -83,7 +83,7 @@ class DriversTest extends TestCase
     {
         // The update is already running and its state is on disk; a failed
         // dispatch costs a background helper, not the update.
-        $bus = $this->createMock(Dispatcher::class);
+        $bus = $this->createStub(Dispatcher::class);
         $bus->method('dispatch')->willThrowException(new RuntimeException('queue is down'));
 
         $drivers = new Drivers($this->queue(new stdClass()), $bus);
@@ -133,14 +133,14 @@ class DriversTest extends TestCase
             }
         };
 
-        $drivers = new Drivers($this->queue($wrapper), $this->createMock(Dispatcher::class));
+        $drivers = new Drivers($this->queue($wrapper), $this->createStub(Dispatcher::class));
 
         $this->assertTrue($drivers->hasWorker());
     }
 
     public function test_it_tells_the_admin_which_situation_they_are_in(): void
     {
-        $bus = $this->createMock(Dispatcher::class);
+        $bus = $this->createStub(Dispatcher::class);
 
         $withWorker = new Drivers($this->queue(new stdClass()), $bus);
         $without = new Drivers($this->queue(new SyncQueue()), $bus);

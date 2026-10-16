@@ -65,11 +65,11 @@ class WiringTest extends TestCase
          * hand stops compiling the day Laravel adds a method to it, which turns
          * a wiring test into a maintenance chore and gets it deleted.
          */
-        $queue = $this->createMock(QueueFactory::class);
+        $queue = $this->createStub(QueueFactory::class);
         $queue->method('connection')->willReturn(new \Illuminate\Queue\SyncQueue());
 
         $this->container->instance(QueueFactory::class, $queue);
-        $this->container->instance(Dispatcher::class, $this->createMock(Dispatcher::class));
+        $this->container->instance(Dispatcher::class, $this->createStub(Dispatcher::class));
 
         /*
          * Flarum's AbstractServiceProvider takes the Application contract and
@@ -79,7 +79,7 @@ class WiringTest extends TestCase
          */
         $real = $this->container;
 
-        $app = $this->createMock(ApplicationContract::class);
+        $app = $this->createStub(ApplicationContract::class);
         $app->method('singleton')->willReturnCallback(fn ($a, $c = null) => $real->singleton($a, $c));
         $app->method('bind')->willReturnCallback(fn ($a, $c = null, $shared = false) => $real->bind($a, $c, $shared));
         $app->method('instance')->willReturnCallback(fn ($a, $i) => $real->instance($a, $i));

@@ -86,6 +86,8 @@ class InProcessComposerTest extends TestCase
         unset($_SERVER['COLUMNS'], $_ENV['COLUMNS']);
         $memory = ini_get('memory_limit');
         $zone = date_default_timezone_get();
+        // Set already when the suite runs under `composer test`, by Symfony Console.
+        $verbosity = $_SERVER['SHELL_VERBOSITY'] ?? null;
 
         try {
             $seen = InProcess::isolate(['COMPOSER_HOME' => '/tmp/mw-test-home'], function (array $limits) {
@@ -113,7 +115,7 @@ class InProcessComposerTest extends TestCase
             $this->assertFalse(getenv('COLUMNS'));
             $this->assertFalse(getenv('COMPOSER_HOME'));
             $this->assertArrayNotHasKey('COMPOSER_HOME', $_SERVER);
-            $this->assertArrayNotHasKey('SHELL_VERBOSITY', $_SERVER);
+            $this->assertSame($verbosity, $_SERVER['SHELL_VERBOSITY'] ?? null);
             $this->assertSame($memory, ini_get('memory_limit'));
             $this->assertSame($zone, date_default_timezone_get());
         } finally {

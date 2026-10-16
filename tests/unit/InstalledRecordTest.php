@@ -77,7 +77,7 @@ class InstalledRecordTest extends TestCase
 
     public function test_real_composer_has_nothing_left_to_extract_once_the_record_is_synced(): void
     {
-        $composer = dirname(__DIR__, 2).'/vendor/composer/composer/bin/composer';
+        $composer = dirname((new \ReflectionClass(\Composer\Composer::class))->getFileName(), 3).'/bin/composer';
         if (! is_file($composer)) {
             $this->markTestSkipped('Composer is not installed in this checkout.');
         }
