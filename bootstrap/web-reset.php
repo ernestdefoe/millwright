@@ -14,7 +14,7 @@ if (PHP_SAPI !== 'cli') {
     // The newest loader is this site's: keyed by its vendor dir, symlinks intact.
     define('MILLWRIGHT_EARLY_STORAGE', dirname((string) array_key_first(Composer\Autoload\ClassLoader::getRegisteredLoaders())).'/storage');
 
-    if (is_file(MILLWRIGHT_EARLY_STORAGE.'/millwright/opcache-reset')) {
+    if (is_file(ErnestDefoe\Millwright\Host\StorageDir::of(MILLWRIGHT_EARLY_STORAGE).'/opcache-reset')) {
         ErnestDefoe\Millwright\Host\Opcache::honourWebReset(MILLWRIGHT_EARLY_STORAGE);
     }
 }

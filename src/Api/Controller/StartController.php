@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Discover\Cache;
 use ErnestDefoe\Millwright\Discover\Compatibility;
@@ -55,7 +56,7 @@ class StartController implements RequestHandlerInterface
      */
     private function replaced(array $packages): ?string
     {
-        $packagist = new Packagist(new Cache($this->paths->storage.'/millwright/packagist'));
+        $packagist = new Packagist(new Cache(StorageDir::of($this->paths->storage).'/packagist'));
         $verdicts = $packagist->verdicts(array_slice($packages, 0, 5), new Compatibility(ltrim($this->app->version(), 'v')));
 
         foreach ($verdicts as $name => $verdict) {
@@ -237,7 +238,7 @@ class StartController implements RequestHandlerInterface
          */
         return (new Repin(
             $this->paths->base.'/composer.json',
-            $this->paths->storage.'/millwright/updates.json'
+            StorageDir::of($this->paths->storage).'/updates.json'
         ))->targetsFor($packages);
     }
 }

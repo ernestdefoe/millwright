@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Apply\Applier;
 use ErnestDefoe\Millwright\Apply\Journal;
@@ -692,7 +693,7 @@ class ComposerSteps implements Steps
         }
 
         try {
-            $dir = $this->storagePath.'/millwright';
+            $dir = StorageDir::of($this->storagePath);
             $summary = (new Pruner($dir, new Retention($dir)))->prune('finished update', 10.0);
         } catch (\Throwable $e) {
             return Lang::trans('composer.tidy_left', ['error' => $e->getMessage()]);
@@ -970,7 +971,7 @@ class ComposerSteps implements Steps
             $this->vendorPath,
             $this->installPath,
             $this->workDir,
-            $this->storagePath.'/millwright/trash',
+            StorageDir::of($this->storagePath).'/trash',
             $this->journal,
             $this->composer,
             $this->storagePath

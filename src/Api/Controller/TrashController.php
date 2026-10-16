@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Prune\Pruner;
 use ErnestDefoe\Millwright\Prune\Retention;
@@ -36,7 +37,7 @@ class TrashController implements RequestHandlerInterface
     {
         RequestUtil::getActor($request)->assertAdmin();
 
-        $dir = $this->paths->storage.'/millwright';
+        $dir = StorageDir::of($this->paths->storage);
         $retention = new Retention($dir);
         $pruner = new Pruner($dir, $retention);
         $pruned = null;

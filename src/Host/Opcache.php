@@ -184,7 +184,7 @@ class Opcache
      */
     public static function requestWebReset(string $storagePath): void
     {
-        $dir = $storagePath.'/millwright';
+        $dir = StorageDir::of($storagePath);
 
         if (! is_dir($dir)) {
             @mkdir($dir, 0775, true);
@@ -195,9 +195,9 @@ class Opcache
 
     public static function webResetPending(string $storagePath): bool
     {
-        clearstatcache(true, $storagePath.'/millwright/opcache-reset');
+        clearstatcache(true, StorageDir::of($storagePath).'/opcache-reset');
 
-        return is_file($storagePath.'/millwright/opcache-reset');
+        return is_file(StorageDir::of($storagePath).'/opcache-reset');
     }
 
     /**
@@ -206,7 +206,7 @@ class Opcache
      */
     public static function honourWebReset(string $storagePath): void
     {
-        $flag = $storagePath.'/millwright/opcache-reset';
+        $flag = StorageDir::of($storagePath).'/opcache-reset';
 
         if (! is_file($flag) || ! @rename($flag, $flag.'.'.getmypid())) {
             return;

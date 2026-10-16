@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Console;
 
+use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Prune\Pruner;
 use ErnestDefoe\Millwright\Prune\Retention;
 use Flarum\Console\AbstractCommand;
@@ -35,7 +36,7 @@ class PruneCommand extends AbstractCommand
 
     protected function fire(): int
     {
-        $dir = $this->paths->storage.'/millwright';
+        $dir = StorageDir::of($this->paths->storage);
         $pruner = new Pruner($dir, new Retention($dir));
 
         try {

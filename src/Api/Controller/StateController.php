@@ -4,6 +4,7 @@ namespace ErnestDefoe\Millwright\Api\Controller;
 
 use ErnestDefoe\Millwright\Host\Capability;
 use ErnestDefoe\Millwright\Host\PhpBinary;
+use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Run\RunStore;
 use ErnestDefoe\Millwright\Work\PendingUndo;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
@@ -39,7 +40,7 @@ class StateController implements RequestHandlerInterface
         $run = $this->runs->latest();
         $undoError = PendingUndo::finish($run, $this->paths);
 
-        $check = new UpdateCheck($this->paths->storage.'/millwright/updates.json');
+        $check = new UpdateCheck(StorageDir::of($this->paths->storage).'/updates.json');
         $cached = $check->current($this->paths->base.'/composer.lock');
 
         return new JsonResponse([

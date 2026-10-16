@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 use Flarum\Foundation\Paths;
@@ -28,7 +29,7 @@ class CheckController implements RequestHandlerInterface
     {
         RequestUtil::getActor($request)->assertAdmin();
 
-        $check = new UpdateCheck($this->paths->storage.'/millwright/updates.json');
+        $check = new UpdateCheck(StorageDir::of($this->paths->storage).'/updates.json');
 
         // 🚨 The same check as the console command, private repositories
         // included: see UpdateCheck::refreshSite().

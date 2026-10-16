@@ -6,6 +6,7 @@ use Composer\Semver\VersionParser;
 use ErnestDefoe\Millwright\Discover\Cache;
 use ErnestDefoe\Millwright\Discover\Compatibility;
 use ErnestDefoe\Millwright\Discover\Packagist;
+use ErnestDefoe\Millwright\Host\StorageDir;
 use Flarum\Foundation\Application;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
@@ -64,7 +65,7 @@ class CompatController implements RequestHandlerInterface
          */
         $core = $this->targetOr($this->coreVersion(), Arr::get((array) $request->getParsedBody(), 'core'));
 
-        $packagist = new Packagist(new Cache($this->paths->storage.'/millwright/packagist'));
+        $packagist = new Packagist(new Cache(StorageDir::of($this->paths->storage).'/packagist'));
 
         return new JsonResponse([
             'verdicts' => $packagist->verdicts($names, new Compatibility($core)),

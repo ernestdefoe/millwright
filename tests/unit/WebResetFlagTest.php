@@ -49,6 +49,8 @@ class WebResetFlagTest extends TestCase
         $files = json_decode((string) file_get_contents($root.'/composer.json'), true)['autoload']['files'] ?? [];
 
         $this->assertContains('bootstrap/web-reset.php', $files);
-        $this->assertStringContainsString("'/millwright/opcache-reset'", (string) file_get_contents($root.'/bootstrap/web-reset.php'));
+        $bootstrap = (string) file_get_contents($root.'/bootstrap/web-reset.php');
+        $this->assertStringContainsString('StorageDir::of(', $bootstrap);
+        $this->assertStringContainsString("'/opcache-reset'", $bootstrap);
     }
 }

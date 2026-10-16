@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Console;
 
+use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 use Flarum\Console\AbstractCommand;
 use Flarum\Foundation\Paths;
@@ -34,7 +35,7 @@ class CheckCommand extends AbstractCommand
 
     protected function fire(): int
     {
-        $check = new UpdateCheck($this->paths->storage.'/millwright/updates.json');
+        $check = new UpdateCheck(StorageDir::of($this->paths->storage).'/updates.json');
 
         if (! $this->input->getOption('force') && ! $check->isStale()) {
             $this->info('The last check is still fresh. Use --force to check anyway.');

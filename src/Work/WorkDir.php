@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Lang;
 use RuntimeException;
 
@@ -27,7 +28,7 @@ class WorkDir
 
     public function root(): string
     {
-        return $this->storagePath.'/millwright/runs/'.$this->runId;
+        return StorageDir::of($this->storagePath).'/runs/'.$this->runId;
     }
 
     public function staging(): string
@@ -48,7 +49,7 @@ class WorkDir
          * gone — that is the whole difference between "reversible" and
          * "reversible for the next few minutes".
          */
-        return $this->storagePath.'/millwright/trash';
+        return StorageDir::of($this->storagePath).'/trash';
     }
 
     public function create(): self

@@ -5,6 +5,7 @@ namespace ErnestDefoe\Millwright\Api\Controller;
 use ErnestDefoe\Millwright\Discover\Cache;
 use ErnestDefoe\Millwright\Discover\Compatibility;
 use ErnestDefoe\Millwright\Discover\Packagist;
+use ErnestDefoe\Millwright\Host\StorageDir;
 use Flarum\Extension\ExtensionManager;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
@@ -75,6 +76,6 @@ class DiscoverController implements RequestHandlerInterface
 
     private function cache(): Cache
     {
-        return new Cache($this->paths->storage.'/millwright/packagist');
+        return new Cache(StorageDir::of($this->paths->storage).'/packagist');
     }
 }

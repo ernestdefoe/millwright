@@ -3,6 +3,7 @@
 namespace ErnestDefoe\Millwright\Console;
 
 use ErnestDefoe\Millwright\Host\Capability;
+use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Plan\Nightly;
 use ErnestDefoe\Millwright\Plan\Repin;
 use ErnestDefoe\Millwright\Run\Run;
@@ -431,7 +432,7 @@ class UpdateCommand extends AbstractCommand
 
     private function storagePath(string $file): string
     {
-        return $this->paths->storage.'/millwright/'.$file;
+        return StorageDir::of($this->paths->storage).'/'.$file;
     }
 
     /**

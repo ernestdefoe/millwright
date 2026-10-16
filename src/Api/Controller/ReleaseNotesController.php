@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Config\AuthTokens;
 use ErnestDefoe\Millwright\Config\JsonFile;
@@ -29,12 +30,12 @@ class ReleaseNotesController implements RequestHandlerInterface
         RequestUtil::getActor($request)->assertAdmin();
 
         $package = (string) ($request->getQueryParams()['package'] ?? '');
-        $updates = (new UpdateCheck($this->paths->storage.'/millwright/updates.json'))
+        $updates = (new UpdateCheck(StorageDir::of($this->paths->storage).'/updates.json'))
             ->current($this->paths->base.'/composer.lock')['updates'] ?? [];
 
         $notes = isset($updates[$package])
             ? (new ReleaseNotes(
-                $this->paths->storage.'/millwright/release-notes',
+                StorageDir::of($this->paths->storage).'/release-notes',
                 new AuthTokens(new JsonFile($this->paths->base.'/auth.json')),
             ))->between($updates[$package])
             : null;
