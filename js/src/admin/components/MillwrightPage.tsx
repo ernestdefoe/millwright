@@ -13,7 +13,6 @@ import {
 import ExtensionPage from 'flarum/admin/components/ExtensionPage';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
 import Link from 'flarum/common/components/Link';
-import ReleaseNotesModal from './ReleaseNotesModal';
 import HostPanel from './HostPanel';
 import TrashPanel from './TrashPanel';
 import RunPanel from './RunPanel';
@@ -777,7 +776,7 @@ export default class MillwrightPage extends ExtensionPage {
                   <button
                     className="Button Button--link Button--sm Millwright-notes"
                     onclick={() =>
-                      app.modal.show(ReleaseNotesModal, {
+                      app.modal.show(() => import('./ReleaseNotesModal'), {
                         name: e.name,
                         package: e.package,
                         from: e.update!.from,
