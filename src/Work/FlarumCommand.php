@@ -30,7 +30,16 @@ final class FlarumCommand
     public function run(string $command, array $options = []): array
     {
         if ($this->composer->processes()) {
-            $argv = [(string) $this->composer->php(), $this->installPath.'/flarum', $command];
+            /*
+             * 🚨 No memory limit, as Composer gets (COMPOSER_MEMORY_LIMIT) and as
+             * the in-process path already takes. Flarum 2's cache:clear compiles
+             * every frontend in one process, and less.php's cache stores each
+             * parsed node with its own copy of the file path (a 12 KB stylesheet
+             * caches as ~4 MB), so the peak grows with the LESS a forum's
+             * extensions ship: 597 MB on dev, past a customer's 128 MB CLI limit
+             * with 26 extensions (2026-10-18), failing every update at its end.
+             */
+            $argv = [(string) $this->composer->php(), '-d', 'memory_limit=-1', $this->installPath.'/flarum', $command];
 
             foreach ($options as $name => $value) {
                 $argv[] = $value === true ? $name : $name.'='.$value;
