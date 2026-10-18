@@ -59,7 +59,9 @@ class StateTest extends TestCase
     {
         $response = $this->send($this->request($method, $path));
 
-        $this->assertContains($response->getStatusCode(), [401, 403]);
+        // A POST without a session is refused by the CSRF check (400) before it
+        // reaches the controller; a GET by the controller (401 or 403).
+        $this->assertContains($response->getStatusCode(), [400, 401, 403]);
     }
 
     public static function endpoints(): array

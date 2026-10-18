@@ -4,6 +4,7 @@ namespace ErnestDefoe\Millwright\Api\Controller;
 
 use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Lang;
+use ErnestDefoe\Millwright\Plan\CoreOverrides;
 use ErnestDefoe\Millwright\Plan\CoreUpgrade;
 use Flarum\Foundation\Application;
 use Flarum\Foundation\Paths;
@@ -71,6 +72,9 @@ class CoreController implements RequestHandlerInterface
          * Doing it here took 28 seconds against this dev forum's 58 extensions.
          */
         $preflight = (new CoreUpgrade())->preflight($packages, $target);
+
+        // Extensions that replace part of Flarum: their `require` can say yes and still be wrong.
+        $preflight['overrides'] = (new CoreOverrides())->find($packages, $this->paths->vendor);
 
         return new JsonResponse([
             'current' => $current,

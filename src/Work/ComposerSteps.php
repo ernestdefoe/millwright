@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Plan\CoreOverrides;
 use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Apply\Applier;
@@ -889,6 +890,19 @@ class ComposerSteps implements Steps
             ? $result['why']
             : $result['why'].' '.Lang::trans('composer.the_error_was', ['error' => $why]);
 
+        /*
+         * 🚨 When the error names one of Flarum's classes and an extension ships
+         * its own copy of that class, say so. "Call to undefined method
+         * Flarum\...\LessCompiler::fontRevisionIn()" reads like Flarum or this
+         * updater is broken; the real cause was irmmr/flarum-ext-rtl's frozen
+         * copy of LessCompiler (ClaudiusH, 2026-10-18).
+         */
+        $culprit = CoreOverrides::culpritFor((string) $why.' '.$result['why'], $this->coreOverrides());
+
+        if ($culprit !== null) {
+            $said .= ' '.Lang::trans('composer.replaced_core_class', $culprit);
+        }
+
         $restore = $this->restore();
 
         if ($restore === null || ! $restore->possible()) {
@@ -910,6 +924,15 @@ class ComposerSteps implements Steps
         }
 
         throw new Reverted($message, $done['undone']);
+    }
+
+    /** @return list<array{package:string, classes:list<string>}> */
+    private function coreOverrides(): array
+    {
+        $lock = json_decode((string) @file_get_contents($this->installPath.'/composer.lock'), true);
+        $vendor = $this->vendorPath !== '' ? $this->vendorPath : $this->installPath.'/vendor';
+
+        return (new CoreOverrides())->find(array_values((array) ($lock['packages'] ?? [])), $vendor);
     }
 
     /**
