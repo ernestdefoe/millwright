@@ -164,7 +164,8 @@ class Restore
             }
 
             if ($result['code'] !== 0) {
-                return Lang::trans('restore.command_failed', ['command' => $command]);
+                return Lang::trans('restore.command_failed', ['command' => $command])
+                    ."\n".FlarumCommand::excerpt($result['output']);
             }
         }
 

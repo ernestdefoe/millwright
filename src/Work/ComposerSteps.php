@@ -1310,9 +1310,7 @@ class ComposerSteps implements Steps
         $result = (new FlarumCommand($this->installPath, $this->composer))->run($command);
 
         if ($result['code'] !== 0) {
-            $lines = explode("\n", $result['output']);
-
-            throw new RuntimeException(Lang::trans('composer.flarum_command_failed', ['command' => $command])."\n".implode("\n", array_slice($lines, -12)));
+            throw new RuntimeException(Lang::trans('composer.flarum_command_failed', ['command' => $command])."\n".FlarumCommand::excerpt($result['output']));
         }
 
         return $note;

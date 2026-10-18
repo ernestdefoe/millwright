@@ -43,6 +43,29 @@ final class FlarumCommand
     }
 
     /**
+     * What to show of a failed command's output: its head AND its tail.
+     *
+     * 🚨 PHP, Xdebug and Symfony all print the error FIRST and the stack after
+     * it. Keeping only the last twelve lines kept the frames and dropped the one
+     * line that named the failure: a customer's `cache:clear` (2026-10-18) came
+     * back as twelve Xdebug frames, each kilobytes of dumped arguments, and no
+     * error at all. Lines are capped too, so one frame cannot bury the rest.
+     */
+    public static function excerpt(string $output, int $head = 4, int $tail = 8): string
+    {
+        $lines = array_map(
+            fn (string $line) => mb_strimwidth(rtrim($line), 0, 300, '…'),
+            array_values(array_filter(explode("\n", $output), fn (string $line) => trim($line) !== ''))
+        );
+
+        if (count($lines) > $head + $tail) {
+            $lines = [...array_slice($lines, 0, $head), '…', ...array_slice($lines, -$tail)];
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
      * @param array<string,bool|string> $options
      * @return array{code:int, output:string}
      */
