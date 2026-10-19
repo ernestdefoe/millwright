@@ -1,7 +1,6 @@
 ernestdefoe-millwright:
-  # The admin page. Laid out like the Extension Manager it takes over from, and
-  # under the same keys wherever the concept is the same, so existing
-  # translations carry across.
+  # The admin page. Laid out in sections, with the long-standing keys kept
+  # wherever the concept is the same, so existing translations carry across.
   admin:
     actions:
       add: Add
