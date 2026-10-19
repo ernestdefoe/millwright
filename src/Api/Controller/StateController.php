@@ -11,6 +11,7 @@ use ErnestDefoe\Millwright\Work\UpdateCheck;
 use Flarum\Extension\ExtensionManager;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -27,6 +28,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 class StateController implements RequestHandlerInterface
 {
     public function __construct(
+        protected TranslatorInterface $translator,
         private ExtensionManager $extensions,
         private Paths $paths,
         private RunStore $runs,
@@ -38,13 +40,13 @@ class StateController implements RequestHandlerInterface
         RequestUtil::getActor($request)->assertAdmin();
 
         $run = $this->runs->latest();
-        $undoError = PendingUndo::finish($run, $this->paths);
+        $undoError = PendingUndo::finish($this->translator, $run, $this->paths);
 
         $check = new UpdateCheck(StorageDir::of($this->paths->storage).'/updates.json');
         $cached = $check->current($this->paths->base.'/composer.lock');
 
         return new JsonResponse([
-            'host' => (new Capability($this->paths->base, PhpBinary::forStorage($this->paths->storage), $this->paths->storage.'/.composer'))->report(),
+            'host' => (new Capability($this->translator, $this->paths->base, PhpBinary::forStorage($this->translator, $this->paths->storage), $this->paths->storage.'/.composer'))->report(),
             'installed' => $this->installed($cached['updates'] ?? []),
             'run' => $this->runs->present($run),
             'undoError' => $undoError,

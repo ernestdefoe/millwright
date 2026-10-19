@@ -5,6 +5,7 @@ namespace ErnestDefoe\Millwright\Tests\Unit;
 use ErnestDefoe\Millwright\Discover\Cache;
 use ErnestDefoe\Millwright\Discover\Compatibility;
 use ErnestDefoe\Millwright\Discover\Packagist;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -24,7 +25,7 @@ class ReplacedPackageTest extends TestCase
 
     private function packagist(array $responses, array &$asked = []): Packagist
     {
-        return new Packagist(new Cache($this->dir), function (string $url) use ($responses, &$asked) {
+        return new Packagist(EnglishTranslator::make(), new Cache($this->dir), function (string $url) use ($responses, &$asked) {
             $asked[] = $url;
 
             return $responses[$url] ?? null;

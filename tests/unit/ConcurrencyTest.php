@@ -4,6 +4,7 @@ namespace ErnestDefoe\Millwright\Tests\Unit;
 
 use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Run\RunStore;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -55,14 +56,14 @@ class ConcurrencyTest extends TestCase
                 pclose($h);
             }
 
-            if ((new RunStore($this->dir))->load('r1')?->isFinished()) {
+            if ((new RunStore(EnglishTranslator::make(), $this->dir))->load('r1')?->isFinished()) {
                 break;
             }
         }
 
         $done = $this->completed();
 
-        $this->assertSame(Run::DONE, (new RunStore($this->dir))->load('r1')?->state);
+        $this->assertSame(Run::DONE, (new RunStore(EnglishTranslator::make(), $this->dir))->load('r1')?->state);
 
         $this->assertSame(
             array_values(array_unique($done)),

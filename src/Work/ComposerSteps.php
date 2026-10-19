@@ -2,9 +2,6 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
-use ErnestDefoe\Millwright\Plan\CoreOverrides;
-use ErnestDefoe\Millwright\Host\StorageDir;
-use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Apply\Applier;
 use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Apply\Restore;
@@ -13,8 +10,10 @@ use ErnestDefoe\Millwright\Host\ErrorLog;
 use ErnestDefoe\Millwright\Host\FlarumUpdater;
 use ErnestDefoe\Millwright\Host\Opcache;
 use ErnestDefoe\Millwright\Host\SiteHealth;
+use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Host\Verdict;
 use ErnestDefoe\Millwright\Plan\Change;
+use ErnestDefoe\Millwright\Plan\CoreOverrides;
 use ErnestDefoe\Millwright\Plan\LockDiff;
 use ErnestDefoe\Millwright\Prune\Pruner;
 use ErnestDefoe\Millwright\Prune\Retention;
@@ -24,6 +23,7 @@ use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Run\Steps;
 use Flarum\Extension\ExtensionManager;
 use Flarum\Foundation\Config;
+use Flarum\Locale\TranslatorInterface;
 use Illuminate\Database\ConnectionInterface;
 use RuntimeException;
 
@@ -45,6 +45,7 @@ use RuntimeException;
 class ComposerSteps implements Steps
 {
     public function __construct(
+        protected TranslatorInterface $translator,
         private string $installPath,
         private string $workDir,
         private ComposerRunner $composer,
@@ -150,10 +151,11 @@ class ComposerSteps implements Steps
         $inProcess = $this->composer->inProcess();
 
         if ($inProcess) {
-            $blockers = (new NeedsGit($this->installPath, $this->composer->composerHome()))->blockers();
+            $needsGit = new NeedsGit($this->translator, $this->installPath, $this->composer->composerHome());
+            $blockers = $needsGit->blockers();
 
             if ($blockers !== []) {
-                throw new RuntimeException(NeedsGit::explain($blockers));
+                throw new RuntimeException($needsGit->explain($blockers));
             }
         }
 
@@ -215,7 +217,7 @@ class ComposerSteps implements Steps
             // Composer's own words, not a summary of them: it is usually precise
             // about which constraint could not be satisfied, and paraphrasing
             // that loses the only part anyone can act on.
-            throw new RuntimeException(Lang::trans('composer.resolve_failed')."\n".$result['output']);
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.composer.resolve_failed')."\n".$result['output']);
         }
 
         /*
@@ -237,15 +239,15 @@ class ComposerSteps implements Steps
 
         if ($changes === []) {
             return match ($this->mode) {
-                'install' => Lang::trans('composer.nothing_changed_install'),
-                'remove' => Lang::trans('composer.nothing_changed_remove'),
+                'install' => $this->translator->trans('ernestdefoe-millwright.api.composer.nothing_changed_install'),
+                'remove' => $this->translator->trans('ernestdefoe-millwright.api.composer.nothing_changed_remove'),
                 default => $this->whyNothingMoved(),
             };
         }
 
-        $shown = array_map(fn (Change $c) => $c->describe(), array_slice($changes, 0, 5));
-        $note = Lang::trans('composer.will_change', ['count' => count($changes), 'list' => implode(', ', $shown)])
-            .(count($changes) > 5 ? Lang::trans('composer.and_more', ['count' => count($changes) - 5]) : '');
+        $shown = array_map(fn (Change $c) => $c->describe($this->translator), array_slice($changes, 0, 5));
+        $note = $this->translator->trans('ernestdefoe-millwright.api.composer.will_change', ['count' => count($changes), 'list' => implode(', ', $shown)])
+            .(count($changes) > 5 ? $this->translator->trans('ernestdefoe-millwright.api.composer.and_more', ['count' => count($changes) - 5]) : '');
 
         return $raised === [] ? $note : implode('; ', $raised).'. '.$note;
     }
@@ -276,7 +278,7 @@ class ComposerSteps implements Steps
                     self::replaceFile($saved, $live);
                 }
             } elseif (! copy($live, $saved)) {
-                throw new RuntimeException(Lang::trans('composer.save_before_resolve_failed', ['file' => $file]));
+                throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.composer.save_before_resolve_failed', ['file' => $file]));
             }
         }
     }
@@ -317,7 +319,7 @@ class ComposerSteps implements Steps
                 $this->startFromSaved();
 
                 throw new RuntimeException(
-                    Lang::trans('composer.resolve_gave_up', ['how' => $how, 'attempts' => self::RESOLVE_ATTEMPTS]).' '.$this->limitAdvice($prev)
+                    $this->translator->trans('ernestdefoe-millwright.api.composer.resolve_gave_up', ['how' => $how, 'attempts' => self::RESOLVE_ATTEMPTS]).' '.$this->limitAdvice($prev)
                 );
             }
 
@@ -326,7 +328,7 @@ class ComposerSteps implements Steps
                 @file_put_contents($path, json_encode($prev));
 
                 throw new NotYet(
-                    Lang::trans('composer.resolve_retrying', ['how' => $how, 'attempt' => $attempts + 1, 'attempts' => self::RESOLVE_ATTEMPTS])
+                    $this->translator->trans('ernestdefoe-millwright.api.composer.resolve_retrying', ['how' => $how, 'attempt' => $attempts + 1, 'attempts' => self::RESOLVE_ATTEMPTS])
                 );
             }
         }
@@ -378,10 +380,10 @@ class ComposerSteps implements Steps
         $seconds = (int) ($attempt['seconds'] ?? 0);
 
         return match ($attempt['stopped'] ?? null) {
-            'time' => Lang::trans('composer.stopped_time', ['seconds' => (int) ($attempt['timeLimit'] ?? $seconds)]),
-            'memory' => Lang::trans('composer.stopped_memory', ['limit' => (string) ($attempt['memoryLimit'] ?? '?')]),
-            'unknown' => Lang::trans('composer.stopped_unknown', ['seconds' => $seconds]),
-            default => Lang::trans('composer.stopped'),
+            'time' => $this->translator->trans('ernestdefoe-millwright.api.composer.stopped_time', ['seconds' => (int) ($attempt['timeLimit'] ?? $seconds)]),
+            'memory' => $this->translator->trans('ernestdefoe-millwright.api.composer.stopped_memory', ['limit' => (string) ($attempt['memoryLimit'] ?? '?')]),
+            'unknown' => $this->translator->trans('ernestdefoe-millwright.api.composer.stopped_unknown', ['seconds' => $seconds]),
+            default => $this->translator->trans('ernestdefoe-millwright.api.composer.stopped'),
         };
     }
 
@@ -389,8 +391,8 @@ class ComposerSteps implements Steps
     private function limitAdvice(array $attempt): string
     {
         return match ($attempt['stopped'] ?? null) {
-            'memory' => Lang::trans('composer.advice_memory'),
-            default => Lang::trans('composer.advice_time'),
+            'memory' => $this->translator->trans('ernestdefoe-millwright.api.composer.advice_memory'),
+            default => $this->translator->trans('ernestdefoe-millwright.api.composer.advice_time'),
         };
     }
 
@@ -447,7 +449,7 @@ class ComposerSteps implements Steps
             }
 
             $json['require'][$package] = $version;
-            $raised[] = Lang::trans('composer.pin_raised', ['package' => $package, 'version' => $version, 'current' => $current]);
+            $raised[] = $this->translator->trans('ernestdefoe-millwright.api.composer.pin_raised', ['package' => $package, 'version' => $version, 'current' => $current]);
         }
 
         if ($raised === []) {
@@ -492,15 +494,15 @@ class ComposerSteps implements Steps
              * those genuinely can be "already newest".
              */
             if (preg_match('/^v?\d+\.\d+\.\d+/', $constraint) && ! preg_match('/[\^~*|]|\s-\s/', $constraint)) {
-                $pinned[] = Lang::trans('composer.pinned_to', ['package' => $package, 'constraint' => $constraint]);
+                $pinned[] = $this->translator->trans('ernestdefoe-millwright.api.composer.pinned_to', ['package' => $package, 'constraint' => $constraint]);
             }
         }
 
         if ($pinned === []) {
-            return Lang::trans('composer.nothing_to_update');
+            return $this->translator->trans('ernestdefoe-millwright.api.composer.nothing_to_update');
         }
 
-        return Lang::trans('composer.nothing_moved_pinned', ['pins' => implode('; ', $pinned)]);
+        return $this->translator->trans('ernestdefoe-millwright.api.composer.nothing_moved_pinned', ['pins' => implode('; ', $pinned)]);
     }
 
     /**
@@ -548,13 +550,13 @@ class ComposerSteps implements Steps
 
         if ($source === null) {
             throw new RuntimeException(
-                Lang::trans('composer.no_archive', ['package' => $package])
+                $this->translator->trans('ernestdefoe-millwright.api.composer.no_archive', ['package' => $package])
             );
         }
 
         $this->fetcher->fetch($package, $source);
 
-        return Lang::trans('composer.downloaded', ['package' => $package]);
+        return $this->translator->trans('ernestdefoe-millwright.api.composer.downloaded', ['package' => $package]);
     }
 
     /**
@@ -592,7 +594,7 @@ class ComposerSteps implements Steps
                  * its undo included. See AutoloadFiles.
                  */
                 if (AutoloadFiles::pruneMissing($this->installPath.'/vendor') !== []) {
-                    $done .= '. '.Lang::trans('composer.autoload_files_pruned');
+                    $done .= '. '.$this->translator->trans('ernestdefoe-millwright.api.composer.autoload_files_pruned');
                 }
 
                 $this->dropStaleCode();
@@ -606,7 +608,7 @@ class ComposerSteps implements Steps
             }
         }
 
-        throw new RuntimeException(Lang::trans('composer.not_in_plan', ['package' => $package]));
+        throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.composer.not_in_plan', ['package' => $package]));
     }
 
     /** @param list<Change> $plan */
@@ -635,7 +637,7 @@ class ComposerSteps implements Steps
     private function bridgeCore(): string
     {
         $db = resolve(ConnectionInterface::class);
-        $ledger = new MigrationLedger($this->workDir);
+        $ledger = new MigrationLedger($this->translator, $this->workDir);
         $ledger->before($db);
         $was = $db->table('settings')->where('key', 'version')->value('value');
 
@@ -649,17 +651,17 @@ class ComposerSteps implements Steps
          * on a host without proc_open Flarum's updater is not there to ask.
          */
         if ($was !== null && $was === CoreVersion::onDisk($this->vendorPath !== '' ? $this->vendorPath : $this->installPath.'/vendor')) {
-            return Lang::trans('composer.core_same_version', ['version' => $was]);
+            return $this->translator->trans('ernestdefoe-millwright.api.composer.core_same_version', ['version' => $was]);
         }
 
         try {
-            (new Opcache())->clear();
+            (new Opcache($this->translator))->clear();
 
             if ($this->composer->canSpawn()) {
                 $this->registerWith(null);
                 $this->flarum('migrate', '');
             } else {
-                (new FlarumUpdater($this->siteUrl, (array) (resolve(Config::class)['database'] ?? [])))->migrate();
+                (new FlarumUpdater($this->translator, $this->siteUrl, (array) (resolve(Config::class)['database'] ?? [])))->migrate();
             }
 
             $now = $db->table('settings')->where('key', 'version')->value('value');
@@ -669,21 +671,21 @@ class ComposerSteps implements Steps
             $this->clearWebCache();
 
             if ($now === $was) {
-                throw new RuntimeException(Lang::trans('composer.core_db_unchanged', ['version' => $was]));
+                throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.composer.core_db_unchanged', ['version' => $was]));
             }
 
-            return Lang::trans('composer.core_moved', ['from' => $was, 'to' => $now]);
+            return $this->translator->trans('ernestdefoe-millwright.api.composer.core_moved', ['from' => $was, 'to' => $now]);
         } catch (\Throwable $e) {
             $restore = $this->restore();
 
             if ($restore === null || ! $restore->possible()) {
-                throw new RuntimeException(Lang::trans('composer.core_db_failed', ['error' => $e->getMessage()]));
+                throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.composer.core_db_failed', ['error' => $e->getMessage()]));
             }
 
             $done = $restore->run();
 
             throw new Reverted(
-                Lang::trans('composer.core_db_failed_undone', ['error' => $e->getMessage()]).($done['note'] !== null ? ' '.$done['note'] : ''),
+                $this->translator->trans('ernestdefoe-millwright.api.composer.core_db_failed_undone', ['error' => $e->getMessage()]).($done['note'] !== null ? ' '.$done['note'] : ''),
                 $done['undone']
             );
         }
@@ -701,22 +703,22 @@ class ComposerSteps implements Steps
     private function tidyTrash(): string
     {
         if ($this->storagePath === '') {
-            return Lang::trans('composer.tidy_no_storage');
+            return $this->translator->trans('ernestdefoe-millwright.api.composer.tidy_no_storage');
         }
 
         try {
             $dir = StorageDir::of($this->storagePath);
-            $summary = (new Pruner($dir, new Retention($dir)))->prune('finished update', 10.0);
+            $summary = (new Pruner($this->translator, $dir, new Retention($dir)))->prune('finished update', 10.0);
         } catch (\Throwable $e) {
-            return Lang::trans('composer.tidy_left', ['error' => $e->getMessage()]);
+            return $this->translator->trans('ernestdefoe-millwright.api.composer.tidy_left', ['error' => $e->getMessage()]);
         }
 
         if ($summary['removed'] === 0) {
-            return Lang::trans('composer.tidy_nothing');
+            return $this->translator->trans('ernestdefoe-millwright.api.composer.tidy_nothing');
         }
 
-        return Lang::trans('composer.tidy_removed', ['count' => $summary['removed'], 'size' => Pruner::human((int) $summary['freed'])])
-            .($summary['complete'] ? '' : ' '.Lang::trans('composer.tidy_rest_tonight'));
+        return $this->translator->trans('ernestdefoe-millwright.api.composer.tidy_removed', ['count' => $summary['removed'], 'size' => Pruner::human((int) $summary['freed'])])
+            .($summary['complete'] ? '' : ' '.$this->translator->trans('ernestdefoe-millwright.api.composer.tidy_rest_tonight'));
     }
 
     /** Longer than this and telling the truth beats parking the admin screen. */
@@ -727,7 +729,7 @@ class ComposerSteps implements Steps
         return match ($item) {
             'register' => $this->register(),
             'migrations' => $this->migrate(),
-            'assets' => $this->flarum('assets:publish', Lang::trans('composer.assets_published')),
+            'assets' => $this->flarum('assets:publish', $this->translator->trans('ernestdefoe-millwright.api.composer.assets_published')),
             'caches' => $this->clearCaches(),
             'check the site again' => $this->verify($run),
             'tidy the trash' => $this->tidyTrash(),
@@ -739,7 +741,7 @@ class ComposerSteps implements Steps
              * success and changed nothing anybody can see.
              */
             'code cache' => $this->codeCache(),
-            default => Lang::trans('composer.nothing_to_do'),
+            default => $this->translator->trans('ernestdefoe-millwright.api.composer.nothing_to_do'),
         };
     }
 
@@ -792,20 +794,20 @@ class ComposerSteps implements Steps
     {
         // A cache left root-owned (a `php flarum cache:clear` run as root while
         // this run waited) would fail the clear below; see StaleCache.
-        $setAside = StaleCache::describe(StaleCache::setAside($this->storagePath));
+        $setAside = StaleCache::describe(StaleCache::setAside($this->storagePath), $this->translator);
 
         $this->flarum('cache:clear', 'cleared');
         $this->flarum('millwright:repair-formatter', 'formatter rebuilt');
         // Before Flarum 2.0.0, cache:clear leaves the compiled bundles as they
         // were: the update's new screen never reached the browser.
         $this->needsFreshCode();
-        $rebuilt = (new FlarumCommand($this->installPath, $this->composer))->run('millwright:rebuild-assets');
+        $rebuilt = (new FlarumCommand($this->translator, $this->installPath, $this->composer))->run('millwright:rebuild-assets');
         $warnings = array_values(array_filter(
             array_map('trim', explode("\n", (string) $rebuilt['output'])),
             fn (string $line) => str_starts_with($line, 'Warning:')
         ));
 
-        return Lang::trans('composer.caches_cleared')
+        return $this->translator->trans('ernestdefoe-millwright.api.composer.caches_cleared')
             .($setAside === '' ? '' : '. '.$setAside)
             .($warnings === [] ? '' : '. '.implode(' ', $warnings));
     }
@@ -838,15 +840,15 @@ class ComposerSteps implements Steps
         if ($health === null) {
             $this->rememberHealth('unchecked');
 
-            return Lang::trans('composer.health_no_address');
+            return $this->translator->trans('ernestdefoe-millwright.api.composer.health_no_address');
         }
 
         $result = $health->check(2);
         $this->rememberHealth($result['ok'] ? 'ok' : 'down');
 
         return $result['ok']
-            ? Lang::trans('composer.health_ok_before')
-            : Lang::trans('composer.health_down_before', ['why' => $result['why']]);
+            ? $this->translator->trans('ernestdefoe-millwright.api.composer.health_ok_before')
+            : $this->translator->trans('ernestdefoe-millwright.api.composer.health_down_before', ['why' => $result['why']]);
     }
 
     /**
@@ -863,7 +865,7 @@ class ComposerSteps implements Steps
         $before = $this->rememberedHealth();
 
         if ($health === null || $before === 'unchecked') {
-            return Lang::trans('composer.health_not_checked');
+            return $this->translator->trans('ernestdefoe-millwright.api.composer.health_not_checked');
         }
 
         $result = $health->check(3);
@@ -876,23 +878,23 @@ class ComposerSteps implements Steps
          * again rather than put back an update that is about to work.
          */
         if (! $result['ok'] && ($result['status'] ?? null) === 503) {
-            $situation = (new Opcache())->situation();
+            $situation = (new Opcache($this->translator))->situation();
             $freq = (int) ($situation['freq'] ?? 0);
 
             if ($situation['validates'] && $freq > 0 && $freq <= self::WAIT_CAP && time() < $this->codeLiveAt($freq) + $freq) {
-                throw new NotYet(Lang::trans('composer.health_503_waiting'));
+                throw new NotYet($this->translator->trans('ernestdefoe-millwright.api.composer.health_503_waiting'));
             }
         }
 
         switch (Verdict::from($before, $result['ok'])) {
             case Verdict::HEALTHY:
-                return Lang::trans('composer.health_ok_after');
+                return $this->translator->trans('ernestdefoe-millwright.api.composer.health_ok_after');
 
             case Verdict::ALREADY_BROKEN:
-                return Lang::trans('composer.health_still_down');
+                return $this->translator->trans('ernestdefoe-millwright.api.composer.health_still_down');
 
             case Verdict::NOT_JUDGED:
-                return Lang::trans('composer.health_not_checked');
+                return $this->translator->trans('ernestdefoe-millwright.api.composer.health_not_checked');
         }
 
         /*
@@ -904,7 +906,7 @@ class ComposerSteps implements Steps
 
         $said = $why === null
             ? $result['why']
-            : $result['why'].' '.Lang::trans('composer.the_error_was', ['error' => $why]);
+            : $result['why'].' '.$this->translator->trans('ernestdefoe-millwright.api.composer.the_error_was', ['error' => $why]);
 
         /*
          * 🚨 When the error names one of Flarum's classes and an extension ships
@@ -916,14 +918,14 @@ class ComposerSteps implements Steps
         $culprit = CoreOverrides::culpritFor((string) $why.' '.$result['why'], $this->coreOverrides());
 
         if ($culprit !== null) {
-            $said .= ' '.Lang::trans('composer.replaced_core_class', $culprit);
+            $said .= ' '.$this->translator->trans('ernestdefoe-millwright.api.composer.replaced_core_class', $culprit);
         }
 
         $restore = $this->restore();
 
         if ($restore === null || ! $restore->possible()) {
             throw new RuntimeException(
-                Lang::trans('composer.broke_site_no_restore').' '.$said
+                $this->translator->trans('ernestdefoe-millwright.api.composer.broke_site_no_restore').' '.$said
             );
         }
 
@@ -933,7 +935,7 @@ class ComposerSteps implements Steps
 
         $done = $restore->run();
 
-        $message = Lang::trans('composer.broke_site_restored').' '.$said;
+        $message = $this->translator->trans('ernestdefoe-millwright.api.composer.broke_site_restored').' '.$said;
 
         if ($done['note'] !== null) {
             $message .= ' '.$done['note'];
@@ -989,7 +991,7 @@ class ComposerSteps implements Steps
     private function dropStaleCode(): void
     {
         if (PHP_SAPI !== 'cli') {
-            (new Opcache())->clear();
+            (new Opcache($this->translator))->clear();
         } else {
             $this->clearWebCache();
         }
@@ -997,7 +999,7 @@ class ComposerSteps implements Steps
 
     private function health(): ?SiteHealth
     {
-        return $this->siteUrl === '' ? null : new SiteHealth($this->siteUrl);
+        return $this->siteUrl === '' ? null : new SiteHealth($this->translator, $this->siteUrl);
     }
 
     private function restore(): ?Restore
@@ -1006,7 +1008,7 @@ class ComposerSteps implements Steps
             return null;
         }
 
-        return new Restore(
+        return new Restore($this->translator, 
             $this->vendorPath,
             $this->installPath,
             $this->workDir,
@@ -1057,10 +1059,10 @@ class ComposerSteps implements Steps
     private function codeCache(): string
     {
         if ($this->clearWebCache()) {
-            return Lang::trans('composer.web_cache_cleared');
+            return $this->translator->trans('ernestdefoe-millwright.api.composer.web_cache_cleared');
         }
 
-        $opcache = new Opcache();
+        $opcache = new Opcache($this->translator);
         $situation = $opcache->situation();
         $result = $opcache->clear();
 
@@ -1088,15 +1090,15 @@ class ComposerSteps implements Steps
              * than telling the truth and letting them restart PHP.
              */
             if ($left > self::WAIT_CAP) {
-                return Lang::trans('composer.wait_too_long', ['seconds' => $situation['freq']]);
+                return $this->translator->trans('ernestdefoe-millwright.api.composer.wait_too_long', ['seconds' => $situation['freq']]);
             }
 
             throw new NotYet(
-                Lang::trans('composer.waiting_reread', ['seconds' => $left])
+                $this->translator->trans('ernestdefoe-millwright.api.composer.waiting_reread', ['seconds' => $left])
             );
         }
 
-        return Lang::trans('composer.reread_done');
+        return $this->translator->trans('ernestdefoe-millwright.api.composer.reread_done');
     }
 
     /**
@@ -1140,13 +1142,13 @@ class ComposerSteps implements Steps
     private function checkPermissions(): string
     {
         if ($this->vendorPath === '' || $this->storagePath === '') {
-            return Lang::trans('composer.permissions_not_checked');
+            return $this->translator->trans('ernestdefoe-millwright.api.composer.permissions_not_checked');
         }
 
         // A root-owned cache is moved aside rather than refused; see StaleCache.
-        $setAside = StaleCache::describe(StaleCache::setAside($this->storagePath));
+        $setAside = StaleCache::describe(StaleCache::setAside($this->storagePath), $this->translator);
 
-        $permissions = new Permissions($this->installPath, $this->vendorPath, $this->storagePath);
+        $permissions = new Permissions($this->translator, $this->installPath, $this->vendorPath, $this->storagePath);
         $blocked = $permissions->blocked($this->plan());
 
         if ($blocked !== []) {
@@ -1162,7 +1164,7 @@ class ComposerSteps implements Steps
             throw new RuntimeException($permissions->explain($blocked));
         }
 
-        return Lang::trans('composer.permissions_ok').($setAside !== '' ? '. '.$setAside : '');
+        return $this->translator->trans('ernestdefoe-millwright.api.composer.permissions_ok').($setAside !== '' ? '. '.$setAside : '');
     }
 
     /**
@@ -1200,23 +1202,23 @@ class ComposerSteps implements Steps
 
     private function registerWith(?string $snapshot): string
     {
-        (new InstalledRecord($this->installPath))->syncFromLock();
+        (new InstalledRecord($this->translator, $this->installPath))->syncFromLock();
 
         $dry = $this->composer->run(['install', '--no-scripts', '--dry-run']);
         if ($dry['code'] !== 0) {
-            throw new RuntimeException(Lang::trans('composer.composer_failed')."\n".$dry['output']);
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.composer.composer_failed')."\n".$dry['output']);
         }
 
         $planned = InstalledRecord::plannedOperations($dry['output']);
         if ($planned > 0) {
             throw new RuntimeException(
-                Lang::trans('composer.still_wants_changes', ['count' => $planned])."\n"
+                $this->translator->trans('ernestdefoe-millwright.api.composer.still_wants_changes', ['count' => $planned])."\n"
                 .$dry['output']
             );
         }
 
         if ($snapshot === null) {
-            return $this->composerCommand(['install', '--no-scripts'], Lang::trans('composer.registered'));
+            return $this->composerCommand(['install', '--no-scripts'], $this->translator->trans('ernestdefoe-millwright.api.composer.registered'));
         }
 
         /*
@@ -1235,7 +1237,7 @@ class ComposerSteps implements Steps
         });
 
         try {
-            return $this->composerCommand(['install', '--no-scripts'], Lang::trans('composer.registered'));
+            return $this->composerCommand(['install', '--no-scripts'], $this->translator->trans('ernestdefoe-millwright.api.composer.registered'));
         } finally {
             $done = true;
         }
@@ -1250,12 +1252,12 @@ class ComposerSteps implements Steps
         $source = $this->installPath.'/vendor/composer';
 
         if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
-            throw new RuntimeException(Lang::trans('composer.autoloader_copy_failed'));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.composer.autoloader_copy_failed'));
         }
 
         foreach ([...(glob($source.'/*.php') ?: []), $source.'/installed.json', $this->installPath.'/vendor/autoload.php'] as $file) {
             if (is_file($file) && ! copy($file, $dir.'/'.$this->snapshotName($file))) {
-                throw new RuntimeException(Lang::trans('composer.autoloader_copy_failed'));
+                throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.composer.autoloader_copy_failed'));
             }
         }
 
@@ -1286,7 +1288,7 @@ class ComposerSteps implements Steps
         $result = $this->composer->run($args);
 
         if ($result['code'] !== 0) {
-            throw new RuntimeException(Lang::trans('composer.composer_failed')."\n".$result['output']);
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.composer.composer_failed')."\n".$result['output']);
         }
 
         return $note;
@@ -1295,14 +1297,14 @@ class ComposerSteps implements Steps
     /** `flarum migrate`, writing down what it ran so undo can reverse it. See MigrationLedger. */
     private function migrate(): string
     {
-        $ledger = new MigrationLedger($this->workDir);
+        $ledger = new MigrationLedger($this->translator, $this->workDir);
         $db = resolve(ConnectionInterface::class);
 
         $ledger->before($db);
         $this->flarum('migrate', 'migrations run');
         $added = $ledger->after($db, resolve(ExtensionManager::class), $this->vendorPath);
 
-        return $added === [] ? Lang::trans('composer.migrations_none') : Lang::trans('composer.migrations_run', ['count' => count($added)]);
+        return $added === [] ? $this->translator->trans('ernestdefoe-millwright.api.composer.migrations_none') : $this->translator->trans('ernestdefoe-millwright.api.composer.migrations_run', ['count' => count($added)]);
     }
 
     private function flarum(string $command, string $note): string
@@ -1323,10 +1325,10 @@ class ComposerSteps implements Steps
          */
         $this->needsFreshCode();
 
-        $result = (new FlarumCommand($this->installPath, $this->composer))->run($command);
+        $result = (new FlarumCommand($this->translator, $this->installPath, $this->composer))->run($command);
 
         if ($result['code'] !== 0) {
-            throw new RuntimeException(Lang::trans('composer.flarum_command_failed', ['command' => $command])."\n".FlarumCommand::excerpt($result['output']));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.composer.flarum_command_failed', ['command' => $command])."\n".FlarumCommand::excerpt($result['output']));
         }
 
         return $note;
@@ -1339,7 +1341,7 @@ class ComposerSteps implements Steps
     private function needsFreshCode(): void
     {
         if (! $this->composer->canSpawn()) {
-            (new FreshCode($this->workDir, $this->installPath, new Opcache()))->ensure();
+            (new FreshCode($this->translator, $this->workDir, $this->installPath, new Opcache($this->translator)))->ensure();
         }
     }
 

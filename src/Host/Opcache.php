@@ -2,7 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Host;
 
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
+
 /**
  * Whether the code this update writes will actually be the code that runs.
  *
@@ -29,6 +30,10 @@ use ErnestDefoe\Millwright\Lang;
  */
 class Opcache
 {
+    public function __construct(protected TranslatorInterface $translator)
+    {
+    }
+
     /** No compiled-code cache in the way at all. */
     public const FINE = 'fine';
 
@@ -120,7 +125,7 @@ class Opcache
         $situation = $this->situation();
 
         if ($situation['state'] === self::FINE) {
-            return ['done' => true, 'why' => Lang::trans('opcache.fine')];
+            return ['done' => true, 'why' => $this->translator->trans('ernestdefoe-millwright.api.opcache.fine')];
         }
 
         if (PHP_SAPI === 'cli') {
@@ -133,8 +138,8 @@ class Opcache
             return [
                 'done' => false,
                 'why' => $situation['validates']
-                    ? Lang::trans('opcache.cli_delay', ['seconds' => max(1, $situation['freq'])])
-                    : Lang::trans('opcache.cli_restart'),
+                    ? $this->translator->trans('ernestdefoe-millwright.api.opcache.cli_delay', ['seconds' => max(1, $situation['freq'])])
+                    : $this->translator->trans('ernestdefoe-millwright.api.opcache.cli_restart'),
             ];
         }
 
@@ -148,18 +153,18 @@ class Opcache
              * most of the 60-second revalidate window, twice per update.
              */
             if ($this->resetPending()) {
-                return ['done' => true, 'why' => Lang::trans('opcache.cleared')];
+                return ['done' => true, 'why' => $this->translator->trans('ernestdefoe-millwright.api.opcache.cleared')];
             }
 
             return [
                 'done' => false,
                 'why' => $situation['validates']
-                    ? Lang::trans('opcache.not_cleared_delay', ['seconds' => max(1, $situation['freq'])])
-                    : Lang::trans('opcache.not_cleared_restart'),
+                    ? $this->translator->trans('ernestdefoe-millwright.api.opcache.not_cleared_delay', ['seconds' => max(1, $situation['freq'])])
+                    : $this->translator->trans('ernestdefoe-millwright.api.opcache.not_cleared_restart'),
             ];
         }
 
-        return ['done' => true, 'why' => Lang::trans('opcache.cleared')];
+        return ['done' => true, 'why' => $this->translator->trans('ernestdefoe-millwright.api.opcache.cleared')];
     }
 
     /** A reset has been asked for and not happened yet: the cache is bypassed meanwhile. */

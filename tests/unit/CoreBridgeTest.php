@@ -6,6 +6,7 @@ use ErnestDefoe\Millwright\Apply\Applier;
 use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Apply\Tree;
 use ErnestDefoe\Millwright\Host\PhpBinary;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use ErnestDefoe\Millwright\Work\ComposerRunner;
 use ErnestDefoe\Millwright\Work\ComposerSteps;
 use ErnestDefoe\Millwright\Work\Fetcher;
@@ -87,15 +88,15 @@ class CoreBridgeTest extends TestCase
 
     private function bridge(): string
     {
-        $journal = new Journal($this->dir.'/work/journal.jsonl');
-        $php = new PhpBinary(PHP_BINARY, null, '', null, PHP_BINARY, 'cli', '');
+        $journal = new Journal(EnglishTranslator::make(), $this->dir.'/work/journal.jsonl');
+        $php = new PhpBinary(EnglishTranslator::make(), PHP_BINARY, null, '', null, PHP_BINARY, 'cli', '');
 
-        $steps = new ComposerSteps(
+        $steps = new ComposerSteps(EnglishTranslator::make(), 
             $this->dir.'/project',
             $this->dir.'/work',
-            (new ComposerRunner($this->dir.'/project', __FILE__, $this->dir.'/home'))->withPhp($php),
-            new Fetcher($this->dir.'/work/staging'),
-            new Applier($this->dir.'/project/vendor', $this->dir.'/work/staging', $this->dir.'/work/trash', $journal),
+            (new ComposerRunner(EnglishTranslator::make(), $this->dir.'/project', __FILE__, $this->dir.'/home'))->withPhp($php),
+            new Fetcher(EnglishTranslator::make(), $this->dir.'/work/staging'),
+            new Applier(EnglishTranslator::make(), $this->dir.'/project/vendor', $this->dir.'/work/staging', $this->dir.'/work/trash', $journal),
             $journal,
             vendorPath: $this->dir.'/project/vendor',
         );

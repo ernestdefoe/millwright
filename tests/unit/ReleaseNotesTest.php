@@ -4,6 +4,7 @@ namespace ErnestDefoe\Millwright\Tests\Unit;
 
 use ErnestDefoe\Millwright\Config\AuthTokens;
 use ErnestDefoe\Millwright\Config\JsonFile;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use ErnestDefoe\Millwright\Work\ReleaseNotes;
 use PHPUnit\Framework\TestCase;
 
@@ -24,7 +25,7 @@ class ReleaseNotesTest extends TestCase
 
     private function notes(): ReleaseNotes
     {
-        return new ReleaseNotes($this->dir, new AuthTokens(new JsonFile($this->dir.'/auth.json')));
+        return new ReleaseNotes($this->dir, new AuthTokens(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/auth.json')));
     }
 
     private function update(): array

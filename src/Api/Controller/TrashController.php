@@ -3,11 +3,11 @@
 namespace ErnestDefoe\Millwright\Api\Controller;
 
 use ErnestDefoe\Millwright\Host\StorageDir;
-use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Prune\Pruner;
 use ErnestDefoe\Millwright\Prune\Retention;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -29,8 +29,10 @@ use Throwable;
  */
 class TrashController implements RequestHandlerInterface
 {
-    public function __construct(private Paths $paths)
-    {
+    public function __construct(
+        protected TranslatorInterface $translator,
+        private Paths $paths,
+    ) {
     }
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -39,7 +41,7 @@ class TrashController implements RequestHandlerInterface
 
         $dir = StorageDir::of($this->paths->storage);
         $retention = new Retention($dir);
-        $pruner = new Pruner($dir, $retention);
+        $pruner = new Pruner($this->translator, $dir, $retention);
         $pruned = null;
 
         try {
@@ -49,7 +51,7 @@ class TrashController implements RequestHandlerInterface
                 match ((string) Arr::get($body, 'action', '')) {
                     'prune' => $pruned = $pruner->prune('admin'),
                     'settings' => $retention->save(Arr::get($body, 'keepDays'), Arr::get($body, 'keepRuns')),
-                    default => throw new \InvalidArgumentException(Lang::trans('unknown_action')),
+                    default => throw new \InvalidArgumentException($this->translator->trans('ernestdefoe-millwright.api.unknown_action')),
                 };
             }
 

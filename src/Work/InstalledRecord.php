@@ -2,7 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
 use RuntimeException;
 
 /**
@@ -30,8 +30,10 @@ use RuntimeException;
  */
 class InstalledRecord
 {
-    public function __construct(private string $installPath)
-    {
+    public function __construct(
+        protected TranslatorInterface $translator,
+        private string $installPath,
+    ) {
     }
 
     /** Rewrite installed.json from composer.lock. Returns the number of packages recorded. */
@@ -88,7 +90,7 @@ class InstalledRecord
         if ($json === false || file_put_contents($tmp, $json."\n") === false || ! rename($tmp, $recordPath)) {
             @unlink($tmp);
 
-            throw new RuntimeException(Lang::trans('installed.rewrite_failed'));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.installed.rewrite_failed'));
         }
 
         return count($packages);
@@ -112,7 +114,7 @@ class InstalledRecord
         $data = json_decode((string) @file_get_contents($path), true);
 
         if (! is_array($data)) {
-            throw new RuntimeException(Lang::trans('fs.read_failed', ['path' => $path]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fs.read_failed', ['path' => $path]));
         }
 
         return $data;

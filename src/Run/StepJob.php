@@ -2,7 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Run;
 
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
 use Flarum\Queue\AbstractJob;
 use Illuminate\Contracts\Bus\Dispatcher;
 
@@ -123,11 +123,11 @@ class StepJob extends AbstractJob
         $run = $store->load($this->runId);
 
         if ($run !== null && ! $run->isFinished()) {
-            $store->save($run->failed(
-                Lang::trans('run.worker_stopped', ['error' => $e->getMessage()]),
-                Lang::trans('run.queue_worker'),
-                time()
-            ));
+            $translator = resolve(TranslatorInterface::class);
+            $error = $translator->trans('ernestdefoe-millwright.api.run.worker_stopped', ['error' => $e->getMessage()]);
+            $step = $translator->trans('ernestdefoe-millwright.api.run.queue_worker');
+
+            $store->save($run->failed($error, $step, time(), resolve(StepRunner::class)->failedNote($step, $error)));
         }
     }
 }

@@ -7,6 +7,7 @@ use ErnestDefoe\Millwright\Run\RunStore;
 use ErnestDefoe\Millwright\Run\StepRunner;
 use ErnestDefoe\Millwright\Run\Steps;
 use ErnestDefoe\Millwright\Run\StepsFactory;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -41,7 +42,7 @@ class StepsFactoryTest extends TestCase
     public function test_each_run_gets_work_built_for_that_run(): void
     {
         $factory = $this->recordingFactory();
-        $runner = new StepRunner(new RunStore($this->dir), $factory, fn () => $this->clock);
+        $runner = new StepRunner(EnglishTranslator::make(), new RunStore(EnglishTranslator::make(), $this->dir), $factory, fn () => $this->clock);
 
         $runner->begin('run-a');
         $runner->step('run-a');
@@ -60,8 +61,8 @@ class StepsFactoryTest extends TestCase
          * wrong ones.
          */
         $factory = $this->recordingFactory();
-        $store = new RunStore($this->dir);
-        $runner = new StepRunner($store, $factory, fn () => $this->clock);
+        $store = new RunStore(EnglishTranslator::make(), $this->dir);
+        $runner = new StepRunner(EnglishTranslator::make(), $store, $factory, fn () => $this->clock);
 
         $runner->begin('run-a');
         while (! $store->load('run-a')?->isFinished()) {
@@ -102,7 +103,7 @@ class StepsFactoryTest extends TestCase
             }
         };
 
-        $runner = new StepRunner(new RunStore($this->dir), $steps, fn () => $this->clock);
+        $runner = new StepRunner(EnglishTranslator::make(), new RunStore(EnglishTranslator::make(), $this->dir), $steps, fn () => $this->clock);
         $runner->begin('r1');
         $runner->step('r1');
         $run = $runner->step('r1');

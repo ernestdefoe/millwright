@@ -2,7 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
+
 /**
  * The package sources Composer can only read by running git — which a host
  * that disables proc_open will not let it do.
@@ -32,7 +33,11 @@ final class NeedsGit
     public const WHY_TOKEN = 'token';
     public const WHY_GIT = 'git';
 
-    public function __construct(private string $installPath, private string $composerHome)
+    public function __construct(
+        protected TranslatorInterface $translator,
+        private string $installPath,
+        private string $composerHome,
+    )
     {
     }
 
@@ -85,19 +90,19 @@ final class NeedsGit
      *
      * @param list<array{url:string, why:string}> $blockers
      */
-    public static function explain(array $blockers): string
+    public function explain(array $blockers): string
     {
         $tokens = array_column(array_filter($blockers, fn ($b) => $b['why'] === self::WHY_TOKEN), 'url');
         $git = array_column(array_filter($blockers, fn ($b) => $b['why'] === self::WHY_GIT), 'url');
 
-        $out = Lang::trans('git.blocked');
+        $out = $this->translator->trans('ernestdefoe-millwright.api.git.blocked');
 
         if ($tokens !== []) {
-            $out .= ' '.Lang::trans('git.add_token', ['urls' => implode(', ', $tokens)]);
+            $out .= ' '.$this->translator->trans('ernestdefoe-millwright.api.git.add_token', ['urls' => implode(', ', $tokens)]);
         }
 
         if ($git !== []) {
-            $out .= ' '.Lang::trans('git.git_only', ['urls' => implode(', ', $git)]);
+            $out .= ' '.$this->translator->trans('ernestdefoe-millwright.api.git.git_only', ['urls' => implode(', ', $git)]);
         }
 
         return $out;

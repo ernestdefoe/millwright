@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Tests\Unit;
 
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use ErnestDefoe\Millwright\Work\Fetcher;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -44,7 +45,7 @@ class FetcherTest extends TestCase
 
     private function fetchLocal(string $archive, string $package, ?string $shasum = null): void
     {
-        $fetcher = new Fetcher($this->dir.'/staging');
+        $fetcher = new Fetcher(EnglishTranslator::make(), $this->dir.'/staging');
         // file:// so the download path is exercised without a network.
         $fetcher->fetch($package, [
             'url' => 'file://'.$archive, 'type' => 'zip', 'reference' => null, 'shasum' => $shasum,

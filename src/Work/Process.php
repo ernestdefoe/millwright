@@ -2,7 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
 use RuntimeException;
 
 /**
@@ -30,13 +30,13 @@ class Process
      * @param array<string,string> $env
      * @return array{code:int, output:string}
      */
-    public static function run(array $command, string $cwd, array $env = [], int $timeout = 600): array
+    public static function run(TranslatorInterface $translator, array $command, string $cwd, array $env = [], int $timeout = 600): array
     {
         $descriptors = [1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
         $process = @proc_open($command, $descriptors, $pipes, $cwd, $env ?: null);
 
         if (! is_resource($process)) {
-            throw new RuntimeException(Lang::trans('process.start_failed', ['command' => $command[0] ?? Lang::trans('process.the_command')]));
+            throw new RuntimeException($translator->trans('ernestdefoe-millwright.api.process.start_failed', ['command' => $command[0] ?? $translator->trans('ernestdefoe-millwright.api.process.the_command')]));
         }
 
         foreach ($pipes as $pipe) {
@@ -60,7 +60,7 @@ class Process
             if (time() > $deadline) {
                 proc_terminate($process, 9);
 
-                throw new RuntimeException(Lang::trans('process.timeout', ['command' => $command[0] ?? Lang::trans('process.the_command_start'), 'seconds' => (string) $timeout]));
+                throw new RuntimeException($translator->trans('ernestdefoe-millwright.api.process.timeout', ['command' => $command[0] ?? $translator->trans('ernestdefoe-millwright.api.process.the_command_start'), 'seconds' => (string) $timeout]));
             }
 
             usleep(50000);

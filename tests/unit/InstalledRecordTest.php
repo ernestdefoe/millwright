@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Tests\Unit;
 
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use ErnestDefoe\Millwright\Work\ComposerRunner;
 use ErnestDefoe\Millwright\Work\InstalledRecord;
 use PHPUnit\Framework\TestCase;
@@ -51,7 +52,7 @@ class InstalledRecordTest extends TestCase
             'dev-package-names' => [],
         ]);
 
-        $count = (new InstalledRecord($this->dir))->syncFromLock();
+        $count = (new InstalledRecord(EnglishTranslator::make(), $this->dir))->syncFromLock();
 
         $record = json_decode(file_get_contents($this->dir.'/vendor/composer/installed.json'), true);
         $byName = array_column($record['packages'], null, 'name');
@@ -95,7 +96,7 @@ class InstalledRecordTest extends TestCase
             ],
             'require' => ['acme/widget' => '*'],
         ]);
-        $runner = new ComposerRunner($this->dir, $composer, $this->dir.'/.composer');
+        $runner = new ComposerRunner(EnglishTranslator::make(), $this->dir, $composer, $this->dir.'/.composer');
         $this->assertSame(0, $runner->run(['install', '--no-scripts'])['code']);
 
         // What Millwright does: plan to 2.0.0 without installing, then place
@@ -107,7 +108,7 @@ class InstalledRecordTest extends TestCase
         $before = $runner->run(['install', '--no-scripts', '--dry-run']);
         $this->assertSame(1, InstalledRecord::plannedOperations($before['output']), 'the stale record is what makes Composer re-extract');
 
-        (new InstalledRecord($this->dir))->syncFromLock();
+        (new InstalledRecord(EnglishTranslator::make(), $this->dir))->syncFromLock();
 
         $after = $runner->run(['install', '--no-scripts', '--dry-run']);
         $this->assertSame(0, $after['code'], $after['output']);

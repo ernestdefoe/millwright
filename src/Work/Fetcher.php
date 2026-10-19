@@ -2,7 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
 use RuntimeException;
 use ZipArchive;
 
@@ -21,6 +21,7 @@ use ZipArchive;
 class Fetcher
 {
     public function __construct(
+        protected TranslatorInterface $translator,
         private string $stagingDir,
         private ?string $authPath = null,
     ) {
@@ -54,7 +55,7 @@ class Fetcher
                  */
                 if (! hash_equals($source['shasum'], (string) $actual)) {
                     throw new RuntimeException(
-                        Lang::trans('fetch.checksum', ['package' => $package])
+                        $this->translator->trans('ernestdefoe-millwright.api.fetch.checksum', ['package' => $package])
                     );
                 }
             }
@@ -101,10 +102,10 @@ class Fetcher
              * to work out that the commit is fine and the token is not.
              */
             $hint = $code === 404 && $this->authHeaders($url) === []
-                ? ' '.Lang::trans('fetch.private_hint')
+                ? ' '.$this->translator->trans('ernestdefoe-millwright.api.fetch.private_hint')
                 : '';
 
-            throw new RuntimeException(Lang::trans('fetch.download_failed', ['url' => $url, 'code' => (string) $code]).$hint.($err ? " $err" : ''));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fetch.download_failed', ['url' => $url, 'code' => (string) $code]).$hint.($err ? " $err" : ''));
         }
 
         return $tmp;
@@ -168,14 +169,14 @@ class Fetcher
         $zip = new ZipArchive();
 
         if ($zip->open($archive) !== true) {
-            throw new RuntimeException(Lang::trans('fetch.not_archive', ['package' => $package]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fetch.not_archive', ['package' => $package]));
         }
 
         $root = $this->commonRoot($zip);
         $this->deleteTree($target);
 
         if (! mkdir($target, 0775, true) && ! is_dir($target)) {
-            throw new RuntimeException(Lang::trans('fetch.staging_failed', ['package' => $package]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fetch.staging_failed', ['package' => $package]));
         }
 
         for ($i = 0; $i < $zip->numFiles; $i++) {
@@ -189,19 +190,19 @@ class Fetcher
             // 🚨 An archive is untrusted input, and "../" inside an entry name is
             // the oldest way out of a target directory there is.
             if (str_contains($rel, '..')) {
-                throw new RuntimeException(Lang::trans('fetch.path_escapes', ['package' => $package]));
+                throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fetch.path_escapes', ['package' => $package]));
             }
 
             $to = $target.'/'.$rel;
 
             if (! is_dir(dirname($to)) && ! mkdir(dirname($to), 0775, true) && ! is_dir(dirname($to))) {
-                throw new RuntimeException(Lang::trans('fs.create_failed', ['path' => dirname($to)]));
+                throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fs.create_failed', ['path' => dirname($to)]));
             }
 
             $stream = $zip->getStream($name);
 
             if ($stream === false) {
-                throw new RuntimeException(Lang::trans('fetch.read_entry_failed', ['name' => $name, 'package' => $package]));
+                throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fetch.read_entry_failed', ['name' => $name, 'package' => $package]));
             }
 
             file_put_contents($to, $stream);

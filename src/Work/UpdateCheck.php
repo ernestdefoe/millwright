@@ -5,6 +5,7 @@ namespace ErnestDefoe\Millwright\Work;
 use ErnestDefoe\Millwright\Config\AuthTokens;
 use ErnestDefoe\Millwright\Config\JsonFile;
 use ErnestDefoe\Millwright\Config\Repositories;
+use Flarum\Locale\TranslatorInterface;
 
 /**
  * Whether anything newer exists, asked cheaply.
@@ -226,7 +227,7 @@ class UpdateCheck
      *
      * @return array<string,mixed>|null
      */
-    public function refreshSite(string $base): ?array
+    public function refreshSite(TranslatorInterface $translator, string $base): ?array
     {
         $lock = (array) json_decode((string) @file_get_contents($base.'/composer.lock'), true);
         $packages = array_merge(array_values((array) ($lock['packages'] ?? [])), array_values((array) ($lock['packages-dev'] ?? [])));
@@ -236,8 +237,8 @@ class UpdateCheck
         }
 
         return $this->refreshWith($this->interesting($packages, self::directRequires($base.'/composer.json')), new PrivateIndex(
-            new Repositories(new JsonFile($base.'/composer.json')),
-            new AuthTokens(new JsonFile($base.'/auth.json')),
+            new Repositories($translator, new JsonFile($translator, $base.'/composer.json')),
+            new AuthTokens($translator, new JsonFile($translator, $base.'/auth.json')),
         ));
     }
 

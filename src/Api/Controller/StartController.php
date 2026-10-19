@@ -2,12 +2,11 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
-use ErnestDefoe\Millwright\Host\StorageDir;
-use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Discover\Cache;
 use ErnestDefoe\Millwright\Discover\Compatibility;
 use ErnestDefoe\Millwright\Discover\Packagist;
 use ErnestDefoe\Millwright\Host\Capability;
+use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Plan\Nightly;
 use ErnestDefoe\Millwright\Plan\Repin;
 use ErnestDefoe\Millwright\Run\Drivers;
@@ -18,6 +17,7 @@ use Flarum\Extension\ExtensionManager;
 use Flarum\Foundation\Application;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -35,6 +35,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 class StartController implements RequestHandlerInterface
 {
     public function __construct(
+        protected TranslatorInterface $translator,
         private RunStore $runs,
         private StepRunner $runner,
         private Drivers $drivers,
@@ -56,14 +57,14 @@ class StartController implements RequestHandlerInterface
      */
     private function replaced(array $packages): ?string
     {
-        $packagist = new Packagist(new Cache(StorageDir::of($this->paths->storage).'/packagist'));
+        $packagist = new Packagist($this->translator, new Cache(StorageDir::of($this->paths->storage).'/packagist'));
         $verdicts = $packagist->verdicts(array_slice($packages, 0, 5), new Compatibility(ltrim($this->app->version(), 'v')));
 
         foreach ($verdicts as $name => $verdict) {
             if (! empty($verdict['replaced'])) {
                 return $verdict['replacedBy']
-                    ? Lang::trans('start.replaced_by', ['name' => $name, 'replacement' => $verdict['replacedBy']])
-                    : Lang::trans('start.replaced', ['name' => $name]);
+                    ? $this->translator->trans('ernestdefoe-millwright.api.start.replaced_by', ['name' => $name, 'replacement' => $verdict['replacedBy']])
+                    : $this->translator->trans('ernestdefoe-millwright.api.start.replaced', ['name' => $name]);
             }
         }
 
@@ -89,7 +90,7 @@ class StartController implements RequestHandlerInterface
              * dependency goes when that dependency goes, and not before.
              */
             if (! isset($direct[$package])) {
-                return Lang::trans('start.not_direct', ['package' => $package]);
+                return $this->translator->trans('ernestdefoe-millwright.api.start.not_direct', ['package' => $package]);
             }
 
             /*
@@ -100,7 +101,7 @@ class StartController implements RequestHandlerInterface
              * the removal safe.
              */
             if ($this->isEnabled($package)) {
-                return Lang::trans('start.still_enabled', ['package' => $package]);
+                return $this->translator->trans('ernestdefoe-millwright.api.start.still_enabled', ['package' => $package]);
             }
         }
 
@@ -134,7 +135,7 @@ class StartController implements RequestHandlerInterface
             : null;
 
         if ($nightly === []) {
-            return new JsonResponse(['error' => Lang::trans('start.no_nightly')], 422);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-millwright.api.start.no_nightly')], 422);
         }
 
         if ($nightly !== null) {
@@ -147,14 +148,14 @@ class StartController implements RequestHandlerInterface
         foreach ($packages as $package) {
             // The only user-supplied value that reaches a command line.
             if (! preg_match('#^[a-z0-9]([_.-]?[a-z0-9]+)*/[a-z0-9](([_.]|-{1,2})?[a-z0-9]+)*$#', (string) $package)) {
-                return new JsonResponse(['error' => Lang::trans('start.not_a_package', ['package' => (string) $package])], 422);
+                return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-millwright.api.start.not_a_package', ['package' => (string) $package])], 422);
             }
         }
 
-        $capability = new Capability($this->paths->base, \ErnestDefoe\Millwright\Host\PhpBinary::forStorage($this->paths->storage), $this->paths->storage.'/.composer');
+        $capability = new Capability($this->translator, $this->paths->base, \ErnestDefoe\Millwright\Host\PhpBinary::forStorage($this->translator, $this->paths->storage), $this->paths->storage.'/.composer');
 
         if ($packages === []) {
-            return new JsonResponse(['error' => Lang::trans('start.nothing_selected')], 422);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-millwright.api.start.nothing_selected')], 422);
         }
 
         if ($mode === 'install' && ($refusal = $this->replaced($packages)) !== null) {
@@ -167,7 +168,7 @@ class StartController implements RequestHandlerInterface
 
         if ($capability->resolveTier() === Capability::NONE) {
             return new JsonResponse([
-                'error' => Lang::trans('start.not_enough_memory'),
+                'error' => $this->translator->trans('ernestdefoe-millwright.api.start.not_enough_memory'),
             ], 422);
         }
 
@@ -183,8 +184,8 @@ class StartController implements RequestHandlerInterface
 
             return new JsonResponse([
                 'error' => $age > 120
-                    ? Lang::trans('start.in_progress_stale', ['minutes' => round($age / 60)])
-                    : Lang::trans('start.in_progress'),
+                    ? $this->translator->trans('ernestdefoe-millwright.api.start.in_progress_stale', ['minutes' => round($age / 60)])
+                    : $this->translator->trans('ernestdefoe-millwright.api.start.in_progress'),
                 'run' => $this->runs->present($existing),
                 'stale' => $existing->isStale(time()),
             ], 409);
@@ -192,7 +193,7 @@ class StartController implements RequestHandlerInterface
 
         $id = 'r'.date('Ymd-His').'-'.bin2hex(random_bytes(3));
 
-        (new WorkDir($this->paths->storage, $id))->create()->remember($packages, $nightly !== null ? 'update' : $mode, $nightly ?? $this->repinFor($packages, $body, $mode));
+        (new WorkDir($this->translator, $this->paths->storage, $id))->create()->remember($packages, $nightly !== null ? 'update' : $mode, $nightly ?? $this->repinFor($packages, $body, $mode));
 
         $run = $this->runner->begin($id);
 

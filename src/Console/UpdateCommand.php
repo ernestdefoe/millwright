@@ -13,6 +13,7 @@ use ErnestDefoe\Millwright\Work\UpdateCheck;
 use ErnestDefoe\Millwright\Work\WorkDir;
 use Flarum\Console\AbstractCommand;
 use Flarum\Foundation\Paths;
+use Flarum\Locale\TranslatorInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 
@@ -58,6 +59,7 @@ class UpdateCommand extends AbstractCommand
     private array $printed = [];
 
     public function __construct(
+        protected TranslatorInterface $translator,
         private Paths $paths,
         private RunStore $runs,
         private StepRunner $runner,
@@ -150,7 +152,7 @@ class UpdateCommand extends AbstractCommand
             return 1;
         }
 
-        if ((new Capability($this->paths->base, \ErnestDefoe\Millwright\Host\PhpBinary::forStorage($this->paths->storage), $this->paths->storage.'/.composer'))->resolveTier() === Capability::NONE) {
+        if ((new Capability($this->translator, $this->paths->base, \ErnestDefoe\Millwright\Host\PhpBinary::forStorage($this->translator, $this->paths->storage), $this->paths->storage.'/.composer'))->resolveTier() === Capability::NONE) {
             $this->error('This host does not have enough memory for Composer to work out what an update involves. '
                 .'Nothing was started. Ask your host to raise memory_limit to 256 MB and try again.');
 
@@ -226,7 +228,7 @@ class UpdateCommand extends AbstractCommand
 
         $id = 'r'.date('Ymd-His').'-'.bin2hex(random_bytes(3));
 
-        (new WorkDir($this->paths->storage, $id))->create()->remember($named, 'update', $repin);
+        (new WorkDir($this->translator, $this->paths->storage, $id))->create()->remember($named, 'update', $repin);
 
         $this->info('Updating '.implode(', ', $named));
 
@@ -401,7 +403,7 @@ class UpdateCommand extends AbstractCommand
         }
 
         $id = 'r'.date('Ymd-His').'-'.bin2hex(random_bytes(3));
-        (new WorkDir($this->paths->storage, $id))->create()->remember(array_keys($targets), 'update', $targets);
+        (new WorkDir($this->translator, $this->paths->storage, $id))->create()->remember(array_keys($targets), 'update', $targets);
 
         $this->info('Moving '.count($targets).' Flarum package(s) to '.reset($targets).': '.implode(', ', array_keys($targets)));
 
@@ -411,7 +413,7 @@ class UpdateCommand extends AbstractCommand
     /** An update whose plan was worked out and came to nothing. */
     private function movedNothing(Run $run): bool
     {
-        $plan = (new WorkDir($this->paths->storage, $run->id))->root().'/plan.json';
+        $plan = (new WorkDir($this->translator, $this->paths->storage, $run->id))->root().'/plan.json';
 
         return is_file($plan) && (((array) json_decode((string) file_get_contents($plan), true))['changes'] ?? null) === [];
     }
@@ -422,7 +424,7 @@ class UpdateCommand extends AbstractCommand
      */
     protected function recheck(): void
     {
-        $this->check()->refreshSite($this->paths->base);
+        $this->check()->refreshSite($this->translator, $this->paths->base);
     }
 
     private function check(): UpdateCheck

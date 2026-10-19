@@ -2,7 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Run;
 
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
 use RuntimeException;
 
 /**
@@ -21,8 +21,10 @@ use RuntimeException;
  */
 class RunStore
 {
-    public function __construct(private string $dir)
-    {
+    public function __construct(
+        protected TranslatorInterface $translator,
+        private string $dir,
+    ) {
     }
 
     public function save(Run $run): void
@@ -37,7 +39,7 @@ class RunStore
         $handle = fopen($temp, 'wb');
 
         if ($handle === false) {
-            throw new RuntimeException(Lang::trans('run.state_write_failed', ['path' => $temp]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.run.state_write_failed', ['path' => $temp]));
         }
 
         fwrite($handle, $json);
@@ -50,7 +52,7 @@ class RunStore
         if (! @rename($temp, $path)) {
             @unlink($temp);
 
-            throw new RuntimeException(Lang::trans('run.state_move_failed', ['path' => $path]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.run.state_move_failed', ['path' => $path]));
         }
 
         // Every run that reaches an end is in the history, from this one place.
@@ -153,7 +155,7 @@ class RunStore
     private function ensureDir(): void
     {
         if (! is_dir($this->dir) && ! mkdir($this->dir, 0775, true) && ! is_dir($this->dir)) {
-            throw new RuntimeException(Lang::trans('run.dir_failed', ['path' => $this->dir]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.run.dir_failed', ['path' => $this->dir]));
         }
     }
 }

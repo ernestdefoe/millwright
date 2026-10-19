@@ -10,6 +10,7 @@ use ErnestDefoe\Millwright\Host\StorageDir;
 use Flarum\Foundation\Application;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -30,6 +31,7 @@ class CompatController implements RequestHandlerInterface
     private const MOST = 24;
 
     public function __construct(
+        protected TranslatorInterface $translator,
         private Paths $paths,
         private Application $app,
     ) {
@@ -65,7 +67,7 @@ class CompatController implements RequestHandlerInterface
          */
         $core = $this->targetOr($this->coreVersion(), Arr::get((array) $request->getParsedBody(), 'core'));
 
-        $packagist = new Packagist(new Cache(StorageDir::of($this->paths->storage).'/packagist'));
+        $packagist = new Packagist($this->translator, new Cache(StorageDir::of($this->paths->storage).'/packagist'));
 
         return new JsonResponse([
             'verdicts' => $packagist->verdicts($names, new Compatibility($core)),

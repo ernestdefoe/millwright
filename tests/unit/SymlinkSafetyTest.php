@@ -6,6 +6,7 @@ use ErnestDefoe\Millwright\Apply\Applier;
 use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Apply\Rollback;
 use ErnestDefoe\Millwright\Plan\Change;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -40,11 +41,11 @@ class SymlinkSafetyTest extends TestCase
 
     private function applier(): Applier
     {
-        return new Applier(
+        return new Applier(EnglishTranslator::make(), 
             $this->dir.'/vendor',
             $this->dir.'/staging',
             $this->dir.'/trash',
-            new Journal($this->dir.'/journal.jsonl')
+            new Journal(EnglishTranslator::make(), $this->dir.'/journal.jsonl')
         );
     }
 
@@ -104,10 +105,10 @@ class SymlinkSafetyTest extends TestCase
         // clears before it moves the live copy aside.
         symlink($checkout, $this->dir.'/trash/'.$change->trashName().'.rolledback');
 
-        (new Rollback(
+        (new Rollback(EnglishTranslator::make(), 
             $this->dir.'/vendor',
             $this->dir.'/trash',
-            new Journal($this->dir.'/journal.jsonl')
+            new Journal(EnglishTranslator::make(), $this->dir.'/journal.jsonl')
         ))->run();
 
         $this->assertFileExists($checkout.'/src/Unpushed.php');

@@ -2,10 +2,10 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
-use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Host\Opcache;
 use ErnestDefoe\Millwright\Run\NeedsWebRequest;
 use ErnestDefoe\Millwright\Run\NotYet;
+use Flarum\Locale\TranslatorInterface;
 
 /**
  * Is the code loaded in THIS process the code now on disk?
@@ -33,6 +33,7 @@ final class FreshCode
     private const WAIT_CAP = 180;
 
     public function __construct(
+        protected TranslatorInterface $translator,
         private string $workDir,
         private string $installPath,
         private Opcache $opcache,
@@ -48,7 +49,7 @@ final class FreshCode
     {
         if (($this->sapi ?? PHP_SAPI) === 'cli') {
             throw new NeedsWebRequest(
-                Lang::trans('fresh.needs_web')
+                $this->translator->trans('ernestdefoe-millwright.api.fresh.needs_web')
             );
         }
 
@@ -57,7 +58,7 @@ final class FreshCode
 
         // A request that began before the last write has the old code by definition.
         if ($start < $changed + 1) {
-            throw new NotYet(Lang::trans('fresh.waiting_request'));
+            throw new NotYet($this->translator->trans('ernestdefoe-millwright.api.fresh.waiting_request'));
         }
 
         $opcache = $this->opcache;
@@ -82,7 +83,7 @@ final class FreshCode
         if ($situation['canReset'] && $opcache->clear()['done']) {
             @file_put_contents($marker, sprintf('%.6F', microtime(true)));
 
-            throw new NotYet(Lang::trans('fresh.cleared'));
+            throw new NotYet($this->translator->trans('ernestdefoe-millwright.api.fresh.cleared'));
         }
 
         if (! $situation['validates']) {
@@ -92,7 +93,7 @@ final class FreshCode
         $left = (int) ceil($changed + max(1, $situation['freq']) + 2 - $start);
 
         if ($left > 0 && $left <= self::WAIT_CAP) {
-            throw new NotYet(Lang::trans('composer.waiting_reread', ['seconds' => $left]));
+            throw new NotYet($this->translator->trans('ernestdefoe-millwright.api.composer.waiting_reread', ['seconds' => $left]));
         }
     }
 

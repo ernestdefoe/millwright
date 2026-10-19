@@ -2,8 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Apply;
 
-use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Plan\Change;
+use Flarum\Locale\TranslatorInterface;
 use RuntimeException;
 
 /**
@@ -32,6 +32,7 @@ class Rollback
      *        filesystem half on a bare tree with no Composer project in it.
      */
     public function __construct(
+        protected TranslatorInterface $translator,
         private string $vendorDir,
         private string $trashDir,
         private Journal $journal,
@@ -75,7 +76,7 @@ class Rollback
                 default => throw new RuntimeException("Unknown change \"{$change->op}\" in the journal for {$change->package}"),
             };
 
-            $undone[] = $change->describe();
+            $undone[] = $change->describe($this->translator);
         }
 
         foreach ($this->restoreManifests() as $line) {
@@ -120,10 +121,10 @@ class Rollback
             }
 
             if (! @copy($saved, $this->installPath.'/'.$file)) {
-                throw new RuntimeException(Lang::trans('rollback.put_back_failed', ['file' => $file, 'from' => $saved]));
+                throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.rollback.put_back_failed', ['file' => $file, 'from' => $saved]));
             }
 
-            $done[] = Lang::trans('rollback.restored', ['file' => $file]);
+            $done[] = $this->translator->trans('ernestdefoe-millwright.api.rollback.restored', ['file' => $file]);
         }
 
         return $done;
@@ -151,14 +152,14 @@ class Rollback
             Tree::delete($aside);
 
             if (! Tree::move($live, $aside)) {
-                throw new RuntimeException(Lang::trans('rollback.move_aside_failed', ['path' => $live]));
+                throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.rollback.move_aside_failed', ['path' => $live]));
             }
         }
 
         $this->ensureDir(dirname($live));
 
         if (! Tree::move($stash, $live)) {
-            throw new RuntimeException(Lang::trans('rollback.restore_failed', ['from' => $stash, 'to' => $live]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.rollback.restore_failed', ['from' => $stash, 'to' => $live]));
         }
     }
 
@@ -177,7 +178,7 @@ class Rollback
         $this->ensureDir(dirname($aside));
 
         if (! Tree::move($live, $aside)) {
-            throw new RuntimeException(Lang::trans('rollback.remove_failed', ['path' => $live]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.rollback.remove_failed', ['path' => $live]));
         }
 
         $this->tidyVendorDir(dirname($live));
@@ -213,7 +214,7 @@ class Rollback
     private function ensureDir(string $dir): void
     {
         if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
-            throw new RuntimeException(Lang::trans('fs.create_failed', ['path' => $dir]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fs.create_failed', ['path' => $dir]));
         }
     }
 }

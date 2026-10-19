@@ -3,10 +3,10 @@
 namespace ErnestDefoe\Millwright\Api\Controller;
 
 use ErnestDefoe\Millwright\Host\StorageDir;
-use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -21,8 +21,10 @@ use Psr\Http\Server\RequestHandlerInterface;
  */
 class CheckController implements RequestHandlerInterface
 {
-    public function __construct(private Paths $paths)
-    {
+    public function __construct(
+        protected TranslatorInterface $translator,
+        private Paths $paths,
+    ) {
     }
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -33,11 +35,11 @@ class CheckController implements RequestHandlerInterface
 
         // 🚨 The same check as the console command, private repositories
         // included: see UpdateCheck::refreshSite().
-        $result = $check->refreshSite($this->paths->base);
+        $result = $check->refreshSite($this->translator, $this->paths->base);
 
         if ($result === null) {
             return new JsonResponse([
-                'error' => Lang::trans('check.no_lock'),
+                'error' => $this->translator->trans('ernestdefoe-millwright.api.check.no_lock'),
             ], 500);
         }
 

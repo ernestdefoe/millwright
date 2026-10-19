@@ -4,6 +4,7 @@ namespace ErnestDefoe\Millwright\Tests\Unit;
 
 use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Run\RunStore;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -65,14 +66,14 @@ class ResumabilityTest extends TestCase
             $processes++;
             $this->spawn($plan, random_int(1, 3));
 
-            $run = (new RunStore($this->dir))->load('r1');
+            $run = (new RunStore(EnglishTranslator::make(), $this->dir))->load('r1');
 
             if ($run !== null && $run->isFinished()) {
                 break;
             }
         }
 
-        $run = (new RunStore($this->dir))->load('r1');
+        $run = (new RunStore(EnglishTranslator::make(), $this->dir))->load('r1');
 
         $this->assertNotNull($run);
         $this->assertSame(Run::DONE, $run->state, "gave up after $processes processes");
@@ -102,7 +103,7 @@ class ResumabilityTest extends TestCase
             $processes++;
             $this->spawn($plan, 1);   // the harshest case: one step per process
 
-            $run = (new RunStore($this->dir))->load('r1');
+            $run = (new RunStore(EnglishTranslator::make(), $this->dir))->load('r1');
 
             if ($run !== null && $run->isFinished()) {
                 break;
@@ -111,7 +112,7 @@ class ResumabilityTest extends TestCase
 
         $done = $this->completedItems();
 
-        $this->assertSame(Run::DONE, (new RunStore($this->dir))->load('r1')?->state);
+        $this->assertSame(Run::DONE, (new RunStore(EnglishTranslator::make(), $this->dir))->load('r1')?->state);
         $this->assertLessThanOrEqual(
             count($plan['fetch']) * 2,
             count($done),
@@ -127,7 +128,7 @@ class ResumabilityTest extends TestCase
         for ($i = 0; $i < 30; $i++) {
             $this->spawn($plan, 5);
 
-            if ((new RunStore($this->dir))->load('r1')?->isFinished()) {
+            if ((new RunStore(EnglishTranslator::make(), $this->dir))->load('r1')?->isFinished()) {
                 break;
             }
         }
@@ -169,7 +170,7 @@ class ResumabilityTest extends TestCase
             'the interrupted item should be redone once, and the run carry on'
         );
 
-        $this->assertSame(Run::DONE, (new RunStore($this->dir))->load('r1')?->state);
+        $this->assertSame(Run::DONE, (new RunStore(EnglishTranslator::make(), $this->dir))->load('r1')?->state);
     }
 
     // ── helpers ──────────────────────────────────────────────────────────

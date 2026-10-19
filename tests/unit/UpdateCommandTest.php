@@ -7,6 +7,7 @@ use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Run\RunStore;
 use ErnestDefoe\Millwright\Run\StepRunner;
 use ErnestDefoe\Millwright\Run\Steps;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use ErnestDefoe\Millwright\Work\WorkDir;
 use Flarum\Foundation\Paths;
 use PHPUnit\Framework\TestCase;
@@ -132,7 +133,7 @@ class UpdateCommandTest extends TestCase
         $this->assertSame(0, $tester->getStatusCode());
         $this->assertStringContainsString('checking again first', $tester->getDisplay());
         $this->assertStringContainsString('Raising a/thing from v1.0.0 to v1.0.1', $tester->getDisplay());
-        $this->assertSame(['a/thing' => 'v1.0.1'], (new WorkDir($this->dir, $this->store()->latest()?->id ?? ''))->repin());
+        $this->assertSame(['a/thing' => 'v1.0.1'], (new WorkDir(EnglishTranslator::make(), $this->dir, $this->store()->latest()?->id ?? ''))->repin());
     }
 
     /**
@@ -236,8 +237,8 @@ class UpdateCommandTest extends TestCase
         $this->assertStringContainsString('Raising a/thing from 1.0.0 to 1.1.0', $tester->getDisplay());
 
         $id = $this->store()->latest()?->id ?? '';
-        $this->assertSame(['a/thing' => '1.1.0'], (new WorkDir($this->dir, $id))->repin());
-        $this->assertSame(['a/thing'], (new WorkDir($this->dir, $id))->requested());
+        $this->assertSame(['a/thing' => '1.1.0'], (new WorkDir(EnglishTranslator::make(), $this->dir, $id))->repin());
+        $this->assertSame(['a/thing'], (new WorkDir(EnglishTranslator::make(), $this->dir, $id))->requested());
     }
 
     public function test_it_drives_the_run_to_done_and_prints_what_happened(): void
@@ -390,14 +391,14 @@ class UpdateCommandTest extends TestCase
     {
         $store = $this->store();
 
-        $command = new class(new Paths(['base' => $this->dir, 'public' => $this->dir, 'storage' => $this->dir, 'vendor' => $this->dir]), $store, new StepRunner($store, $this->steps($plan, $failOn, $planChanges, $this->dir), fn (): int => time()), $recheck ?? fn () => throw new \LogicException('No re-check expected.')) extends UpdateCommand {
+        $command = new class(new Paths(['base' => $this->dir, 'public' => $this->dir, 'storage' => $this->dir, 'vendor' => $this->dir]), $store, new StepRunner(EnglishTranslator::make(), $store, $this->steps($plan, $failOn, $planChanges, $this->dir), fn (): int => time()), $recheck ?? fn () => throw new \LogicException('No re-check expected.')) extends UpdateCommand {
             /** @var callable():void */
             private $recheckWith;
 
             public function __construct(Paths $paths, RunStore $runs, StepRunner $runner, callable $recheck)
             {
                 $this->recheckWith = $recheck;
-                parent::__construct($paths, $runs, $runner);
+                parent::__construct(EnglishTranslator::make(), $paths, $runs, $runner);
             }
 
             protected function recheck(): void
@@ -414,7 +415,7 @@ class UpdateCommandTest extends TestCase
 
     private function store(): RunStore
     {
-        return new RunStore($this->dir.'/millwright/runs');
+        return new RunStore(EnglishTranslator::make(), $this->dir.'/millwright/runs');
     }
 
     /** @param array<string,list<string>> $plan */
@@ -438,7 +439,7 @@ class UpdateCommandTest extends TestCase
                 }
 
                 if ($phase === 'plan' && $this->planChanges !== null) {
-                    file_put_contents((new WorkDir($this->dir, $run->id))->root().'/plan.json', json_encode(['changes' => $this->planChanges]));
+                    file_put_contents((new WorkDir(EnglishTranslator::make(), $this->dir, $run->id))->root().'/plan.json', json_encode(['changes' => $this->planChanges]));
                 }
 
                 return "$phase $item";

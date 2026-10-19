@@ -2,7 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Config;
 
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
 use RuntimeException;
 
 /**
@@ -20,8 +20,10 @@ class Stability
     /** Composer's own order, loosest last. */
     public const LEVELS = ['stable', 'RC', 'beta', 'alpha', 'dev'];
 
-    public function __construct(private JsonFile $file)
-    {
+    public function __construct(
+        protected TranslatorInterface $translator,
+        private JsonFile $file,
+    ) {
     }
 
     /** @return array{minimumStability:string, preferStable:bool} */
@@ -40,7 +42,7 @@ class Stability
     public function set(string $level, bool $preferStable): void
     {
         if (! in_array($level, self::LEVELS, true)) {
-            throw new RuntimeException(Lang::trans('config.stability_invalid', ['levels' => implode(', ', self::LEVELS)]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.stability_invalid', ['levels' => implode(', ', self::LEVELS)]));
         }
 
         $data = $this->file->read();

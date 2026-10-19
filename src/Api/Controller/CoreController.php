@@ -3,12 +3,12 @@
 namespace ErnestDefoe\Millwright\Api\Controller;
 
 use ErnestDefoe\Millwright\Host\StorageDir;
-use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Plan\CoreOverrides;
 use ErnestDefoe\Millwright\Plan\CoreUpgrade;
 use Flarum\Foundation\Application;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -27,6 +27,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 class CoreController implements RequestHandlerInterface
 {
     public function __construct(
+        protected TranslatorInterface $translator,
         private Paths $paths,
         private Application $app,
     ) {
@@ -44,7 +45,7 @@ class CoreController implements RequestHandlerInterface
 
         if ($packages === []) {
             return new JsonResponse([
-                'error' => Lang::trans('core.no_lock'),
+                'error' => $this->translator->trans('ernestdefoe-millwright.api.core.no_lock'),
             ], 500);
         }
 

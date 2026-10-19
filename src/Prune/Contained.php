@@ -2,7 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Prune;
 
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
 use RuntimeException;
 
 /**
@@ -28,12 +28,14 @@ class Contained
 {
     private string $base;
 
-    public function __construct(string $base)
-    {
+    public function __construct(
+        protected TranslatorInterface $translator,
+        string $base,
+    ) {
         $real = realpath($base);
 
         if ($real === false || ! is_dir($real)) {
-            throw new RuntimeException(Lang::trans('prune.base_not_dir', ['path' => $base]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.prune.base_not_dir', ['path' => $base]));
         }
 
         $this->base = rtrim($real, DIRECTORY_SEPARATOR);
@@ -67,7 +69,7 @@ class Contained
         $parent = realpath(dirname($path));
 
         if ($parent === false || rtrim($parent, DIRECTORY_SEPARATOR) !== $this->base) {
-            throw new RuntimeException(Lang::trans('prune.not_inside', ['path' => $path, 'base' => $this->base]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.prune.not_inside', ['path' => $path, 'base' => $this->base]));
         }
 
         return $this->removePath($this->entry(basename($path)));
@@ -100,7 +102,7 @@ class Contained
         $names = @scandir($this->base);
 
         if ($names === false) {
-            throw new RuntimeException(Lang::trans('prune.cannot_list', ['path' => $this->base]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.prune.cannot_list', ['path' => $this->base]));
         }
 
         return array_values(array_filter($names, fn ($n) => $n !== '.' && $n !== '..'));
@@ -110,7 +112,7 @@ class Contained
     {
         if ($name === '' || $name === '.' || $name === '..' || str_contains($name, '/')
             || str_contains($name, '\\') || str_contains($name, "\0")) {
-            throw new RuntimeException(Lang::trans('prune.not_single_name', ['name' => $name, 'base' => $this->base]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.prune.not_single_name', ['name' => $name, 'base' => $this->base]));
         }
 
         return $this->base.DIRECTORY_SEPARATOR.$name;
@@ -128,7 +130,7 @@ class Contained
             $bytes = $this->bytes($stat);
 
             if (! @unlink($path) && (is_link($path) || file_exists($path))) {
-                throw new RuntimeException(Lang::trans('prune.remove_failed', ['path' => $path]));
+                throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.prune.remove_failed', ['path' => $path]));
             }
 
             return $bytes;
@@ -170,7 +172,7 @@ class Contained
         $bytes += $stat === false ? 0 : $this->bytes($stat);
 
         if (! @rmdir($dir) && is_dir($dir)) {
-            throw new RuntimeException(Lang::trans('prune.remove_dir_failed', ['path' => $dir]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.prune.remove_dir_failed', ['path' => $dir]));
         }
 
         return $bytes;
@@ -210,7 +212,7 @@ class Contained
         $real = realpath($dir);
 
         if ($real === false || ! str_starts_with($real, $this->base.DIRECTORY_SEPARATOR)) {
-            throw new RuntimeException(Lang::trans('prune.resolves_outside', ['path' => $dir, 'base' => $this->base]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.prune.resolves_outside', ['path' => $dir, 'base' => $this->base]));
         }
     }
 

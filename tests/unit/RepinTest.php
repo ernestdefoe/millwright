@@ -3,6 +3,7 @@
 namespace ErnestDefoe\Millwright\Tests\Unit;
 
 use ErnestDefoe\Millwright\Api\Controller\StartController;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use ErnestDefoe\Millwright\Work\ComposerSteps;
 use ErnestDefoe\Millwright\Work\WorkDir;
 use PHPUnit\Framework\TestCase;
@@ -163,20 +164,20 @@ class RepinTest extends TestCase
      */
     public function test_the_permission_survives_being_written_down(): void
     {
-        $work = new WorkDir($this->dir, 'r-test');
+        $work = new WorkDir(EnglishTranslator::make(), $this->dir, 'r-test');
         $work->create()->remember(['a/pinned'], 'update', ['a/pinned' => '1.1.0']);
 
-        $this->assertSame(['a/pinned'], (new WorkDir($this->dir, 'r-test'))->requested());
-        $this->assertSame(['a/pinned' => '1.1.0'], (new WorkDir($this->dir, 'r-test'))->repin());
+        $this->assertSame(['a/pinned'], (new WorkDir(EnglishTranslator::make(), $this->dir, 'r-test'))->requested());
+        $this->assertSame(['a/pinned' => '1.1.0'], (new WorkDir(EnglishTranslator::make(), $this->dir, 'r-test'))->repin());
     }
 
     /** An older run, written before this existed, must simply have none. */
     public function test_a_run_recorded_without_a_permission_raises_nothing(): void
     {
-        $work = new WorkDir($this->dir, 'r-old');
+        $work = new WorkDir(EnglishTranslator::make(), $this->dir, 'r-old');
         $work->create()->remember(['a/pinned'], 'update');
 
-        $this->assertSame([], (new WorkDir($this->dir, 'r-old'))->repin());
+        $this->assertSame([], (new WorkDir(EnglishTranslator::make(), $this->dir, 'r-old'))->repin());
     }
 
     /**
@@ -243,6 +244,7 @@ class RepinTest extends TestCase
             'requested' => $requested,
             'mode' => 'update',
             'repin' => $repin,
+            'translator' => EnglishTranslator::make(),
         ] as $prop => $value) {
             $reflection->getProperty($prop)->setValue($steps, $value);
         }

@@ -2,7 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Apply;
 
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
 use RuntimeException;
 
 /**
@@ -33,8 +33,10 @@ class Journal
     private const STATE_BEGUN = 'begun';
     private const STATE_DONE = 'done';
 
-    public function __construct(private string $path)
-    {
+    public function __construct(
+        protected TranslatorInterface $translator,
+        private string $path,
+    ) {
     }
 
     public function path(): string
@@ -82,7 +84,7 @@ class Journal
         $handle = fopen($this->path, 'rb');
 
         if ($handle === false) {
-            throw new RuntimeException(Lang::trans('journal.read_failed', ['path' => $this->path]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.journal.read_failed', ['path' => $this->path]));
         }
 
         $bySeq = [];
@@ -173,13 +175,13 @@ class Journal
         $dir = dirname($this->path);
 
         if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
-            throw new RuntimeException(Lang::trans('journal.dir_failed', ['path' => $dir]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.journal.dir_failed', ['path' => $dir]));
         }
 
         $handle = fopen($this->path, 'ab');
 
         if ($handle === false) {
-            throw new RuntimeException(Lang::trans('journal.write_failed', ['path' => $this->path]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.journal.write_failed', ['path' => $this->path]));
         }
 
         $line = json_encode($row, JSON_UNESCAPED_SLASHES)."\n";
@@ -187,7 +189,7 @@ class Journal
         if (fwrite($handle, $line) === false) {
             fclose($handle);
 
-            throw new RuntimeException(Lang::trans('journal.append_failed', ['path' => $this->path]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.journal.append_failed', ['path' => $this->path]));
         }
 
         fflush($handle);

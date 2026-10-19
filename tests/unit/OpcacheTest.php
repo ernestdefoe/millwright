@@ -3,6 +3,7 @@
 namespace ErnestDefoe\Millwright\Tests\Unit;
 
 use ErnestDefoe\Millwright\Host\Opcache;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -33,7 +34,7 @@ class OpcacheTest extends TestCase
          *
          * Reading only validate_timestamps called that "fine" and did nothing.
          */
-        $s = (new Opcache())->situationFrom(['opcache.enable' => true, 'opcache.validate_timestamps' => true, 'opcache.revalidate_freq' => 60]);
+        $s = (new Opcache(EnglishTranslator::make()))->situationFrom(['opcache.enable' => true, 'opcache.validate_timestamps' => true, 'opcache.revalidate_freq' => 60]);
 
         $this->assertSame(Opcache::STALE_RISK, $s['state']);
         $this->assertTrue($s['validates']);
@@ -42,7 +43,7 @@ class OpcacheTest extends TestCase
 
     public function test_no_opcache_at_all_is_the_only_state_needing_nothing(): void
     {
-        $s = (new Opcache())->situationFrom(['opcache.enable' => false]);
+        $s = (new Opcache(EnglishTranslator::make()))->situationFrom(['opcache.enable' => false]);
 
         $this->assertSame(Opcache::FINE, $s['state']);
     }
@@ -52,7 +53,7 @@ class OpcacheTest extends TestCase
         // Where timestamps ARE checked, a worker that cannot reset is not a
         // problem to escalate — the change becomes live on its own shortly, and
         // saying so is more useful than a warning about restarting PHP-FPM.
-        $o = new class extends Opcache {
+        $o = new class(EnglishTranslator::make()) extends Opcache {
             public function situation(): array
             {
                 return ['state' => Opcache::STALE_RISK, 'enabled' => true, 'validates' => true, 'freq' => 60, 'canReset' => true];
@@ -76,7 +77,7 @@ class OpcacheTest extends TestCase
          * function is how this gets diagnosed three days later as "the update
          * didn't work".
          */
-        $o = new class extends Opcache {
+        $o = new class(EnglishTranslator::make()) extends Opcache {
             public function situation(): array
             {
                 return ['state' => Opcache::STALE_RISK, 'enabled' => true, 'validates' => false, 'freq' => 0, 'canReset' => true];
@@ -95,7 +96,7 @@ class OpcacheTest extends TestCase
     {
         // Whatever this machine is configured to do, the shape must hold — this
         // is consulted on a page load and on every finalise.
-        $s = (new Opcache())->situation();
+        $s = (new Opcache(EnglishTranslator::make()))->situation();
 
         $this->assertContains($s['state'], [Opcache::FINE, Opcache::STALE_RISK]);
         $this->assertIsBool($s['enabled']);
@@ -109,7 +110,7 @@ class OpcacheTest extends TestCase
         // the lock and Composer's record all agree; a cache that could not be
         // cleared is something to say, never a reason to fail work that was
         // correct and offer to undo it.
-        $result = (new Opcache())->clear();
+        $result = (new Opcache(EnglishTranslator::make()))->clear();
 
         $this->assertIsBool($result['done']);
         $this->assertNotSame('', $result['why']);

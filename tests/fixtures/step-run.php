@@ -19,6 +19,7 @@ use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Run\RunStore;
 use ErnestDefoe\Millwright\Run\StepRunner;
 use ErnestDefoe\Millwright\Run\Steps;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 
 [$script, $dir, $runId, $itemsJson, $logPath, $budget] = $argv;
 $killInside = $argv[6] ?? '';
@@ -55,8 +56,8 @@ $steps = new class($plan, $logPath, $killInside) implements Steps {
     }
 };
 
-$store = new RunStore($dir);
-$runner = new StepRunner($store, $steps, fn () => time(), $dir.'/locks');
+$store = new RunStore(EnglishTranslator::make(), $dir);
+$runner = new StepRunner(EnglishTranslator::make(), $store, $steps, fn () => time(), $dir.'/locks');
 
 if ($store->load($runId) === null) {
     $runner->begin($runId);

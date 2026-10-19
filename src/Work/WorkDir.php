@@ -3,7 +3,7 @@
 namespace ErnestDefoe\Millwright\Work;
 
 use ErnestDefoe\Millwright\Host\StorageDir;
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
 use RuntimeException;
 
 /**
@@ -19,8 +19,11 @@ use RuntimeException;
  */
 class WorkDir
 {
-    public function __construct(private string $storagePath, private string $runId)
-    {
+    public function __construct(
+        protected TranslatorInterface $translator,
+        private string $storagePath,
+        private string $runId,
+    ) {
         if (! preg_match('/^[A-Za-z0-9_-]{1,64}$/', $runId)) {
             throw new RuntimeException("Refusing to build a work directory for run id: $runId");
         }
@@ -56,7 +59,7 @@ class WorkDir
     {
         foreach ([$this->root(), $this->staging(), $this->trash()] as $dir) {
             if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
-                throw new RuntimeException(Lang::trans('fs.create_failed', ['path' => $dir]));
+                throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fs.create_failed', ['path' => $dir]));
             }
         }
 

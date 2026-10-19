@@ -2,7 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
 use RuntimeException;
 
 /**
@@ -19,8 +19,11 @@ use RuntimeException;
  */
 final class FlarumCommand
 {
-    public function __construct(private string $installPath, private ComposerRunner $composer)
-    {
+    public function __construct(
+        protected TranslatorInterface $translator,
+        private string $installPath,
+        private ComposerRunner $composer,
+    ) {
     }
 
     /**
@@ -45,7 +48,7 @@ final class FlarumCommand
                 $argv[] = $value === true ? $name : $name.'='.$value;
             }
 
-            return Process::run($argv, $this->installPath);
+            return Process::run($this->translator, $argv, $this->installPath);
         }
 
         return $this->inProcess($command, $options);
@@ -83,7 +86,7 @@ final class FlarumCommand
         $container = \Illuminate\Container\Container::getInstance();
 
         if (! $container->bound('flarum.console.commands')) {
-            throw new RuntimeException(Lang::trans('flarum_command.no_console', ['command' => $command]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.flarum_command.no_console', ['command' => $command]));
         }
 
         $found = null;
@@ -102,7 +105,7 @@ final class FlarumCommand
         }
 
         if ($found === null) {
-            throw new RuntimeException(Lang::trans('flarum_command.unknown', ['command' => $command]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.flarum_command.unknown', ['command' => $command]));
         }
 
         $output = new \Symfony\Component\Console\Output\BufferedOutput(

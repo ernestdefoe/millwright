@@ -7,8 +7,10 @@ use ErnestDefoe\Millwright\Run\Drivers;
 use ErnestDefoe\Millwright\Run\RunStore;
 use ErnestDefoe\Millwright\Run\StepRunner;
 use ErnestDefoe\Millwright\Run\StepsFactory;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use Flarum\Foundation\Config;
 use Flarum\Foundation\Paths;
+use Flarum\Locale\TranslatorInterface;
 use Illuminate\Container\Container;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Foundation\Application as ApplicationContract;
@@ -70,6 +72,7 @@ class WiringTest extends TestCase
 
         $this->container->instance(QueueFactory::class, $queue);
         $this->container->instance(Dispatcher::class, $this->createStub(Dispatcher::class));
+        $this->container->instance(TranslatorInterface::class, EnglishTranslator::make());
 
         /*
          * Flarum's AbstractServiceProvider takes the Application contract and

@@ -2,14 +2,14 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
-use ErnestDefoe\Millwright\Host\StorageDir;
-use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Config\AuthTokens;
 use ErnestDefoe\Millwright\Config\JsonFile;
+use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Work\ReleaseNotes;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -21,8 +21,10 @@ use Psr\Http\Server\RequestHandlerInterface;
  */
 class ReleaseNotesController implements RequestHandlerInterface
 {
-    public function __construct(private Paths $paths)
-    {
+    public function __construct(
+        protected TranslatorInterface $translator,
+        private Paths $paths,
+    ) {
     }
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -36,12 +38,12 @@ class ReleaseNotesController implements RequestHandlerInterface
         $notes = isset($updates[$package])
             ? (new ReleaseNotes(
                 StorageDir::of($this->paths->storage).'/release-notes',
-                new AuthTokens(new JsonFile($this->paths->base.'/auth.json')),
+                new AuthTokens($this->translator, new JsonFile($this->translator, $this->paths->base.'/auth.json')),
             ))->between($updates[$package])
             : null;
 
         if ($notes === null) {
-            return new JsonResponse(['error' => Lang::trans('release_notes.none')], 404);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-millwright.api.release_notes.none')], 404);
         }
 
         return new JsonResponse(['package' => $package, 'from' => $updates[$package]['from'], 'to' => $updates[$package]['to']] + $notes);

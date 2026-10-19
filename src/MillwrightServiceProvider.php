@@ -11,6 +11,7 @@ use ErnestDefoe\Millwright\Work\ComposerStepsFactory;
 use Flarum\Foundation\AbstractServiceProvider;
 use Flarum\Foundation\Config;
 use Flarum\Foundation\Paths;
+use Flarum\Locale\TranslatorInterface;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 
@@ -38,11 +39,11 @@ class MillwrightServiceProvider extends AbstractServiceProvider
              * the web root, and already backed up with the rest of the site. A
              * run's state is not secret but it is not public either.
              */
-            return new RunStore(StorageDir::of($container->make(Paths::class)->storage).'/runs');
+            return new RunStore($container->make(TranslatorInterface::class), StorageDir::of($container->make(Paths::class)->storage).'/runs');
         });
 
         $this->container->singleton(Drivers::class, function ($container) {
-            return new Drivers(
+            return new Drivers($container->make(TranslatorInterface::class), 
                 $container->make(QueueFactory::class),
                 $container->make(Dispatcher::class)
             );
@@ -73,6 +74,7 @@ class MillwrightServiceProvider extends AbstractServiceProvider
              * written. Nothing errored; the feature simply was not there.
              */
             return new ComposerStepsFactory(
+                $container->make(TranslatorInterface::class),
                 $container->make(Paths::class),
                 $container->make(Config::class)
             );
@@ -87,7 +89,7 @@ class MillwrightServiceProvider extends AbstractServiceProvider
         $this->container->singleton(StepRunner::class, function ($container) {
             $storage = $container->make(Paths::class)->storage;
 
-            return new StepRunner(
+            return new StepRunner($container->make(TranslatorInterface::class), 
                 $container->make(RunStore::class),
                 $container->make(StepsFactory::class),
                 fn () => time(),

@@ -5,6 +5,7 @@ namespace ErnestDefoe\Millwright\Tests\Unit;
 use ErnestDefoe\Millwright\Apply\Tree;
 use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Run\RunStore;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use PHPUnit\Framework\TestCase;
 
 /** "Recently updated", as an app store keeps it: written from RunStore::save, kept past pruning. */
@@ -28,7 +29,7 @@ class HistoryTest extends TestCase
 
     public function test_a_finished_run_is_recorded_once_and_an_undo_updates_it(): void
     {
-        $store = new RunStore($this->dir.'/runs');
+        $store = new RunStore(EnglishTranslator::make(), $this->dir.'/runs');
         $run = Run::start('r1', 1000);
 
         $store->save($run);

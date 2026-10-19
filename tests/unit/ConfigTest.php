@@ -6,6 +6,7 @@ use ErnestDefoe\Millwright\Config\AuthTokens;
 use ErnestDefoe\Millwright\Config\JsonFile;
 use ErnestDefoe\Millwright\Config\Repositories;
 use ErnestDefoe\Millwright\Config\Stability;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -40,7 +41,7 @@ class ConfigTest extends TestCase
             file_put_contents($path, json_encode($data));
         }
 
-        return new JsonFile($path);
+        return new JsonFile(EnglishTranslator::make(), $path);
     }
 
     // ── credentials ─────────────────────────────────────────────────────────
@@ -53,7 +54,7 @@ class ConfigTest extends TestCase
          * ticket into a credential leak, and the person it leaks from has no
          * reason to think anything happened.
          */
-        $auth = new AuthTokens($this->file('auth.json', []));
+        $auth = new AuthTokens(EnglishTranslator::make(), $this->file('auth.json', []));
         $auth->set('github-oauth', 'github.com', 'ghp_thismustneverappear');
         $auth->set('http-basic', 'floxum.com', 'sekrit', 'ernest');
 
@@ -72,7 +73,7 @@ class ConfigTest extends TestCase
     public function test_the_credential_really_is_written_for_composer(): void
     {
         // Write-only to the admin, but Composer still has to be able to read it.
-        $auth = new AuthTokens($this->file('auth.json', []));
+        $auth = new AuthTokens(EnglishTranslator::make(), $this->file('auth.json', []));
         $auth->set('github-oauth', 'github.com', 'ghp_token');
 
         $onDisk = json_decode(file_get_contents($this->dir.'/auth.json'), true);
@@ -84,19 +85,19 @@ class ConfigTest extends TestCase
     public function test_http_basic_needs_a_username(): void
     {
         $this->expectExceptionMessageMatches('/username/');
-        (new AuthTokens($this->file('auth.json', [])))->set('http-basic', 'floxum.com', 'pw');
+        (new AuthTokens(EnglishTranslator::make(), $this->file('auth.json', [])))->set('http-basic', 'floxum.com', 'pw');
     }
 
     public function test_a_url_pasted_where_a_hostname_belongs_is_refused(): void
     {
         // Composer matches on hostname; a URL here silently never matches.
         $this->expectExceptionMessageMatches('/hostname/');
-        (new AuthTokens($this->file('auth.json', [])))->set('github-oauth', 'https://github.com/', 'x');
+        (new AuthTokens(EnglishTranslator::make(), $this->file('auth.json', [])))->set('github-oauth', 'https://github.com/', 'x');
     }
 
     public function test_removing_a_credential_removes_the_empty_kind_too(): void
     {
-        $auth = new AuthTokens($this->file('auth.json', []));
+        $auth = new AuthTokens(EnglishTranslator::make(), $this->file('auth.json', []));
         $auth->set('bearer', 'floxum.com', 'tok');
         $auth->remove('bearer', 'floxum.com');
 
@@ -107,7 +108,7 @@ class ConfigTest extends TestCase
 
     public function test_repositories_are_listed_with_their_type(): void
     {
-        $repos = new Repositories($this->file('composer.json', ['repositories' => [
+        $repos = new Repositories(EnglishTranslator::make(), $this->file('composer.json', ['repositories' => [
             ['type' => 'vcs', 'url' => 'https://github.com/a/b'],
             ['type' => 'composer', 'url' => 'https://floxum.com/composer'],
         ]]));
@@ -117,7 +118,7 @@ class ConfigTest extends TestCase
 
     public function test_a_duplicate_repository_is_refused(): void
     {
-        $repos = new Repositories($this->file('composer.json', ['repositories' => [
+        $repos = new Repositories(EnglishTranslator::make(), $this->file('composer.json', ['repositories' => [
             ['type' => 'vcs', 'url' => 'https://github.com/a/b'],
         ]]));
 
@@ -129,7 +130,7 @@ class ConfigTest extends TestCase
     {
         // Composer resolves in order, so appending cannot change how anything
         // already installed is found.
-        $repos = new Repositories($this->file('composer.json', ['repositories' => [
+        $repos = new Repositories(EnglishTranslator::make(), $this->file('composer.json', ['repositories' => [
             ['type' => 'composer', 'url' => 'https://floxum.com/composer'],
         ]]));
 
@@ -141,7 +142,7 @@ class ConfigTest extends TestCase
 
     public function test_nonsense_is_not_written_into_composer_json(): void
     {
-        $repos = new Repositories($this->file('composer.json', []));
+        $repos = new Repositories(EnglishTranslator::make(), $this->file('composer.json', []));
 
         try {
             $repos->add('vcs', 'not a url');
@@ -156,7 +157,7 @@ class ConfigTest extends TestCase
 
     public function test_removing_a_repository_that_is_not_there_says_so(): void
     {
-        $repos = new Repositories($this->file('composer.json', ['repositories' => []]));
+        $repos = new Repositories(EnglishTranslator::make(), $this->file('composer.json', ['repositories' => []]));
 
         $this->expectExceptionMessageMatches('/not in composer.json/');
         $repos->remove('https://github.com/a/b');
@@ -166,7 +167,7 @@ class ConfigTest extends TestCase
 
     public function test_stability_reports_and_sets(): void
     {
-        $s = new Stability($this->file('composer.json', ['minimum-stability' => 'beta', 'prefer-stable' => true]));
+        $s = new Stability(EnglishTranslator::make(), $this->file('composer.json', ['minimum-stability' => 'beta', 'prefer-stable' => true]));
 
         $this->assertSame('beta', $s->current()['minimumStability']);
         $this->assertTrue($s->current()['preferStable']);
@@ -179,7 +180,7 @@ class ConfigTest extends TestCase
     public function test_an_invented_stability_level_is_refused(): void
     {
         $this->expectExceptionMessageMatches('/must be one of/');
-        (new Stability($this->file('composer.json', [])))->set('mostly-fine', true);
+        (new Stability(EnglishTranslator::make(), $this->file('composer.json', [])))->set('mostly-fine', true);
     }
 
     public function test_every_level_explains_what_it_means(): void
@@ -207,12 +208,12 @@ class ConfigTest extends TestCase
         file_put_contents($this->dir.'/composer.json', '{"require": {,,,}');
 
         $this->expectExceptionMessageMatches('/not valid JSON/');
-        (new Repositories(new JsonFile($this->dir.'/composer.json')))->all();
+        (new Repositories(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/composer.json')))->all();
     }
 
     public function test_the_previous_contents_are_kept(): void
     {
-        $s = new Stability($this->file('composer.json', ['minimum-stability' => 'stable', 'name' => 'flarum/flarum']));
+        $s = new Stability(EnglishTranslator::make(), $this->file('composer.json', ['minimum-stability' => 'stable', 'name' => 'flarum/flarum']));
         $s->set('beta', true);
 
         $backups = glob($this->dir.'/composer.json.millwright-backup-*');
@@ -231,7 +232,7 @@ class ConfigTest extends TestCase
             'minimum-stability' => 'stable',
         ];
 
-        $s = new Stability($this->file('composer.json', $original));
+        $s = new Stability(EnglishTranslator::make(), $this->file('composer.json', $original));
         $s->set('beta', true);
 
         $after = json_decode(file_get_contents($this->dir.'/composer.json'), true);

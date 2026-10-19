@@ -2,8 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Apply;
 
-use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Plan\Change;
+use Flarum\Locale\TranslatorInterface;
 use RuntimeException;
 
 /**
@@ -39,6 +39,7 @@ class Applier
      *        rather than at a convenient one.
      */
     public function __construct(
+        protected TranslatorInterface $translator,
         private string $vendorDir,
         private string $stagingDir,
         private string $trashDir,
@@ -69,7 +70,7 @@ class Applier
              * recoverable situation becomes a manual one.
              */
             throw new RuntimeException(
-                Lang::trans('apply.previous_unfinished')
+                $this->translator->trans('ernestdefoe-millwright.api.apply.previous_unfinished')
             );
         }
 
@@ -113,7 +114,7 @@ class Applier
         $this->journal->complete($seq);
         $this->observe('completed', $change);
 
-        return $change->describe();
+        return $change->describe($this->translator);
     }
 
     /**
@@ -136,7 +137,7 @@ class Applier
 
         if (is_link($live)) {
             throw new RuntimeException(
-                Lang::trans('apply.local_path', ['package' => $change->package, 'path' => 'vendor/'.$change->relativePath()])
+                $this->translator->trans('ernestdefoe-millwright.api.apply.local_path', ['package' => $change->package, 'path' => 'vendor/'.$change->relativePath()])
             );
         }
     }
@@ -220,7 +221,7 @@ class Applier
         $this->ensureDir(dirname($target));
 
         if (! Tree::move($live, $target)) {
-            throw new RuntimeException(Lang::trans('apply.move_aside_failed', ['from' => $live, 'to' => $target]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.apply.move_aside_failed', ['from' => $live, 'to' => $target]));
         }
     }
 
@@ -252,7 +253,7 @@ class Applier
         $this->ensureDir(dirname($live));
 
         if (! Tree::move($staged, $live)) {
-            throw new RuntimeException(Lang::trans('apply.move_in_failed', ['from' => $staged, 'to' => $live]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.apply.move_in_failed', ['from' => $staged, 'to' => $live]));
         }
     }
 
@@ -269,7 +270,7 @@ class Applier
     private function ensureDir(string $dir): void
     {
         if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
-            throw new RuntimeException(Lang::trans('fs.create_failed', ['path' => $dir]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fs.create_failed', ['path' => $dir]));
         }
     }
 }

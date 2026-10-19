@@ -4,6 +4,7 @@ namespace ErnestDefoe\Millwright\Tests\Unit;
 
 use ErnestDefoe\Millwright\Apply\Applier;
 use ErnestDefoe\Millwright\Apply\Journal;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use ErnestDefoe\Millwright\Work\ComposerRunner;
 use ErnestDefoe\Millwright\Work\ComposerSteps;
 use ErnestDefoe\Millwright\Work\Fetcher;
@@ -34,13 +35,13 @@ class CodeLiveAtTest extends TestCase
 
     private function liveAt(int $freq): int
     {
-        $journal = new Journal($this->dir.'/work/journal.jsonl');
-        $steps = new ComposerSteps(
+        $journal = new Journal(EnglishTranslator::make(), $this->dir.'/work/journal.jsonl');
+        $steps = new ComposerSteps(EnglishTranslator::make(), 
             $this->dir.'/project',
             $this->dir.'/work',
-            new ComposerRunner($this->dir.'/project', __FILE__, $this->dir.'/home'),
-            new Fetcher($this->dir.'/work/staging'),
-            new Applier($this->dir.'/project/vendor', $this->dir.'/work/staging', $this->dir.'/work/trash', $journal),
+            new ComposerRunner(EnglishTranslator::make(), $this->dir.'/project', __FILE__, $this->dir.'/home'),
+            new Fetcher(EnglishTranslator::make(), $this->dir.'/work/staging'),
+            new Applier(EnglishTranslator::make(), $this->dir.'/project/vendor', $this->dir.'/work/staging', $this->dir.'/work/trash', $journal),
             $journal,
             vendorPath: $this->dir.'/project/vendor',
         );

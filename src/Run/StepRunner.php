@@ -2,7 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Run;
 
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
 use Throwable;
 
 /**
@@ -61,6 +61,7 @@ class StepRunner
      * @param callable():int $clock
      */
     public function __construct(
+        protected TranslatorInterface $translator,
         private RunStore $store,
         private Steps|StepsFactory $steps,
         private $clock,
@@ -92,7 +93,7 @@ class StepRunner
 
     public function begin(string $id): Run
     {
-        $run = Run::start($id, $this->now());
+        $run = Run::start($id, $this->now(), $this->translator->trans('ernestdefoe-millwright.api.run.starting'));
         $this->store->save($run);
 
         return $run;
@@ -231,7 +232,10 @@ class StepRunner
                 $run = $run->revertedAfter(
                     $reverted->getMessage(),
                     "$phase → $item",
-                    $reverted->undone,
+                    [
+                        $this->failedNote("$phase → $item", $reverted->getMessage()),
+                        $this->translator->trans('ernestdefoe-millwright.api.run.put_back', ['undone' => $this->undoneList($reverted->undone)]),
+                    ],
                     $this->now()
                 );
                 $this->store->save($run);
@@ -272,7 +276,7 @@ class StepRunner
             return $run;
         } catch (Throwable $e) {
             $where = $item === null ? "$phase (planning)" : "$phase → $item";
-            $run = $run->failed($e->getMessage(), $where, $this->now());
+            $run = $run->failed($e->getMessage(), $where, $this->now(), $this->failedNote($where, $e->getMessage()));
             $this->store->save($run);
 
             return $run;
@@ -287,12 +291,24 @@ class StepRunner
         $next = $at === false ? null : ($order[$at + 1] ?? null);
 
         $run = $next === null
-            ? $run->finished($this->now())
-            : $run->enteredPhase($next, $this->now(), Lang::trans('run.finished_phase', ['phase' => $run->phase]));
+            ? $run->finished($this->now(), $this->translator->trans('ernestdefoe-millwright.api.run.finished'))
+            : $run->enteredPhase($next, $this->now(), $this->translator->trans('ernestdefoe-millwright.api.run.finished_phase', ['phase' => $run->phase]));
 
         $this->store->save($run);
 
         return $run;
+    }
+
+    /** The log line for a failed step. */
+    public function failedNote(string $step, string $error): string
+    {
+        return $this->translator->trans('ernestdefoe-millwright.api.run.failed_during', ['step' => $step, 'error' => $error]);
+    }
+
+    /** @param list<string> $undone */
+    public function undoneList(array $undone): string
+    {
+        return implode(', ', $undone) ?: $this->translator->trans('ernestdefoe-millwright.api.run.nothing_to_undo');
     }
 
     private function now(): int

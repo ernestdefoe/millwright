@@ -2,7 +2,6 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
-use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Apply\Restore;
 use ErnestDefoe\Millwright\Run\RunStore;
@@ -10,6 +9,7 @@ use ErnestDefoe\Millwright\Work\ComposerRunner;
 use ErnestDefoe\Millwright\Work\WorkDir;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -27,6 +27,7 @@ use RuntimeException;
 class RollbackController implements RequestHandlerInterface
 {
     public function __construct(
+        protected TranslatorInterface $translator,
         private RunStore $runs,
         private Paths $paths,
     ) {
@@ -34,11 +35,11 @@ class RollbackController implements RequestHandlerInterface
 
     private function composer(): ComposerRunner
     {
-        return new ComposerRunner(
+        return new ComposerRunner($this->translator, 
             $this->paths->base,
             null,
             $this->paths->storage.'/.composer',
-            (new \ErnestDefoe\Millwright\Host\PhpOverride($this->paths->storage))->get()
+            (new \ErnestDefoe\Millwright\Host\PhpOverride($this->translator, $this->paths->storage))->get()
         );
     }
 
@@ -49,11 +50,11 @@ class RollbackController implements RequestHandlerInterface
         $run = $this->runs->latest();
 
         if ($run === null) {
-            return new JsonResponse(['error' => Lang::trans('rollback.nothing')], 404);
+            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-millwright.api.rollback.nothing')], 404);
         }
 
-        $workDir = new WorkDir($this->paths->storage, $run->id);
-        $journal = new Journal($workDir->journalPath());
+        $workDir = new WorkDir($this->translator, $this->paths->storage, $run->id);
+        $journal = new Journal($this->translator, $workDir->journalPath());
 
         /*
          * 🚨 An empty journal does NOT mean nothing changed.
@@ -74,7 +75,7 @@ class RollbackController implements RequestHandlerInterface
 
         if (! $journal->exists() && ! is_file($savedLock)) {
             return new JsonResponse([
-                'error' => Lang::trans('rollback.nothing_changed'),
+                'error' => $this->translator->trans('ernestdefoe-millwright.api.rollback.nothing_changed'),
             ], 422);
         }
 
@@ -84,7 +85,7 @@ class RollbackController implements RequestHandlerInterface
          * exactly the pair that drifts, and the half that drifts is Composer's
          * record, which fails silently and months later.
          */
-        $restore = new Restore(
+        $restore = new Restore($this->translator, 
             $this->paths->vendor,
             $this->paths->base,
             $workDir->root(),
@@ -104,7 +105,9 @@ class RollbackController implements RequestHandlerInterface
         $undone = $result['undone'];
         $note = $result['note'];
 
-        $this->runs->save($run->rolledBack(time(), $undone));
+        $this->runs->save($run->rolledBack(time(), $this->translator->trans('ernestdefoe-millwright.api.run.rolled_back', [
+            'undone' => implode(', ', $undone) ?: $this->translator->trans('ernestdefoe-millwright.api.run.nothing_to_undo'),
+        ])));
 
         return new JsonResponse([
             'undone' => $undone,

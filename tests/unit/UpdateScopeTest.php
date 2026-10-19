@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Tests\Unit;
 
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use ErnestDefoe\Millwright\Work\ComposerSteps;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -137,7 +138,7 @@ class UpdateScopeTest extends TestCase
         $reflection = new ReflectionClass(ComposerSteps::class);
         $steps = $reflection->newInstanceWithoutConstructor();
 
-        foreach (['installPath' => $this->dir, 'requested' => $requested, 'mode' => 'update'] as $prop => $value) {
+        foreach (['installPath' => $this->dir, 'requested' => $requested, 'mode' => 'update', 'translator' => EnglishTranslator::make()] as $prop => $value) {
             $reflection->getProperty($prop)->setValue($steps, $value);
         }
 

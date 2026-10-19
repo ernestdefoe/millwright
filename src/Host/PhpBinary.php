@@ -2,7 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Host;
 
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
+
 /**
  * Where the command-line PHP is — and, when it cannot be found, WHY.
  *
@@ -52,6 +53,7 @@ class PhpBinary
      * @param (\Closure(string): array{code:int, out:string, err:string})|null $runner
      */
     public function __construct(
+        protected TranslatorInterface $translator,
         private ?string $override = null,
         private ?array $candidates = null,
         private ?string $openBasedir = null,
@@ -63,9 +65,9 @@ class PhpBinary
     }
 
     /** The PHP this forum's processes run with: the admin's choice, if they made one. */
-    public static function forStorage(string $storagePath): self
+    public static function forStorage(TranslatorInterface $translator, string $storagePath): self
     {
-        return new self((new PhpOverride($storagePath))->get());
+        return new self($translator, (new PhpOverride($translator, $storagePath))->get());
     }
 
     public function path(): ?string
@@ -149,7 +151,7 @@ class PhpBinary
             $err = trim($run['err']) !== '' ? trim($run['err']) : trim($run['out']);
             $result['error'] = $err !== ''
                 ? mb_substr(strtok($err, "\n") ?: $err, 0, 300)
-                : ($sapi !== null && $sapi !== 'cli' ? Lang::trans('php.wrong_sapi', ['sapi' => $sapi]) : Lang::trans('php.exit_code', ['code' => (string) $run['code']]));
+                : ($sapi !== null && $sapi !== 'cli' ? $this->translator->trans('ernestdefoe-millwright.api.php.wrong_sapi', ['sapi' => $sapi]) : $this->translator->trans('ernestdefoe-millwright.api.php.exit_code', ['code' => (string) $run['code']]));
         }
 
         return $this->probes[$candidate] = $result;

@@ -12,6 +12,7 @@ use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Run\RunStore;
 use ErnestDefoe\Millwright\Run\StepRunner;
 use ErnestDefoe\Millwright\Run\Steps;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use ErnestDefoe\Millwright\Work\ComposerRunner;
 use ErnestDefoe\Millwright\Work\ComposerSteps;
 use ErnestDefoe\Millwright\Work\Fetcher;
@@ -83,8 +84,8 @@ class InProcessComposerTest extends TestCase
 
     public function test_no_command_line_php_also_falls_back_to_in_process(): void
     {
-        $php = new PhpBinary(null, ['/nonexistent/php-for-test'], '', null, '/x/php-fpm', 'fpm-fcgi', '');
-        $runner = (new ComposerRunner($this->dir.'/project', __FILE__, $this->dir.'/home'))->withPhp($php);
+        $php = new PhpBinary(EnglishTranslator::make(), null, ['/nonexistent/php-for-test'], '', null, '/x/php-fpm', 'fpm-fcgi', '');
+        $runner = (new ComposerRunner(EnglishTranslator::make(), $this->dir.'/project', __FILE__, $this->dir.'/home'))->withPhp($php);
 
         $this->assertFalse($runner->canSpawn());
         $this->assertTrue($runner->inProcess());
@@ -188,7 +189,7 @@ class InProcessComposerTest extends TestCase
             'packagist.org' => false,
         ]]);
 
-        $blockers = (new NeedsGit($this->dir.'/project', $this->dir.'/home'))->blockers();
+        $blockers = (new NeedsGit(EnglishTranslator::make(), $this->dir.'/project', $this->dir.'/home'))->blockers();
 
         $this->assertSame([
             ['url' => 'https://github.com/acme/private-a', 'why' => NeedsGit::WHY_TOKEN],
@@ -198,7 +199,7 @@ class InProcessComposerTest extends TestCase
             ['url' => 'packages/unversioned', 'why' => NeedsGit::WHY_GIT],
         ], $blockers);
 
-        $said = NeedsGit::explain($blockers);
+        $said = (new NeedsGit(EnglishTranslator::make(), $this->dir.'/project', $this->dir.'/home'))->explain($blockers);
         $this->assertStringStartsWith('Nothing was changed.', $said);
         $this->assertStringContainsString('GitHub token', $said);
         $this->assertStringContainsString('https://github.com/acme/private-a', $said);
@@ -210,11 +211,11 @@ class InProcessComposerTest extends TestCase
         $this->writeJson('project/composer.json', ['repositories' => [['type' => 'vcs', 'url' => 'https://github.com/acme/private-a']]]);
 
         $this->writeJson('home/auth.json', ['github-oauth' => ['github.com' => 'ghp_test']]);
-        $this->assertSame([], (new NeedsGit($this->dir.'/project', $this->dir.'/home'))->blockers());
+        $this->assertSame([], (new NeedsGit(EnglishTranslator::make(), $this->dir.'/project', $this->dir.'/home'))->blockers());
 
         unlink($this->dir.'/home/auth.json');
         $this->writeJson('project/auth.json', ['github-oauth' => ['github.com' => 'ghp_test']]);
-        $this->assertSame([], (new NeedsGit($this->dir.'/project', $this->dir.'/home'))->blockers());
+        $this->assertSame([], (new NeedsGit(EnglishTranslator::make(), $this->dir.'/project', $this->dir.'/home'))->blockers());
     }
 
     public function test_planning_refuses_with_a_sentence_and_changes_nothing(): void
@@ -314,7 +315,7 @@ class InProcessComposerTest extends TestCase
     {
         $this->expectException(NeedsWebRequest::class);
 
-        (new FreshCode($this->dir.'/work', $this->dir.'/project', $this->opcache(false), 'cli', microtime(true)))->ensure();
+        (new FreshCode(EnglishTranslator::make(), $this->dir.'/work', $this->dir.'/project', $this->opcache(false), 'cli', microtime(true)))->ensure();
     }
 
     public function test_a_request_that_started_before_the_swap_waits_for_the_next_one(): void
@@ -322,7 +323,7 @@ class InProcessComposerTest extends TestCase
         file_put_contents($this->dir.'/work/journal.jsonl', "{}\n");
 
         $this->expectException(NotYet::class);
-        (new FreshCode($this->dir.'/work', $this->dir.'/project', $this->opcache(false), 'fpm-fcgi', time() - 30))->ensure();
+        (new FreshCode(EnglishTranslator::make(), $this->dir.'/work', $this->dir.'/project', $this->opcache(false), 'fpm-fcgi', time() - 30))->ensure();
     }
 
     public function test_opcache_is_cleared_and_the_step_runs_on_the_following_request(): void
@@ -332,20 +333,20 @@ class InProcessComposerTest extends TestCase
         $opcache = $this->opcache(true);
 
         try {
-            (new FreshCode($this->dir.'/work', $this->dir.'/project', $opcache, 'fpm-fcgi', microtime(true)))->ensure();
+            (new FreshCode(EnglishTranslator::make(), $this->dir.'/work', $this->dir.'/project', $opcache, 'fpm-fcgi', microtime(true)))->ensure();
             $this->fail('the clearing request must not run the step itself');
         } catch (NotYet $e) {
             $this->assertSame(1, $opcache->cleared);
         }
 
         // The next request began after the clear.
-        (new FreshCode($this->dir.'/work', $this->dir.'/project', $opcache, 'fpm-fcgi', microtime(true) + 2))->ensure();
+        (new FreshCode(EnglishTranslator::make(), $this->dir.'/work', $this->dir.'/project', $opcache, 'fpm-fcgi', microtime(true) + 2))->ensure();
         $this->assertSame(1, $opcache->cleared, 'not cleared again');
     }
 
     public function test_a_queue_worker_stops_asking_when_only_the_page_can_continue(): void
     {
-        $store = new RunStore($this->dir.'/runs');
+        $store = new RunStore(EnglishTranslator::make(), $this->dir.'/runs');
         $steps = new class implements Steps {
             public function itemsFor(string $phase, Run $run): array
             {
@@ -358,7 +359,7 @@ class InProcessComposerTest extends TestCase
             }
         };
 
-        $runner = new StepRunner($store, $steps, fn () => 1000);
+        $runner = new StepRunner(EnglishTranslator::make(), $store, $steps, fn () => 1000);
         $runner->begin('r1');
         $runner->step('r1');            // plans
         $run = $runner->step('r1');     // waits
@@ -373,22 +374,22 @@ class InProcessComposerTest extends TestCase
 
     private function runner(string $disabled): ComposerRunner
     {
-        $php = new PhpBinary(PHP_BINARY, null, '', null, PHP_BINARY, 'cli', $disabled);
+        $php = new PhpBinary(EnglishTranslator::make(), PHP_BINARY, null, '', null, PHP_BINARY, 'cli', $disabled);
 
-        return (new ComposerRunner($this->dir.'/project', __FILE__, $this->dir.'/home'))->withPhp($php);
+        return (new ComposerRunner(EnglishTranslator::make(), $this->dir.'/project', __FILE__, $this->dir.'/home'))->withPhp($php);
     }
 
     /** @param list<string> $packages */
     private function steps(array $packages, string $mode): ComposerSteps
     {
-        $journal = new Journal($this->dir.'/work/journal.jsonl');
+        $journal = new Journal(EnglishTranslator::make(), $this->dir.'/work/journal.jsonl');
 
-        return new ComposerSteps(
+        return new ComposerSteps(EnglishTranslator::make(), 
             $this->dir.'/project',
             $this->dir.'/work',
             $this->runner('proc_open'),
-            new Fetcher($this->dir.'/work/staging'),
-            new Applier($this->dir.'/project/vendor', $this->dir.'/work/staging', $this->dir.'/work/trash', $journal),
+            new Fetcher(EnglishTranslator::make(), $this->dir.'/work/staging'),
+            new Applier(EnglishTranslator::make(), $this->dir.'/project/vendor', $this->dir.'/work/staging', $this->dir.'/work/trash', $journal),
             $journal,
             $packages,
             $mode

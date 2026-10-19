@@ -2,7 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Host;
 
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
 use RuntimeException;
 
 /**
@@ -30,15 +30,18 @@ final class FlarumUpdater
     private const TIMEOUT = 300;
 
     /** @param array<string,mixed> $database config.php's `database` section */
-    public function __construct(private string $siteUrl, private array $database)
-    {
+    public function __construct(
+        protected TranslatorInterface $translator,
+        private string $siteUrl,
+        private array $database,
+    ) {
     }
 
     /** @return string what the updater said */
     public function migrate(): string
     {
         if (! function_exists('curl_init')) {
-            throw new RuntimeException(Lang::trans('updater.no_http'));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.updater.no_http'));
         }
 
         $username = (string) ($this->database['username'] ?? '');
@@ -72,8 +75,8 @@ final class FlarumUpdater
 
         throw new RuntimeException(
             $local['status'] === null
-                ? Lang::trans('updater.unreachable', ['error' => $local['error']])
-                : Lang::trans('updater.answered', ['status' => $local['status'], 'body' => mb_substr(trim(strip_tags($local['body'])), 0, 200)])
+                ? $this->translator->trans('ernestdefoe-millwright.api.updater.unreachable', ['error' => $local['error']])
+                : $this->translator->trans('ernestdefoe-millwright.api.updater.answered', ['status' => $local['status'], 'body' => mb_substr(trim(strip_tags($local['body'])), 0, 200)])
         );
     }
 

@@ -5,6 +5,7 @@ namespace ErnestDefoe\Millwright\Tests\Unit;
 use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Apply\Rollback;
 use ErnestDefoe\Millwright\Plan\Change;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -65,7 +66,7 @@ class CrashRecoveryTest extends TestCase
 
         $this->assertNotSame(0, $exit, 'the harness was supposed to be killed, not to finish');
 
-        (new Rollback($this->dir('vendor'), $this->dir('trash'), $this->journal()))->run();
+        (new Rollback(EnglishTranslator::make(), $this->dir('vendor'), $this->dir('trash'), $this->journal()))->run();
 
         $this->assertSame(
             $before,
@@ -86,7 +87,7 @@ class CrashRecoveryTest extends TestCase
             (new Change(Change::ADD, 'acme/newthing', null, '1.0.0'))->toArray(),
         ], $killAt);
 
-        (new Rollback($this->dir('vendor'), $this->dir('trash'), $this->journal()))->run();
+        (new Rollback(EnglishTranslator::make(), $this->dir('vendor'), $this->dir('trash'), $this->journal()))->run();
 
         $this->assertSame(
             $before,
@@ -123,7 +124,7 @@ class CrashRecoveryTest extends TestCase
 
         $this->assertSame('NEW widget v2', $this->read('vendor/acme/widget/file.txt'));
 
-        (new Rollback($this->dir('vendor'), $this->dir('trash'), $this->journal()))->run();
+        (new Rollback(EnglishTranslator::make(), $this->dir('vendor'), $this->dir('trash'), $this->journal()))->run();
 
         $this->assertSame($before, $this->snapshot($this->dir('vendor')));
     }
@@ -153,7 +154,7 @@ class CrashRecoveryTest extends TestCase
             (new Change(Change::REPLACE, 'acme/three', '1', '2'))->toArray(),
         ], 'stashed', killOnPackage: 'acme/two');
 
-        (new Rollback($this->dir('vendor'), $this->dir('trash'), $this->journal()))->run();
+        (new Rollback(EnglishTranslator::make(), $this->dir('vendor'), $this->dir('trash'), $this->journal()))->run();
 
         $this->assertSame($before, $this->snapshot($this->dir('vendor')));
     }
@@ -186,7 +187,7 @@ class CrashRecoveryTest extends TestCase
 
     private function journal(): Journal
     {
-        return new Journal($this->dir('journal.jsonl'));
+        return new Journal(EnglishTranslator::make(), $this->dir('journal.jsonl'));
     }
 
     private function dir(string $name): string

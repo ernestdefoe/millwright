@@ -2,9 +2,9 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
-use ErnestDefoe\Millwright\Lang;
 use Flarum\Database\Migrator;
 use Flarum\Extension\ExtensionManager;
+use Flarum\Locale\TranslatorInterface;
 use Illuminate\Database\ConnectionInterface;
 use RuntimeException;
 use Throwable;
@@ -39,8 +39,10 @@ use Throwable;
  */
 final class MigrationLedger
 {
-    public function __construct(private string $workDir)
-    {
+    public function __construct(
+        protected TranslatorInterface $translator,
+        private string $workDir,
+    ) {
     }
 
     /** Before `flarum migrate`: what has already run, and the version Flarum records. Saved once. */
@@ -137,8 +139,8 @@ final class MigrationLedger
                 call_user_func($down, $db->getSchemaBuilder());
             } catch (Throwable $e) {
                 throw new RuntimeException(
-                    Lang::trans('migrations.undo_stopped', ['migration' => $m['migration'], 'error' => $e->getMessage()]).' '
-                    .($done ? Lang::trans('migrations.already_reversed', ['list' => implode(', ', $done)]) : Lang::trans('migrations.none_reversed'))
+                    $this->translator->trans('ernestdefoe-millwright.api.migrations.undo_stopped', ['migration' => $m['migration'], 'error' => $e->getMessage()]).' '
+                    .($done ? $this->translator->trans('ernestdefoe-millwright.api.migrations.already_reversed', ['list' => implode(', ', $done)]) : $this->translator->trans('ernestdefoe-millwright.api.migrations.none_reversed'))
                 );
             }
 
@@ -150,7 +152,7 @@ final class MigrationLedger
         @unlink($this->workDir.'/migrations.json');
         @unlink($this->workDir.'/migrations.pending');
 
-        return array_map(fn ($name) => Lang::trans('migrations.reversed', ['migration' => $name]), $done);
+        return array_map(fn ($name) => $this->translator->trans('ernestdefoe-millwright.api.migrations.reversed', ['migration' => $name]), $done);
     }
 
     /**
@@ -171,8 +173,8 @@ final class MigrationLedger
             if (! isset($migration['down']) || ! is_callable($migration['down'])) {
                 throw new RuntimeException(
                     $m['extension']
-                        ? Lang::trans('migrations.irreversible_ext', ['migration' => $m['migration'], 'extension' => $m['extension']])
-                        : Lang::trans('migrations.irreversible', ['migration' => $m['migration']])
+                        ? $this->translator->trans('ernestdefoe-millwright.api.migrations.irreversible_ext', ['migration' => $m['migration'], 'extension' => $m['extension']])
+                        : $this->translator->trans('ernestdefoe-millwright.api.migrations.irreversible', ['migration' => $m['migration']])
                 );
             }
 

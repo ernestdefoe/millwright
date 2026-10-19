@@ -6,6 +6,7 @@ use ErnestDefoe\Millwright\Apply\Applier;
 use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Apply\Rollback;
 use ErnestDefoe\Millwright\Plan\Change;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -42,10 +43,10 @@ class RollbackManifestTest extends TestCase
 
     private function rollback(): Rollback
     {
-        return new Rollback(
+        return new Rollback(EnglishTranslator::make(), 
             $this->dir.'/install/vendor',
             $this->dir.'/trash',
-            new Journal($this->dir.'/work/journal.jsonl'),
+            new Journal(EnglishTranslator::make(), $this->dir.'/work/journal.jsonl'),
             $this->dir.'/install',
             $this->dir.'/work'
         );
@@ -53,11 +54,11 @@ class RollbackManifestTest extends TestCase
 
     private function applyOne(): void
     {
-        (new Applier(
+        (new Applier(EnglishTranslator::make(), 
             $this->dir.'/install/vendor',
             $this->dir.'/staging',
             $this->dir.'/trash',
-            new Journal($this->dir.'/work/journal.jsonl')
+            new Journal(EnglishTranslator::make(), $this->dir.'/work/journal.jsonl')
         ))->applyOne(new Change(Change::REPLACE, 'acme/widget', '1.0.0', '2.0.0'));
     }
 
@@ -117,11 +118,11 @@ class RollbackManifestTest extends TestCase
         file_put_contents($this->dir.'/staging/newco/thing/it.php', 'new');
         file_put_contents($this->dir.'/work/composer.lock.before', '{"packages":[]}');
 
-        (new Applier(
+        (new Applier(EnglishTranslator::make(), 
             $this->dir.'/install/vendor',
             $this->dir.'/staging',
             $this->dir.'/trash',
-            new Journal($this->dir.'/work/journal.jsonl')
+            new Journal(EnglishTranslator::make(), $this->dir.'/work/journal.jsonl')
         ))->applyOne(new Change(Change::ADD, 'newco/thing', null, '1.0.0'));
 
         $this->assertDirectoryExists($this->dir.'/install/vendor/newco/thing');
@@ -165,11 +166,11 @@ class RollbackManifestTest extends TestCase
         file_put_contents($this->dir.'/install/vendor/lonely/pkg/it.php', 'x');
         file_put_contents($this->dir.'/work/composer.lock.before', '{"packages":[]}');
 
-        (new Applier(
+        (new Applier(EnglishTranslator::make(), 
             $this->dir.'/install/vendor',
             $this->dir.'/staging',
             $this->dir.'/trash',
-            new Journal($this->dir.'/work/journal.jsonl')
+            new Journal(EnglishTranslator::make(), $this->dir.'/work/journal.jsonl')
         ))->applyOne(new Change(Change::REMOVE, 'lonely/pkg', '1.0.0', null));
 
         $this->assertDirectoryDoesNotExist($this->dir.'/install/vendor/lonely');

@@ -16,6 +16,7 @@ require __DIR__.'/../../vendor/autoload.php';
 use ErnestDefoe\Millwright\Apply\Applier;
 use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Plan\Change;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 
 [$script, $vendor, $staging, $trash, $journalPath, $changesJson, $killAt] = $argv;
 $killOnPackage = $argv[7] ?? '';
@@ -25,9 +26,9 @@ $changes = array_map(
     json_decode($changesJson, true, 512, JSON_THROW_ON_ERROR)
 );
 
-$journal = new Journal($journalPath);
+$journal = new Journal(EnglishTranslator::make(), $journalPath);
 
-$applier = new Applier($vendor, $staging, $trash, $journal, function (string $label, Change $change) use ($killAt, $killOnPackage) {
+$applier = new Applier(EnglishTranslator::make(), $vendor, $staging, $trash, $journal, function (string $label, Change $change) use ($killAt, $killOnPackage) {
     if ($label === $killAt && ($killOnPackage === '' || $change->package === $killOnPackage)) {
         // No shutdown functions, no flush, no unwinding — exactly what a host
         // killing an overrunning request does.

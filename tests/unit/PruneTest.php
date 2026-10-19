@@ -11,6 +11,7 @@ use ErnestDefoe\Millwright\Prune\Pruner;
 use ErnestDefoe\Millwright\Prune\Retention;
 use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Run\RunStore;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -47,7 +48,7 @@ class PruneTest extends TestCase
 
         // Two days after everything on disk was made, so the grace period has passed.
         $this->now = time() + 2 * self::DAY;
-        $this->store = new RunStore($this->mw.'/runs');
+        $this->store = new RunStore(EnglishTranslator::make(), $this->mw.'/runs');
     }
 
     protected function tearDown(): void
@@ -59,7 +60,7 @@ class PruneTest extends TestCase
     {
         $clock = $now ?? $this->now;
 
-        return new Pruner($this->mw, new Retention($this->mw), fn () => $clock);
+        return new Pruner(EnglishTranslator::make(), $this->mw, new Retention($this->mw), fn () => $clock);
     }
 
     /**
@@ -74,7 +75,7 @@ class PruneTest extends TestCase
 
         mkdir($this->mw.'/runs/'.$id, 0775, true);
         file_put_contents($this->mw.'/runs/'.$id.'/composer.lock.before', '{}');
-        $journal = new Journal($this->mw.'/runs/'.$id.'/journal.jsonl');
+        $journal = new Journal(EnglishTranslator::make(), $this->mw.'/runs/'.$id.'/journal.jsonl');
 
         foreach ($packages as $spec) {
             [$package, $from] = explode('@', $spec);
@@ -324,7 +325,7 @@ class PruneTest extends TestCase
         mkdir($outside, 0775, true);
         file_put_contents($outside.'/keep.php', 'live code');
 
-        $trash = new Contained($this->mw.'/trash');
+        $trash = new Contained(EnglishTranslator::make(), $this->mw.'/trash');
 
         foreach (['..', '.', '', '../../../vendor', 'acme/widget', "a\0b"] as $name) {
             try {
@@ -357,7 +358,7 @@ class PruneTest extends TestCase
         mkdir($this->dir.'/elsewhere/sibling', 0775, true);
         symlink($real, $this->dir.'/trash-link');
 
-        $trash = new Contained($this->dir.'/trash-link');
+        $trash = new Contained(EnglishTranslator::make(), $this->dir.'/trash-link');
         $trash->remove('acme+a@1.0.0');
 
         $this->assertDirectoryDoesNotExist($real.'/acme+a@1.0.0');
@@ -385,8 +386,8 @@ class PruneTest extends TestCase
             mkdir($staging, 0775, true);
             file_put_contents("$staging/version", $to);
 
-            $journal = new Journal($this->mw."/runs/$id/journal.jsonl");
-            (new Applier($vendor, $this->mw."/runs/$id/staging", $this->mw.'/trash', $journal))
+            $journal = new Journal(EnglishTranslator::make(), $this->mw."/runs/$id/journal.jsonl");
+            (new Applier(EnglishTranslator::make(), $vendor, $this->mw."/runs/$id/staging", $this->mw.'/trash', $journal))
                 ->applyOne(new Change(Change::REPLACE, 'acme/widget', $from, $to));
 
             $at = $this->now - (200 - (int) str_replace('.', '', $to)) * self::DAY;
@@ -404,7 +405,7 @@ class PruneTest extends TestCase
         $latest = $this->store->latest();
         $this->assertSame('r-130', $latest?->id);
 
-        (new Rollback($vendor, $this->mw.'/trash', new Journal($this->mw.'/runs/r-130/journal.jsonl')))->run();
+        (new Rollback(EnglishTranslator::make(), $vendor, $this->mw.'/trash', new Journal(EnglishTranslator::make(), $this->mw.'/runs/r-130/journal.jsonl')))->run();
 
         $this->assertSame('1.2.0', file_get_contents("$vendor/acme/widget/version"), 'Roll back still puts the previous version back');
     }

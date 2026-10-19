@@ -2,7 +2,6 @@
 
 namespace ErnestDefoe\Millwright\Apply;
 
-use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Host\Opcache;
 use ErnestDefoe\Millwright\Work\ComposerRunner;
 use ErnestDefoe\Millwright\Work\FlarumCommand;
@@ -11,6 +10,7 @@ use ErnestDefoe\Millwright\Work\MigrationLedger;
 use ErnestDefoe\Millwright\Work\StaleCache;
 use Flarum\Database\Migrator;
 use Flarum\Extension\ExtensionManager;
+use Flarum\Locale\TranslatorInterface;
 use Illuminate\Database\ConnectionInterface;
 use Throwable;
 
@@ -28,6 +28,7 @@ use Throwable;
 class Restore
 {
     public function __construct(
+        protected TranslatorInterface $translator,
         private string $vendorPath,
         private string $basePath,
         private string $workDirRoot,
@@ -55,7 +56,7 @@ class Restore
          * back. The reversal itself waits for the next request, booted from
          * the restored code. See MigrationLedger.
          */
-        $ledger = new MigrationLedger($this->workDirRoot);
+        $ledger = new MigrationLedger($this->translator, $this->workDirRoot);
         $pending = $ledger->prepare(
             resolve(ConnectionInterface::class),
             resolve(Migrator::class),
@@ -63,7 +64,7 @@ class Restore
             $this->vendorPath
         );
 
-        $undone = array_merge($pending ? [Lang::trans('restore.migrations_queued')] : [], (new Rollback(
+        $undone = array_merge($pending ? [$this->translator->trans('ernestdefoe-millwright.api.restore.migrations_queued')] : [], (new Rollback($this->translator, 
             $this->vendorPath,
             $this->trashPath,
             $this->journal,
@@ -90,17 +91,17 @@ class Restore
                 // put back — with a Composer that lives in this same vendor/,
                 // which is how an update took wowcraft.online down. Synced
                 // from the restored lock, install only rebuilds the autoloader.
-                (new InstalledRecord($this->basePath))->syncFromLock();
+                (new InstalledRecord($this->translator, $this->basePath))->syncFromLock();
 
                 $result = $this->composer->run(['install', '--no-scripts']);
 
                 if ($result['code'] === 0) {
-                    $undone[] = Lang::trans('restore.record_put_back');
+                    $undone[] = $this->translator->trans('ernestdefoe-millwright.api.restore.record_put_back');
                 } else {
-                    $note = Lang::trans('restore.record_failed');
+                    $note = $this->translator->trans('ernestdefoe-millwright.api.restore.record_failed');
                 }
             } catch (Throwable $e) {
-                $note = Lang::trans('restore.composer_failed', ['error' => $e->getMessage()]);
+                $note = $this->translator->trans('ernestdefoe-millwright.api.restore.composer_failed', ['error' => $e->getMessage()]);
             }
         }
 
@@ -141,12 +142,12 @@ class Restore
          * clearing caches only copy and delete files, so they are safe here.
          */
         // A root-owned cache would fail cache:clear below; see StaleCache.
-        $setAside = StaleCache::describe(StaleCache::setAside($this->storagePath));
+        $setAside = StaleCache::describe(StaleCache::setAside($this->storagePath), $this->translator);
         if ($setAside !== '') {
             $undone[] = $setAside;
         }
 
-        $flarum = new FlarumCommand($this->basePath, $this->composer);
+        $flarum = new FlarumCommand($this->translator, $this->basePath, $this->composer);
         $inProcess = ! $this->composer->processes();
         $commands = [
             ['assets:publish', []],
@@ -164,12 +165,12 @@ class Restore
             }
 
             if ($result['code'] !== 0) {
-                return Lang::trans('restore.command_failed', ['command' => $command])
+                return $this->translator->trans('ernestdefoe-millwright.api.restore.command_failed', ['command' => $command])
                     ."\n".FlarumCommand::excerpt($result['output']);
             }
         }
 
-        $undone[] = Lang::trans('restore.assets_rebuilt');
+        $undone[] = $this->translator->trans('ernestdefoe-millwright.api.restore.assets_rebuilt');
 
         /*
          * 🚨 And the web server's compiled-code cache, as an update's finish
@@ -178,7 +179,7 @@ class Restore
          * 500'd on a class the restored version never had, until PHP-FPM was
          * restarted by hand.
          */
-        $undone[] = (new Opcache())->clear()['why'];
+        $undone[] = (new Opcache($this->translator))->clear()['why'];
 
         return null;
     }

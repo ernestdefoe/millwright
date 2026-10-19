@@ -2,7 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Config;
 
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
 use RuntimeException;
 
 /**
@@ -31,8 +31,10 @@ class AuthTokens
      */
     public const KINDS = ['github-oauth', 'gitlab-token', 'bearer', 'http-basic'];
 
-    public function __construct(private JsonFile $file)
-    {
+    public function __construct(
+        protected TranslatorInterface $translator,
+        private JsonFile $file,
+    ) {
     }
 
     /**
@@ -59,8 +61,8 @@ class AuthTokens
                      * apart. The password is never included.
                      */
                     'detail' => is_array($value) && isset($value['username'])
-                        ? Lang::trans('config.detail_username', ['username' => (string) $value['username']])
-                        : Lang::trans('config.detail_token_set'),
+                        ? $this->translator->trans('ernestdefoe-millwright.api.config.detail_username', ['username' => (string) $value['username']])
+                        : $this->translator->trans('ernestdefoe-millwright.api.config.detail_token_set'),
                 ];
             }
         }
@@ -115,7 +117,7 @@ class AuthTokens
     public function set(string $kind, string $host, string $secret, ?string $username = null): void
     {
         if (! in_array($kind, self::KINDS, true)) {
-            throw new RuntimeException(Lang::trans('config.unknown_credential_type', ['kinds' => implode(', ', self::KINDS)]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.unknown_credential_type', ['kinds' => implode(', ', self::KINDS)]));
         }
 
         $host = strtolower(trim($host));
@@ -123,15 +125,15 @@ class AuthTokens
         // A host, not a URL: Composer matches on the hostname, and pasting a full
         // URL here silently never matches anything.
         if (! preg_match('/^[a-z0-9.-]+\.[a-z]{2,}$/', $host)) {
-            throw new RuntimeException(Lang::trans('config.not_a_hostname'));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.not_a_hostname'));
         }
 
         if (trim($secret) === '') {
-            throw new RuntimeException(Lang::trans('config.credential_empty'));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.credential_empty'));
         }
 
         if ($kind === 'http-basic' && ($username === null || trim($username) === '')) {
-            throw new RuntimeException(Lang::trans('config.basic_needs_username'));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.basic_needs_username'));
         }
 
         $data = $this->file->read();
@@ -153,7 +155,7 @@ class AuthTokens
         $host = strtolower(trim($host));
 
         if (! isset($data[$kind][$host])) {
-            throw new RuntimeException(Lang::trans('config.no_credential'));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.no_credential'));
         }
 
         unset($data[$kind][$host]);

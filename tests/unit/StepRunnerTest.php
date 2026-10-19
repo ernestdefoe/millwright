@@ -6,6 +6,7 @@ use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Run\RunStore;
 use ErnestDefoe\Millwright\Run\StepRunner;
 use ErnestDefoe\Millwright\Run\Steps;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -170,7 +171,7 @@ class StepRunnerTest extends TestCase
         [$runner, $steps] = $this->make(['plan' => [], 'fetch' => ['a', 'b', 'c'], 'apply' => [], 'finalise' => []]);
         $runner->begin('r1');
 
-        $store = new RunStore($this->dir);
+        $store = new RunStore(EnglishTranslator::make(), $this->dir);
 
         for ($i = 0; $i < 8; $i++) {
             $runner->step('r1');
@@ -247,7 +248,7 @@ class StepRunnerTest extends TestCase
 
     private function newRunner(object $steps): StepRunner
     {
-        return new StepRunner(new RunStore($this->dir), $steps, fn () => $this->clock);
+        return new StepRunner(EnglishTranslator::make(), new RunStore(EnglishTranslator::make(), $this->dir), $steps, fn () => $this->clock);
     }
 
     private function fakeSteps(array $plan): object

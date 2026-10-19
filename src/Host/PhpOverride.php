@@ -3,6 +3,7 @@
 namespace ErnestDefoe\Millwright\Host;
 
 use ErnestDefoe\Millwright\Config\JsonFile;
+use Flarum\Locale\TranslatorInterface;
 
 /**
  * The command-line PHP an admin has pointed Millwright at, for the hosts where
@@ -18,14 +19,16 @@ use ErnestDefoe\Millwright\Config\JsonFile;
  */
 class PhpOverride
 {
-    public function __construct(private string $storagePath)
-    {
+    public function __construct(
+        protected TranslatorInterface $translator,
+        private string $storagePath,
+    ) {
     }
 
     public function get(): ?string
     {
         try {
-            $path = (new JsonFile($this->file()))->read()['path'] ?? null;
+            $path = (new JsonFile($this->translator, $this->file()))->read()['path'] ?? null;
         } catch (\Throwable) {
             return null;
         }
@@ -41,7 +44,7 @@ class PhpOverride
      */
     public function refusal(string $path, ?PhpBinary $php = null): ?array
     {
-        $php ??= new PhpBinary();
+        $php ??= new PhpBinary($this->translator);
 
         if ($path === '' || $path[0] !== '/') {
             return ['php_path_not_absolute', []];
@@ -88,7 +91,7 @@ class PhpOverride
             return;
         }
 
-        (new JsonFile($this->file()))->write(['path' => $path]);
+        (new JsonFile($this->translator, $this->file()))->write(['path' => $path]);
     }
 
     private function file(): string

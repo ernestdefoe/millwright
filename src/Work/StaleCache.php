@@ -2,7 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
+
 /**
  * A cache somebody else owns, moved out of the way instead of refused.
  *
@@ -104,16 +105,16 @@ final class StaleCache
     }
 
     /** One line for a step result, or '' when nothing moved. */
-    public static function describe(array $moved): string
+    public static function describe(array $moved, TranslatorInterface $translator): string
     {
-        return $moved === [] ? '' : Lang::trans('stale_cache.set_aside').' rm -rf '
+        return $moved === [] ? '' : $translator->trans('ernestdefoe-millwright.api.stale_cache.set_aside').' rm -rf '
             .implode(' ', array_map('escapeshellarg', $moved));
     }
 
     private static function hasUnwritable(string $root): bool
     {
         $found = [];
-        (new Permissions('', '', ''))->walkInto($root, $found);
+        Permissions::walkInto($root, $found);
 
         return $found !== [];
     }

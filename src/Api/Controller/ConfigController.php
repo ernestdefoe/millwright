@@ -2,7 +2,6 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
-use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Config\AuthTokens;
 use ErnestDefoe\Millwright\Config\JsonFile;
 use ErnestDefoe\Millwright\Config\Repositories;
@@ -10,6 +9,7 @@ use ErnestDefoe\Millwright\Config\Stability;
 use ErnestDefoe\Millwright\Host\PhpOverride;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
+use Flarum\Locale\TranslatorInterface;
 use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -29,8 +29,10 @@ use RuntimeException;
  */
 class ConfigController implements RequestHandlerInterface
 {
-    public function __construct(private Paths $paths)
-    {
+    public function __construct(
+        protected TranslatorInterface $translator,
+        private Paths $paths,
+    ) {
     }
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -53,7 +55,7 @@ class ConfigController implements RequestHandlerInterface
              * page translates.
              */
             if ($action === 'set-php') {
-                $override = new PhpOverride($this->paths->storage);
+                $override = new PhpOverride($this->translator, $this->paths->storage);
                 $path = trim((string) Arr::get($body, 'path', ''));
 
                 if ($path !== '' && ($refusal = $override->refusal($path)) !== null) {
@@ -86,7 +88,7 @@ class ConfigController implements RequestHandlerInterface
                     (string) Arr::get($body, 'kind', ''),
                     (string) Arr::get($body, 'host', '')
                 ),
-                default => throw new RuntimeException(Lang::trans('unknown_action')),
+                default => throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.unknown_action')),
             };
         } catch (RuntimeException $e) {
             /*
@@ -123,22 +125,22 @@ class ConfigController implements RequestHandlerInterface
              * between somebody understanding why nothing happened and somebody
              * concluding the screen is broken.
              */
-            'note' => Lang::trans('config.takes_effect_next_time'),
+            'note' => $this->translator->trans('ernestdefoe-millwright.api.config.takes_effect_next_time'),
         ];
     }
 
     private function repositories(): Repositories
     {
-        return new Repositories(new JsonFile($this->paths->base.'/composer.json'));
+        return new Repositories($this->translator, new JsonFile($this->translator, $this->paths->base.'/composer.json'));
     }
 
     private function stability(): Stability
     {
-        return new Stability(new JsonFile($this->paths->base.'/composer.json'));
+        return new Stability($this->translator, new JsonFile($this->translator, $this->paths->base.'/composer.json'));
     }
 
     private function auth(): AuthTokens
     {
-        return new AuthTokens(new JsonFile($this->paths->base.'/auth.json'));
+        return new AuthTokens($this->translator, new JsonFile($this->translator, $this->paths->base.'/auth.json'));
     }
 }

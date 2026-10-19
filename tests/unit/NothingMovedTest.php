@@ -3,6 +3,7 @@
 namespace ErnestDefoe\Millwright\Tests\Unit;
 
 use ErnestDefoe\Millwright\Run\Run;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use ErnestDefoe\Millwright\Work\ComposerStepsFactory;
 use Flarum\Foundation\Config;
 use Flarum\Foundation\Paths;
@@ -62,7 +63,7 @@ class NothingMovedTest extends TestCase
             'storage' => $this->dir.'/storage', 'vendor' => $this->dir.'/vendor',
         ]);
 
-        return (new ComposerStepsFactory($paths, new Config(['url' => 'https://example.test'])))
+        return (new ComposerStepsFactory(EnglishTranslator::make(), $paths, new Config(['url' => 'https://example.test'])))
             ->for('r1')->itemsFor('finalise', Run::start('r1', time()));
     }
 }

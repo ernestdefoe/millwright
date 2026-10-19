@@ -2,8 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
-use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Host\PhpBinary;
+use Flarum\Locale\TranslatorInterface;
 use RuntimeException;
 
 /**
@@ -36,12 +36,13 @@ class ComposerRunner
     private PhpBinary $php;
 
     public function __construct(
+        protected TranslatorInterface $translator,
         private string $installPath,
         private ?string $composerBin = null,
         private ?string $composerHome = null,
         ?string $phpBin = null,
     ) {
-        $this->php = new PhpBinary($phpBin);
+        $this->php = new PhpBinary($translator, $phpBin);
     }
 
     /** The same runner, judging the host through a different PhpBinary. */
@@ -102,7 +103,7 @@ class ComposerRunner
             ['--no-interaction', '--working-dir='.$this->installPath]
         );
 
-        return Process::run($cmd, $this->installPath, [
+        return Process::run($this->translator, $cmd, $this->installPath, [
             'PATH' => getenv('PATH') ?: '/usr/bin:/bin',
             /*
              * 🚨 -1, set explicitly. Composer raises its own limit to 1.5G on
@@ -156,13 +157,13 @@ class ComposerRunner
                 $code = $application->run(new \Symfony\Component\Console\Input\ArgvInput($argv), $output);
             } catch (\Throwable $e) {
                 $code = 1;
-                $output->writeln(self::explainThrowable($e));
+                $output->writeln($this->explainThrowable($e));
             }
 
             $said = trim($output->fetch());
 
             if ($code !== 0 && (! $limits['memory'] || ! $limits['time'])) {
-                $said .= "\n".self::limitNote($limits);
+                $said .= "\n".$this->limitNote($limits);
             }
 
             return ['code' => $code, 'output' => $said];
@@ -214,11 +215,11 @@ class ComposerRunner
      * Symfony's "relies on proc_open" LogicException, from deep inside a VCS or
      * path repository. Turned into the sentence that says what to do.
      */
-    public static function explainThrowable(\Throwable $e): string
+    public function explainThrowable(\Throwable $e): string
     {
         for ($t = $e; $t !== null; $t = $t->getPrevious()) {
             if (str_contains($t->getMessage(), 'proc_open')) {
-                return Lang::trans('composer.needs_git');
+                return $this->translator->trans('ernestdefoe-millwright.api.composer.needs_git');
             }
         }
 
@@ -228,19 +229,19 @@ class ComposerRunner
     /**
      * @param array{memory:bool, time:bool} $limits
      */
-    private static function limitNote(array $limits): string
+    protected function limitNote(array $limits): string
     {
         $parts = [];
 
         if (! $limits['memory']) {
-            $parts[] = Lang::trans('composer.limit_memory', ['limit' => (string) ini_get('memory_limit')]);
+            $parts[] = $this->translator->trans('ernestdefoe-millwright.api.composer.limit_memory', ['limit' => (string) ini_get('memory_limit')]);
         }
 
         if (! $limits['time']) {
-            $parts[] = Lang::trans('composer.limit_time', ['seconds' => (string) ini_get('max_execution_time')]);
+            $parts[] = $this->translator->trans('ernestdefoe-millwright.api.composer.limit_time', ['seconds' => (string) ini_get('max_execution_time')]);
         }
 
-        return Lang::trans('composer.limit_note', ['limits' => implode(Lang::trans('composer.limit_joiner'), $parts)]);
+        return $this->translator->trans('ernestdefoe-millwright.api.composer.limit_note', ['limits' => implode($this->translator->trans('ernestdefoe-millwright.api.composer.limit_joiner'), $parts)]);
     }
 
     /**
@@ -286,6 +287,6 @@ class ComposerRunner
      */
     private function whyNot(): string
     {
-        return Lang::trans('composer.missing');
+        return $this->translator->trans('ernestdefoe-millwright.api.composer.missing');
     }
 }

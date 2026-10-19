@@ -5,6 +5,7 @@ namespace ErnestDefoe\Millwright\Tests\Unit;
 use ErnestDefoe\Millwright\Discover\Cache;
 use ErnestDefoe\Millwright\Discover\Compatibility;
 use ErnestDefoe\Millwright\Discover\Packagist;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -115,7 +116,7 @@ class CompatibilityTest extends TestCase
         $calls = 0;
 
         $body = json_encode($this->p2('acme/w', [['version' => '2.0.0', 'require' => ['flarum/core' => '^2.0']]]));
-        $packagist = new Packagist(new Cache($dir), function () use (&$calls, $body) {
+        $packagist = new Packagist(EnglishTranslator::make(), new Cache($dir), function () use (&$calls, $body) {
             $calls++;
 
             return $body;
@@ -139,7 +140,7 @@ class CompatibilityTest extends TestCase
         $dir = sys_get_temp_dir().'/mw-compat-'.bin2hex(random_bytes(4));
         $calls = 0;
 
-        $packagist = new Packagist(new Cache($dir), function () use (&$calls) {
+        $packagist = new Packagist(EnglishTranslator::make(), new Cache($dir), function () use (&$calls) {
             $calls++;
 
             return null;

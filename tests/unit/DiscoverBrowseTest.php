@@ -4,6 +4,7 @@ namespace ErnestDefoe\Millwright\Tests\Unit;
 
 use ErnestDefoe\Millwright\Discover\Cache;
 use ErnestDefoe\Millwright\Discover\Packagist;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -40,7 +41,7 @@ class DiscoverBrowseTest extends TestCase
     {
         $urls = new \ArrayObject();
 
-        $p = new Packagist(new Cache($this->dir), function (string $url) use ($urls, $body) {
+        $p = new Packagist(EnglishTranslator::make(), new Cache($this->dir), function (string $url) use ($urls, $body) {
             $urls->append($url);
 
             return $body;
@@ -132,7 +133,7 @@ class DiscoverBrowseTest extends TestCase
          * screen and mean opposite things: the first ends a search, the second
          * means try again in a minute.
          */
-        $p = new Packagist(new Cache($this->dir), fn () => null);
+        $p = new Packagist(EnglishTranslator::make(), new Cache($this->dir), fn () => null);
         $found = $p->search('');
 
         $this->assertSame([], $found['results']);

@@ -2,7 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Host;
 
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
+
 /**
  * What this host will and will not let Millwright do, established by looking
  * rather than by hoping.
@@ -47,6 +48,7 @@ class Capability
      * @param array{memory:bool, time:bool, timeLimit:int}|null $limits for tests: what the host lets be lifted
      */
     public function __construct(
+        protected TranslatorInterface $translator,
         private string $installPath,
         PhpBinary $php,
         private ?string $composerHome = null,
@@ -150,17 +152,17 @@ class Capability
         }
 
         $tier = $this->resolveTier($bytes);
-        $mb = $bytes === -1 ? Lang::trans('capability.unlimited') : round($bytes / 1048576).' MB';
+        $mb = $bytes === -1 ? $this->translator->trans('ernestdefoe-millwright.api.capability.unlimited') : round($bytes / 1048576).' MB';
 
         return [
             'id' => 'memory',
             'ok' => $tier !== self::NONE,
             'warn' => $tier === self::TARGETED,
-            'what' => Lang::trans('capability.memory', ['memory' => $mb]),
+            'what' => $this->translator->trans('ernestdefoe-millwright.api.capability.memory', ['memory' => $mb]),
             'why' => match ($tier) {
-                self::FULL => Lang::trans('capability.memory_full'),
-                self::TARGETED => Lang::trans('capability.memory_targeted'),
-                default => Lang::trans('capability.memory_none'),
+                self::FULL => $this->translator->trans('ernestdefoe-millwright.api.capability.memory_full'),
+                self::TARGETED => $this->translator->trans('ernestdefoe-millwright.api.capability.memory_targeted'),
+                default => $this->translator->trans('ernestdefoe-millwright.api.capability.memory_none'),
             },
         ];
     }
@@ -197,10 +199,10 @@ class Capability
             'id' => 'time',
             'ok' => true,
             'warn' => false,
-            'what' => $limit === 0 ? Lang::trans('capability.time_none') : Lang::trans('capability.time_limit', ['seconds' => $limit]),
+            'what' => $limit === 0 ? $this->translator->trans('ernestdefoe-millwright.api.capability.time_none') : $this->translator->trans('ernestdefoe-millwright.api.capability.time_limit', ['seconds' => $limit]),
             'why' => $limit === 0
-                ? Lang::trans('capability.time_none_why')
-                : Lang::trans('capability.time_limit_why', ['seconds' => $limit]),
+                ? $this->translator->trans('ernestdefoe-millwright.api.capability.time_none_why')
+                : $this->translator->trans('ernestdefoe-millwright.api.capability.time_limit_why', ['seconds' => $limit]),
         ];
     }
 
@@ -262,7 +264,7 @@ class Capability
             return [];
         }
 
-        $blockers = $this->blockers ??= (new \ErnestDefoe\Millwright\Work\NeedsGit(
+        $blockers = $this->blockers ??= (new \ErnestDefoe\Millwright\Work\NeedsGit($this->translator, 
             $this->installPath,
             $this->composerHome ?? $this->installPath.'/storage/.composer'
         ))->blockers();
@@ -371,13 +373,13 @@ class Capability
      */
     private function opcacheCheck(): array
     {
-        $o = (new Opcache())->situation();
+        $o = (new Opcache($this->translator))->situation();
 
         if (! $o['enabled']) {
             return [
                 'id' => 'opcache', 'ok' => true, 'warn' => false,
-                'what' => Lang::trans('capability.opcache_off'),
-                'why' => Lang::trans('capability.opcache_off_why'),
+                'what' => $this->translator->trans('ernestdefoe-millwright.api.capability.opcache_off'),
+                'why' => $this->translator->trans('ernestdefoe-millwright.api.capability.opcache_off_why'),
             ];
         }
 
@@ -394,13 +396,13 @@ class Capability
             'ok' => $handled,
             'warn' => ! $handled,
             'what' => $o['validates']
-                ? Lang::trans('capability.opcache_rereads', ['seconds' => max(1, $o['freq'])])
-                : Lang::trans('capability.opcache_never_rereads'),
+                ? $this->translator->trans('ernestdefoe-millwright.api.capability.opcache_rereads', ['seconds' => max(1, $o['freq'])])
+                : $this->translator->trans('ernestdefoe-millwright.api.capability.opcache_never_rereads'),
             'why' => $handled
-                ? Lang::trans('capability.opcache_handled')
+                ? $this->translator->trans('ernestdefoe-millwright.api.capability.opcache_handled')
                 : ($o['validates']
-                    ? Lang::trans('capability.opcache_delay', ['seconds' => max(1, $o['freq'])])
-                    : Lang::trans('capability.opcache_restart')),
+                    ? $this->translator->trans('ernestdefoe-millwright.api.capability.opcache_delay', ['seconds' => max(1, $o['freq'])])
+                    : $this->translator->trans('ernestdefoe-millwright.api.capability.opcache_restart')),
         ];
     }
 
@@ -413,17 +415,17 @@ class Capability
             'id' => 'disk',
             'ok' => $gb === null || $gb > 1,
             'warn' => $gb !== null && $gb <= 1,
-            'what' => $gb === null ? Lang::trans('capability.disk_unknown') : Lang::trans('capability.disk_free', ['gb' => $gb]),
-            'why' => Lang::trans('capability.disk_why'),
+            'what' => $gb === null ? $this->translator->trans('ernestdefoe-millwright.api.capability.disk_unknown') : $this->translator->trans('ernestdefoe-millwright.api.capability.disk_free', ['gb' => $gb]),
+            'why' => $this->translator->trans('ernestdefoe-millwright.api.capability.disk_why'),
         ];
     }
 
     private function summary(int $bytes): string
     {
         return match ($this->resolveTier($bytes)) {
-            self::FULL => Lang::trans('capability.summary_full'),
-            self::TARGETED => Lang::trans('capability.summary_targeted'),
-            default => Lang::trans('capability.summary_none'),
+            self::FULL => $this->translator->trans('ernestdefoe-millwright.api.capability.summary_full'),
+            self::TARGETED => $this->translator->trans('ernestdefoe-millwright.api.capability.summary_targeted'),
+            default => $this->translator->trans('ernestdefoe-millwright.api.capability.summary_none'),
         };
     }
 

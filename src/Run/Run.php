@@ -2,7 +2,6 @@
 
 namespace ErnestDefoe\Millwright\Run;
 
-use ErnestDefoe\Millwright\Lang;
 /**
  * The state of one update, as a value.
  *
@@ -45,9 +44,9 @@ final class Run
     ) {
     }
 
-    public static function start(string $id, int $now): self
+    public static function start(string $id, int $now, ?string $note = null): self
     {
-        return new self($id, self::RUNNING, 'plan', [], 0, [Lang::trans('run.starting')], null, null, $now, $now);
+        return new self($id, self::RUNNING, 'plan', [], 0, $note === null ? [] : [$note], null, null, $now, $now);
     }
 
     /** What is being worked on right now, for the screen. */
@@ -140,32 +139,33 @@ final class Run
      * "Has been attempted too many times" is the anti-example: true, useless,
      * and three layers away from the cause.
      */
-    public function failed(string $error, string $step, int $now): self
+    /** @param string $note the log line saying so */
+    public function failed(string $error, string $step, int $now, string $note): self
     {
         return $this->copy([
             'state' => self::FAILED,
             'error' => $error,
             'errorStep' => $step,
             'movedAt' => $now,
-            'log' => [...$this->log, Lang::trans('run.failed_during', ['step' => $step, 'error' => $error])],
+            'log' => [...$this->log, $note],
         ]);
     }
 
-    public function finished(int $now): self
+    public function finished(int $now, string $note): self
     {
         return $this->copy([
             'state' => self::DONE,
             'movedAt' => $now,
-            'log' => [...$this->log, Lang::trans('run.finished')],
+            'log' => [...$this->log, $note],
         ]);
     }
 
-    public function rolledBack(int $now, array $undone): self
+    public function rolledBack(int $now, string $note): self
     {
         return $this->copy([
             'state' => self::ROLLBACK,
             'movedAt' => $now,
-            'log' => [...$this->log, Lang::trans('run.rolled_back', ['undone' => implode(', ', $undone) ?: Lang::trans('run.nothing_to_undo')])],
+            'log' => [...$this->log, $note],
         ]);
     }
 
@@ -177,20 +177,16 @@ final class Run
      * update sitting there with its changes apparently still in place — which
      * is the exact ambiguity this class exists to prevent.
      *
-     * @param list<string> $undone
+     * @param list<string> $notes the log lines saying so
      */
-    public function revertedAfter(string $why, string $step, array $undone, int $now): self
+    public function revertedAfter(string $why, string $step, array $notes, int $now): self
     {
         return $this->copy([
             'state' => self::ROLLBACK,
             'error' => $why,
             'errorStep' => $step,
             'movedAt' => $now,
-            'log' => [
-                ...$this->log,
-                Lang::trans('run.failed_during', ['step' => $step, 'error' => $why]),
-                Lang::trans('run.put_back', ['undone' => implode(', ', $undone) ?: Lang::trans('run.nothing_to_undo')]),
-            ],
+            'log' => [...$this->log, ...$notes],
         ]);
     }
 

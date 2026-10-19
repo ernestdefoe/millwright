@@ -5,6 +5,7 @@ namespace ErnestDefoe\Millwright\Tests\Unit;
 use ErnestDefoe\Millwright\Config\AuthTokens;
 use ErnestDefoe\Millwright\Config\JsonFile;
 use ErnestDefoe\Millwright\Config\Repositories;
+use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use ErnestDefoe\Millwright\Work\PrivateIndex;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -39,8 +40,8 @@ class PrivateIndexTest extends TestCase
         file_put_contents($this->dir.'/auth.json', json_encode($auth));
 
         return new PrivateIndex(
-            new Repositories(new JsonFile($this->dir.'/composer.json')),
-            new AuthTokens(new JsonFile($this->dir.'/auth.json'))
+            new Repositories(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/composer.json')),
+            new AuthTokens(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/auth.json'))
         );
     }
 
@@ -135,7 +136,7 @@ class PrivateIndexTest extends TestCase
             'bearer' => ['other.test' => 'another-secret'],
         ]));
 
-        $auth = new AuthTokens(new JsonFile($this->dir.'/auth.json'));
+        $auth = new AuthTokens(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/auth.json'));
 
         $reported = json_encode($auth->all());
 
@@ -150,7 +151,7 @@ class PrivateIndexTest extends TestCase
             'http-basic' => ['example.test' => ['username' => 'token', 'password' => 'shh']],
         ]));
 
-        $auth = new AuthTokens(new JsonFile($this->dir.'/auth.json'));
+        $auth = new AuthTokens(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/auth.json'));
 
         $this->assertSame('Authorization: Basic '.base64_encode('token:shh'), $auth->headerFor('example.test'));
     }
@@ -161,7 +162,7 @@ class PrivateIndexTest extends TestCase
             'bearer' => ['example.test' => 'shh'],
         ]));
 
-        $auth = new AuthTokens(new JsonFile($this->dir.'/auth.json'));
+        $auth = new AuthTokens(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/auth.json'));
 
         $this->assertSame('Authorization: Bearer shh', $auth->headerFor('example.test'));
     }
@@ -177,7 +178,7 @@ class PrivateIndexTest extends TestCase
             'http-basic' => ['example.test' => ['username' => 'token', 'password' => 'shh']],
         ]));
 
-        $auth = new AuthTokens(new JsonFile($this->dir.'/auth.json'));
+        $auth = new AuthTokens(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/auth.json'));
 
         $this->assertNotNull($auth->headerFor('EXAMPLE.TEST'));
         $this->assertNull($auth->headerFor('https://example.test/composer'));
@@ -187,7 +188,7 @@ class PrivateIndexTest extends TestCase
     /** A repository with no credential is a normal state, not an error. */
     public function test_no_credential_is_not_an_error(): void
     {
-        $auth = new AuthTokens(new JsonFile($this->dir.'/auth.json'));
+        $auth = new AuthTokens(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/auth.json'));
 
         $this->assertNull($auth->headerFor('example.test'));
     }

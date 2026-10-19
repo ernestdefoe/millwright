@@ -2,7 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Run;
 
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Queue\SyncQueue;
@@ -22,6 +22,7 @@ use Illuminate\Queue\SyncQueue;
 class Drivers
 {
     public function __construct(
+        protected TranslatorInterface $translator,
         private QueueFactory $queue,
         private Dispatcher $bus,
     ) {
@@ -97,7 +98,7 @@ class Drivers
     public function describe(): string
     {
         return $this->hasWorker()
-            ? Lang::trans('run.worker_available')
-            : Lang::trans('run.no_worker');
+            ? $this->translator->trans('ernestdefoe-millwright.api.run.worker_available')
+            : $this->translator->trans('ernestdefoe-millwright.api.run.no_worker');
     }
 }

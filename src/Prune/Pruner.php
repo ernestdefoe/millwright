@@ -2,10 +2,10 @@
 
 namespace ErnestDefoe\Millwright\Prune;
 
-use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Plan\Change;
 use ErnestDefoe\Millwright\Run\Run;
+use Flarum\Locale\TranslatorInterface;
 use RuntimeException;
 use Throwable;
 
@@ -53,6 +53,7 @@ class Pruner
     private $clock;
 
     public function __construct(
+        protected TranslatorInterface $translator,
         private string $millwrightDir,
         private Retention $retention,
         ?callable $clock = null,
@@ -137,8 +138,8 @@ class Pruner
             }
         }
 
-        $trash = is_dir($this->trashDir()) ? new Contained($this->trashDir()) : null;
-        $runsDir = is_dir($this->runsDir()) ? new Contained($this->runsDir()) : null;
+        $trash = is_dir($this->trashDir()) ? new Contained($this->translator, $this->trashDir()) : null;
+        $runsDir = is_dir($this->runsDir()) ? new Contained($this->translator, $this->runsDir()) : null;
 
         $removeBytes = 0;
 
@@ -200,8 +201,8 @@ class Pruner
         $started = microtime(true);
         $plan = $this->plan(false);
 
-        $trash = is_dir($this->trashDir()) ? new Contained($this->trashDir()) : null;
-        $runs = is_dir($this->runsDir()) ? new Contained($this->runsDir()) : null;
+        $trash = is_dir($this->trashDir()) ? new Contained($this->translator, $this->trashDir()) : null;
+        $runs = is_dir($this->runsDir()) ? new Contained($this->translator, $this->runsDir()) : null;
 
         $removed = [];
         $failed = [];
@@ -301,7 +302,7 @@ class Pruner
             return [];
         }
 
-        $trash = new Contained($this->trashDir());
+        $trash = new Contained($this->translator, $this->trashDir());
         $out = [];
 
         foreach ($trash->names() as $name) {
@@ -344,7 +345,7 @@ class Pruner
             return [];
         }
 
-        $dir = new Contained($this->runsDir());
+        $dir = new Contained($this->translator, $this->runsDir());
         $known = [];
 
         foreach ($runs as $run) {
@@ -434,14 +435,14 @@ class Pruner
 
         try {
             if (! is_readable($path)) {
-                throw new RuntimeException(Lang::trans('prune.not_readable', ['path' => $path]));
+                throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.prune.not_readable', ['path' => $path]));
             }
 
-            $entries = (new Journal($path))->entries();
+            $entries = (new Journal($this->translator, $path))->entries();
         } catch (Throwable $e) {
             if ($mustRead) {
                 throw new RuntimeException(
-                    Lang::trans('prune.journal_unreadable', ['id' => $id]),
+                    $this->translator->trans('ernestdefoe-millwright.api.prune.journal_unreadable', ['id' => $id]),
                     0,
                     $e
                 );

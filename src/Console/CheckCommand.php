@@ -6,6 +6,7 @@ use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 use Flarum\Console\AbstractCommand;
 use Flarum\Foundation\Paths;
+use Flarum\Locale\TranslatorInterface;
 use Symfony\Component\Console\Input\InputOption;
 
 /**
@@ -21,8 +22,10 @@ use Symfony\Component\Console\Input\InputOption;
  */
 class CheckCommand extends AbstractCommand
 {
-    public function __construct(private Paths $paths)
-    {
+    public function __construct(
+        protected TranslatorInterface $translator,
+        private Paths $paths,
+    ) {
         parent::__construct();
     }
 
@@ -51,7 +54,7 @@ class CheckCommand extends AbstractCommand
          * was never told a new version existed. Packagist stays FIRST so a
          * private repository can never shadow a public package.
          */
-        $result = $check->refreshSite($this->paths->base);
+        $result = $check->refreshSite($this->translator, $this->paths->base);
 
         if ($result === null) {
             $this->error('Could not read composer.lock, so there is nothing to check.');

@@ -7,6 +7,7 @@ use ErnestDefoe\Millwright\Prune\Pruner;
 use ErnestDefoe\Millwright\Prune\Retention;
 use Flarum\Console\AbstractCommand;
 use Flarum\Foundation\Paths;
+use Flarum\Locale\TranslatorInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Throwable;
 
@@ -22,8 +23,10 @@ use Throwable;
  */
 class PruneCommand extends AbstractCommand
 {
-    public function __construct(private Paths $paths)
-    {
+    public function __construct(
+        protected TranslatorInterface $translator,
+        private Paths $paths,
+    ) {
         parent::__construct();
     }
 
@@ -37,7 +40,7 @@ class PruneCommand extends AbstractCommand
     protected function fire(): int
     {
         $dir = StorageDir::of($this->paths->storage);
-        $pruner = new Pruner($dir, new Retention($dir));
+        $pruner = new Pruner($this->translator, $dir, new Retention($dir));
 
         try {
             if ($this->input->getOption('dry-run')) {

@@ -8,6 +8,7 @@ use ErnestDefoe\Millwright\Run\Steps;
 use ErnestDefoe\Millwright\Run\StepsFactory;
 use Flarum\Foundation\Config;
 use Flarum\Foundation\Paths;
+use Flarum\Locale\TranslatorInterface;
 
 /**
  * Assembles a run's Composer, downloader and applier around that run's own
@@ -29,8 +30,11 @@ class ComposerStepsFactory implements StepsFactory
      * that never ran anywhere. A required parameter turns that into a failure
      * at construction, where somebody would see it.
      */
-    public function __construct(private Paths $paths, private Config $config)
-    {
+    public function __construct(
+        protected TranslatorInterface $translator,
+        private Paths $paths,
+        private Config $config,
+    ) {
     }
 
     /**
@@ -56,20 +60,20 @@ class ComposerStepsFactory implements StepsFactory
 
     public function for(string $runId): Steps
     {
-        $workDir = new WorkDir($this->paths->storage, $runId);
-        $journal = new Journal($workDir->journalPath());
+        $workDir = new WorkDir($this->translator, $this->paths->storage, $runId);
+        $journal = new Journal($this->translator, $workDir->journalPath());
 
-        return new ComposerSteps(
+        return new ComposerSteps($this->translator, 
             $this->paths->base,
             $workDir->root(),
-            new ComposerRunner(
+            new ComposerRunner($this->translator, 
                 $this->paths->base,
                 null,
                 $this->paths->storage.'/.composer',
-                (new \ErnestDefoe\Millwright\Host\PhpOverride($this->paths->storage))->get()
+                (new \ErnestDefoe\Millwright\Host\PhpOverride($this->translator, $this->paths->storage))->get()
             ),
-            new Fetcher($workDir->staging(), $this->paths->base.'/auth.json'),
-            new Applier($this->paths->vendor, $workDir->staging(), $workDir->trash(), $journal),
+            new Fetcher($this->translator, $workDir->staging(), $this->paths->base.'/auth.json'),
+            new Applier($this->translator, $this->paths->vendor, $workDir->staging(), $workDir->trash(), $journal),
             $journal,
             $workDir->requested(),
             $workDir->mode(),

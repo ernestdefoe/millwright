@@ -2,7 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Plan;
 
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
 use InvalidArgumentException;
 
 /**
@@ -72,12 +72,12 @@ class Change
         return str_replace('/', '+', $this->package).'@'.($this->from ?? 'absent');
     }
 
-    public function describe(): string
+    public function describe(TranslatorInterface $translator): string
     {
         return match ($this->op) {
             self::REPLACE => "{$this->package} {$this->from} → {$this->to}",
-            self::ADD => Lang::trans('change.added', ['package' => $this->package, 'version' => $this->to]),
-            self::REMOVE => Lang::trans('change.removed', ['package' => $this->package, 'version' => $this->from]),
+            self::ADD => $translator->trans('ernestdefoe-millwright.api.change.added', ['package' => $this->package, 'version' => $this->to]),
+            self::REMOVE => $translator->trans('ernestdefoe-millwright.api.change.removed', ['package' => $this->package, 'version' => $this->from]),
             default => $this->package,
         };
     }

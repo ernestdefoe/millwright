@@ -2,7 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Discover;
 
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
+
 /**
  * Finding extensions, in two cheap requests rather than one slow one.
  *
@@ -38,6 +39,7 @@ class Packagist
 
     /** @param ?callable(string):?string $get overridable so tests never touch a network */
     public function __construct(
+        protected TranslatorInterface $translator,
         private Cache $cache,
         private $get = null,
     ) {
@@ -79,13 +81,13 @@ class Packagist
              * opposite things — the first ends a search, the second means try
              * again in a minute.
              */
-            return ['results' => [], 'total' => 0, 'error' => Lang::trans('discover.unreachable'), 'more' => false];
+            return ['results' => [], 'total' => 0, 'error' => $this->translator->trans('ernestdefoe-millwright.api.discover.unreachable'), 'more' => false];
         }
 
         $data = json_decode($body, true);
 
         if (! is_array($data) || ! isset($data['results'])) {
-            return ['results' => [], 'total' => 0, 'error' => Lang::trans('discover.unexpected'), 'more' => false];
+            return ['results' => [], 'total' => 0, 'error' => $this->translator->trans('ernestdefoe-millwright.api.discover.unexpected'), 'more' => false];
         }
 
         $results = [];

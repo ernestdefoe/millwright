@@ -2,7 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Config;
 
-use ErnestDefoe\Millwright\Lang;
+use Flarum\Locale\TranslatorInterface;
 use RuntimeException;
 
 /**
@@ -20,8 +20,10 @@ use RuntimeException;
  */
 class JsonFile
 {
-    public function __construct(private string $path)
-    {
+    public function __construct(
+        protected TranslatorInterface $translator,
+        private string $path,
+    ) {
     }
 
     public function exists(): bool
@@ -39,7 +41,7 @@ class JsonFile
         $raw = @file_get_contents($this->path);
 
         if ($raw === false) {
-            throw new RuntimeException(Lang::trans('config.json_unreadable', ['path' => $this->path]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.json_unreadable', ['path' => $this->path]));
         }
 
         $data = json_decode($raw, true);
@@ -52,7 +54,7 @@ class JsonFile
              * by hand into one whose contents are gone.
              */
             throw new RuntimeException(
-                Lang::trans('config.json_invalid', ['file' => basename($this->path), 'error' => json_last_error_msg() ?: Lang::trans('config.unknown_error')])
+                $this->translator->trans('ernestdefoe-millwright.api.config.json_invalid', ['file' => basename($this->path), 'error' => json_last_error_msg() ?: $this->translator->trans('ernestdefoe-millwright.api.config.unknown_error')])
             );
         }
 
@@ -68,12 +70,12 @@ class JsonFile
         $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
         if ($json === false) {
-            throw new RuntimeException(Lang::trans('config.json_encode_failed', ['file' => basename($this->path), 'error' => json_last_error_msg()]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.json_encode_failed', ['file' => basename($this->path), 'error' => json_last_error_msg()]));
         }
 
         // 🚨 Prove it parses before it goes anywhere near the real path.
         if (json_decode($json, true) === null) {
-            throw new RuntimeException(Lang::trans('config.json_refuse_write', ['file' => basename($this->path)]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.json_refuse_write', ['file' => basename($this->path)]));
         }
 
         $this->backup();
@@ -82,7 +84,7 @@ class JsonFile
         $handle = @fopen($tmp, 'w');
 
         if ($handle === false) {
-            throw new RuntimeException(Lang::trans('config.json_write_failed', ['path' => $this->path]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.json_write_failed', ['path' => $this->path]));
         }
 
         try {
@@ -100,7 +102,7 @@ class JsonFile
         if (! @rename($tmp, $this->path)) {
             @unlink($tmp);
 
-            throw new RuntimeException(Lang::trans('config.json_replace_failed', ['path' => $this->path]));
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.json_replace_failed', ['path' => $this->path]));
         }
     }
 

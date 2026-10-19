@@ -2,9 +2,9 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
-use ErnestDefoe\Millwright\Lang;
 use ErnestDefoe\Millwright\Plan\Change;
 use FilesystemIterator;
+use Flarum\Locale\TranslatorInterface;
 use RecursiveCallbackFilterIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -36,6 +36,7 @@ class Permissions
     private const SHOWN = 10;
 
     public function __construct(
+        protected TranslatorInterface $translator,
         private string $basePath,
         private string $vendorPath,
         private string $storagePath,
@@ -81,20 +82,20 @@ class Permissions
     public function explain(array $blocked): string
     {
         $user = function_exists('posix_geteuid') && function_exists('posix_getpwuid')
-            ? (posix_getpwuid(posix_geteuid())['name'] ?? Lang::trans('permissions.web_user'))
-            : Lang::trans('permissions.web_user');
+            ? (posix_getpwuid(posix_geteuid())['name'] ?? $this->translator->trans('ernestdefoe-millwright.api.permissions.web_user'))
+            : $this->translator->trans('ernestdefoe-millwright.api.permissions.web_user');
 
         $shown = array_slice($blocked, 0, self::SHOWN);
         $more = count($blocked) - count($shown);
 
-        return Lang::trans('permissions.blocked', ['count' => count($blocked), 'user' => $user])
+        return $this->translator->trans('ernestdefoe-millwright.api.permissions.blocked', ['count' => count($blocked), 'user' => $user])
             ."\n  chown -R $user ".escapeshellarg($this->vendorPath).' '
             .escapeshellarg($this->storagePath)."\n"
             .implode("\n", array_map(fn ($p) => '  '.$p, $shown))
-            .($more > 0 ? "\n  ".Lang::trans('permissions.and_more', ['count' => $more]) : '');
+            .($more > 0 ? "\n  ".$this->translator->trans('ernestdefoe-millwright.api.permissions.and_more', ['count' => $more]) : '');
     }
 
-    private function need(string $path, array &$blocked): void
+    protected static function need(string $path, array &$blocked): void
     {
         if (file_exists($path) && ! is_writable($path)) {
             $blocked[] = $path;
@@ -102,13 +103,13 @@ class Permissions
     }
 
     /** Every entry under $root this process cannot change, appended to $blocked. */
-    public function walkInto(string $root, array &$blocked): void
+    public static function walkInto(string $root, array &$blocked): void
     {
         if (! is_dir($root)) {
             return;
         }
 
-        $this->need($root, $blocked);
+        self::need($root, $blocked);
 
         try {
             // What StaleCache set aside is never read again, so it blocks nothing.
