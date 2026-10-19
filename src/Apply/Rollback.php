@@ -33,11 +33,11 @@ class Rollback
      */
     public function __construct(
         protected TranslatorInterface $translator,
-        private string $vendorDir,
-        private string $trashDir,
-        private Journal $journal,
-        private ?string $installPath = null,
-        private ?string $savedManifests = null,
+        protected string $vendorDir,
+        protected string $trashDir,
+        protected Journal $journal,
+        protected ?string $installPath = null,
+        protected ?string $savedManifests = null,
     ) {
     }
 
@@ -103,7 +103,7 @@ class Rollback
      *
      * @return list<string>
      */
-    private function restoreManifests(): array
+    protected function restoreManifests(): array
     {
         if ($this->installPath === null || $this->savedManifests === null) {
             return [];
@@ -131,7 +131,7 @@ class Rollback
     }
 
     /** Put the stashed version back, discarding whatever is live. */
-    private function restore(Change $change, string $trashName): void
+    protected function restore(Change $change, string $trashName): void
     {
         $live = $this->path($this->vendorDir, $change->relativePath());
         $stash = $this->path($this->trashDir, $trashName);
@@ -164,7 +164,7 @@ class Rollback
     }
 
     /** Take out a package this apply had added. */
-    private function uninstall(Change $change): void
+    protected function uninstall(Change $change): void
     {
         $live = $this->path($this->vendorDir, $change->relativePath());
 
@@ -195,7 +195,7 @@ class Rollback
      * everything back the way it was should not leave an empty vendor/acme/
      * behind as evidence that it did not quite.
      */
-    private function tidyVendorDir(string $dir): void
+    protected function tidyVendorDir(string $dir): void
     {
         $vendor = rtrim($this->vendorDir, DIRECTORY_SEPARATOR);
 
@@ -206,12 +206,12 @@ class Rollback
         @rmdir($dir);
     }
 
-    private function path(string $base, string $relative): string
+    protected function path(string $base, string $relative): string
     {
         return rtrim($base, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.$relative;
     }
 
-    private function ensureDir(string $dir): void
+    protected function ensureDir(string $dir): void
     {
         if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
             throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fs.create_failed', ['path' => $dir]));

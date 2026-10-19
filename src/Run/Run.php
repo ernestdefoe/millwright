@@ -15,7 +15,7 @@ namespace ErnestDefoe\Millwright\Run;
  * Immutable: every transition returns a new Run, so a half-applied state change
  * cannot exist even in memory.
  */
-final class Run
+class Run
 {
     public const PENDING = 'pending';
     public const RUNNING = 'running';
@@ -218,7 +218,7 @@ final class Run
         );
     }
 
-    private function copy(array $changes): self
+    protected function copy(array $changes): self
     {
         return self::fromArray(array_merge($this->toArray(), $changes));
     }

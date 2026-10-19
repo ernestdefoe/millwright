@@ -17,7 +17,7 @@ namespace ErnestDefoe\Millwright\Host;
  */
 class ErrorLog
 {
-    public function __construct(private string $storagePath)
+    public function __construct(protected string $storagePath)
     {
     }
 
@@ -43,7 +43,7 @@ class ErrorLog
         return null;
     }
 
-    private function scan(string $file, int $since): ?string
+    protected function scan(string $file, int $since): ?string
     {
         if (! is_readable($file)) {
             return null;

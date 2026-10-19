@@ -28,8 +28,8 @@ class DiscoverController implements RequestHandlerInterface
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        private Paths $paths,
-        private ExtensionManager $extensions,
+        protected Paths $paths,
+        protected ExtensionManager $extensions,
     ) {
     }
 
@@ -76,7 +76,7 @@ class DiscoverController implements RequestHandlerInterface
         return new JsonResponse($found);
     }
 
-    private function cache(): Cache
+    protected function cache(): Cache
     {
         return new Cache(StorageDir::of($this->paths->storage).'/packagist');
     }

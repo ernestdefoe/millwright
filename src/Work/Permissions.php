@@ -33,13 +33,13 @@ use Throwable;
 class Permissions
 {
     /** Enough to show the pattern without burying the instruction. */
-    private const SHOWN = 10;
+    protected const SHOWN = 10;
 
     public function __construct(
         protected TranslatorInterface $translator,
-        private string $basePath,
-        private string $vendorPath,
-        private string $storagePath,
+        protected string $basePath,
+        protected string $vendorPath,
+        protected string $storagePath,
     ) {
     }
 

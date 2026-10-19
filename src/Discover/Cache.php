@@ -13,8 +13,8 @@ namespace ErnestDefoe\Millwright\Discover;
 class Cache
 {
     public function __construct(
-        private string $dir,
-        private int $ttl = 86400,
+        protected string $dir,
+        protected int $ttl = 86400,
     ) {
     }
 
@@ -42,7 +42,7 @@ class Cache
         @file_put_contents($this->path($key), json_encode($value));
     }
 
-    private function path(string $key): string
+    protected function path(string $key): string
     {
         // Hashed, so a package name can never become a path.
         return $this->dir.'/'.sha1($key).'.json';

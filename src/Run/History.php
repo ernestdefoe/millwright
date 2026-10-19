@@ -12,11 +12,11 @@ namespace ErnestDefoe\Millwright\Run;
  * run, written when the run reaches an end (done, failed, undone); an undo
  * updates its run's entry instead of adding a second. The newest LIMIT kept.
  */
-final class History
+class History
 {
-    private const LIMIT = 50;
+    protected const LIMIT = 50;
 
-    public function __construct(private string $millwrightDir)
+    public function __construct(protected string $millwrightDir)
     {
     }
 
@@ -60,7 +60,7 @@ final class History
         return array_values((array) json_decode((string) @file_get_contents($this->path()), true));
     }
 
-    private function path(): string
+    protected function path(): string
     {
         return $this->millwrightDir.'/history.json';
     }

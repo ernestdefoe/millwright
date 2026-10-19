@@ -23,7 +23,7 @@ class JsonFile
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        private string $path,
+        protected string $path,
     ) {
     }
 

@@ -33,8 +33,8 @@ class ComposerStepsFactory implements StepsFactory
      */
     public function __construct(
         protected TranslatorInterface $translator,
-        private Paths $paths,
-        private Config $config,
+        protected Paths $paths,
+        protected Config $config,
     ) {
     }
 
@@ -48,7 +48,7 @@ class ComposerStepsFactory implements StepsFactory
      * is worse than none, since it would either pass while the real site is
      * down or fail while it is fine — and the second one now undoes updates.
      */
-    private function siteUrl(): string
+    protected function siteUrl(): string
     {
         try {
             $url = (string) $this->config->url();

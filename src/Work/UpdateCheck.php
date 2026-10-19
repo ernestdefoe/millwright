@@ -38,11 +38,11 @@ class UpdateCheck
      *
      * @var array<string,array<string,string>>
      */
-    private array $releaseNotes = [];
+    protected array $releaseNotes = [];
 
     public function __construct(
-        private string $cachePath,
-        private int $freshFor = 21600,        // six hours
+        protected string $cachePath,
+        protected int $freshFor = 21600,        // six hours
     ) {
     }
 
@@ -146,7 +146,7 @@ class UpdateCheck
 
             if ($versions === null) {
                 /*
-                 * 🚨 Named, not silently dropped. A private or path-installed
+                 * 🚨 Named, not silently dropped. A protected or path-installed
                  * package is not on Packagist, and "we could not check this one"
                  * is a true and useful thing to say — whereas leaving it out
                  * implies it is up to date, which is a guess presented as a fact.
@@ -199,28 +199,28 @@ class UpdateCheck
     }
 
     /**
-     * Packagist first, then the site's own private repositories: the check the
+     * Packagist first, then the site's own protected repositories: the check the
      * console command and "Check now" both run.
      *
      * 🚨 One place, because they drifted. "Check now" asked Packagist alone,
-     * so pressing it dropped every private extension's update that the nightly
+     * so pressing it dropped every protected extension's update that the nightly
      * check had found, until the next night put them back.
      *
      * @param array<string,string> $installed
      * @return array<string,mixed>
      */
-    public function refreshWith(array $installed, PrivateIndex $private): array
+    public function refreshWith(array $installed, PrivateIndex $protected): array
     {
         return $this->refresh(
             $installed,
-            fn (string $name) => $this->fromPackagist($name) ?? $private->versionsFor($name),
-            fn (string $name) => $private->releaseNotesFor($name),
+            fn (string $name) => $this->fromPackagist($name) ?? $protected->versionsFor($name),
+            fn (string $name) => $protected->releaseNotesFor($name),
         );
     }
 
     /**
      * The whole check for a forum: what its lock says is installed, filtered
-     * as {@see interesting()}, asked of Packagist and then its private
+     * as {@see interesting()}, asked of Packagist and then its protected
      * repositories. Null when composer.lock cannot be read.
      *
      * 🚨 One place for "Check now", millwright:check and the re-check
@@ -313,7 +313,7 @@ class UpdateCheck
         return str_starts_with($version, 'dev-') || str_contains($version, '-dev');
     }
 
-    private function newestComparable(array $versions, string $installed): ?string
+    protected function newestComparable(array $versions, string $installed): ?string
     {
         $installedIsDev = self::tracksABranch($installed);
 
@@ -333,7 +333,7 @@ class UpdateCheck
         return end($candidates) ?: null;
     }
 
-    private function isNewer(string $candidate, string $installed): bool
+    protected function isNewer(string $candidate, string $installed): bool
     {
         // Two dev branches of the same name are never "newer" than each other by
         // version string — whether a branch has moved is a question for the
@@ -345,7 +345,7 @@ class UpdateCheck
         return version_compare($this->normalise($candidate), $this->normalise($installed)) > 0;
     }
 
-    private function normalise(string $version): string
+    protected function normalise(string $version): string
     {
         return ltrim($version, 'v');
     }
@@ -353,7 +353,7 @@ class UpdateCheck
     /** @return list<string>|null */
     /**
      * Public so a caller can compose it — Packagist first, then whatever
-     * private repositories the site has — without reimplementing it.
+     * protected repositories the site has — without reimplementing it.
      */
     public function fromPackagist(string $name): ?array
     {

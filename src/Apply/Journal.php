@@ -30,12 +30,12 @@ use RuntimeException;
  */
 class Journal
 {
-    private const STATE_BEGUN = 'begun';
-    private const STATE_DONE = 'done';
+    protected const STATE_BEGUN = 'begun';
+    protected const STATE_DONE = 'done';
 
     public function __construct(
         protected TranslatorInterface $translator,
-        private string $path,
+        protected string $path,
     ) {
     }
 
@@ -154,7 +154,7 @@ class Journal
         }
     }
 
-    private function nextSeq(): int
+    protected function nextSeq(): int
     {
         $entries = $this->entries();
 
@@ -170,7 +170,7 @@ class Journal
      * to make impossible. The cost is one sync per package, against an operation
      * that is already doing disk I/O.
      */
-    private function write(array $row): void
+    protected function write(array $row): void
     {
         $dir = dirname($this->path);
 

@@ -29,8 +29,8 @@ class CoreController implements RequestHandlerInterface
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        private Paths $paths,
-        private Application $app,
+        protected Paths $paths,
+        protected Application $app,
     ) {
     }
 
@@ -92,7 +92,7 @@ class CoreController implements RequestHandlerInterface
      * thing that is invisible until the day Packagist is slow and every admin
      * page hangs with it.
      */
-    private function newestCore(): ?array
+    protected function newestCore(): ?array
     {
         /*
          * 🚨 Measured against what is installed, as the extension cards are.

@@ -38,11 +38,11 @@ use Throwable;
  * Recorded in two halves so a run killed mid-step still knows: the "before"
  * state is saved once, before migrate runs, and the difference is taken after.
  */
-final class MigrationLedger
+class MigrationLedger
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        private string $workDir,
+        protected string $workDir,
     ) {
     }
 
@@ -162,7 +162,7 @@ final class MigrationLedger
      *
      * @return list<array{0: array{migration:string, extension:?string}, 1: callable}>
      */
-    private function downs(Migrator $migrator, ExtensionManager $extensions, string $vendorPath): array
+    protected function downs(Migrator $migrator, ExtensionManager $extensions, string $vendorPath): array
     {
         $steps = [];
 
@@ -187,7 +187,7 @@ final class MigrationLedger
         return $steps;
     }
 
-    private function restoreVersion(ConnectionInterface $db): void
+    protected function restoreVersion(ConnectionInterface $db): void
     {
         $version = $this->beforeState()['version'];
 
@@ -197,7 +197,7 @@ final class MigrationLedger
     }
 
     /** @return array{migrations: list<array{migration:string, extension:?string}>, version: ?string} */
-    private function beforeState(): array
+    protected function beforeState(): array
     {
         $raw = (array) json_decode((string) @file_get_contents($this->workDir.'/migrations.before.json'), true);
 
@@ -207,20 +207,20 @@ final class MigrationLedger
             : ['migrations' => (array) ($raw['migrations'] ?? []), 'version' => $raw['version'] ?? null];
     }
 
-    private function liveDir(?string $extension, ExtensionManager $extensions, string $vendorPath): string
+    protected function liveDir(?string $extension, ExtensionManager $extensions, string $vendorPath): string
     {
         return $extension === null
             ? $vendorPath.'/flarum/core/migrations'
             : $extensions->getExtension($extension)?->getPath().'/migrations';
     }
 
-    private function copyDir(?string $extension): string
+    protected function copyDir(?string $extension): string
     {
         return $this->workDir.'/migrations/'.($extension ?? 'core');
     }
 
     /** @return list<array{migration:string, extension:?string}> */
-    private function current(ConnectionInterface $db): array
+    protected function current(ConnectionInterface $db): array
     {
         return $db->table('migrations')->get(['migration', 'extension'])
             ->map(fn ($row) => ['migration' => (string) $row->migration, 'extension' => $row->extension !== null ? (string) $row->extension : null])

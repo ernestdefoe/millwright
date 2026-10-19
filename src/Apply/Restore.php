@@ -29,13 +29,13 @@ class Restore
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        private string $vendorPath,
-        private string $basePath,
-        private string $workDirRoot,
-        private string $trashPath,
-        private Journal $journal,
-        private ComposerRunner $composer,
-        private string $storagePath = '',
+        protected string $vendorPath,
+        protected string $basePath,
+        protected string $workDirRoot,
+        protected string $trashPath,
+        protected Journal $journal,
+        protected ComposerRunner $composer,
+        protected string $storagePath = '',
     ) {
     }
 
@@ -127,7 +127,7 @@ class Restore
      *
      * @param list<string> $undone appended to as each one succeeds
      */
-    private function refresh(array &$undone): ?string
+    protected function refresh(array &$undone): ?string
     {
         if (! is_file($this->basePath.'/flarum')) {
             return null;   // not a forum (the tests' trees)

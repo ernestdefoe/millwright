@@ -23,8 +23,8 @@ class Drivers
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        private QueueFactory $queue,
-        private Dispatcher $bus,
+        protected QueueFactory $queue,
+        protected Dispatcher $bus,
     ) {
     }
 
@@ -53,7 +53,7 @@ class Drivers
      * precisely the long request this design exists to avoid, on precisely the
      * hosts least able to survive one.
      */
-    private function unwrap(mixed $queue): mixed
+    protected function unwrap(mixed $queue): mixed
     {
         // getDriver() is public on RoutingQueue; anything else is already the
         // driver, and anything unfamiliar is left exactly as it came.

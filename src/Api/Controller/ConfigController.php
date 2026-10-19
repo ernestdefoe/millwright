@@ -31,7 +31,7 @@ class ConfigController implements RequestHandlerInterface
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        private Paths $paths,
+        protected Paths $paths,
     ) {
     }
 
@@ -98,7 +98,7 @@ class ConfigController implements RequestHandlerInterface
     }
 
     /** @return array<string,mixed> */
-    private function state(): array
+    protected function state(): array
     {
         $stability = $this->stability();
         $current = $stability->current();
@@ -124,17 +124,17 @@ class ConfigController implements RequestHandlerInterface
         ];
     }
 
-    private function repositories(): Repositories
+    protected function repositories(): Repositories
     {
         return new Repositories($this->translator, new JsonFile($this->translator, $this->paths->base.'/composer.json'));
     }
 
-    private function stability(): Stability
+    protected function stability(): Stability
     {
         return new Stability($this->translator, new JsonFile($this->translator, $this->paths->base.'/composer.json'));
     }
 
-    private function auth(): AuthTokens
+    protected function auth(): AuthTokens
     {
         return new AuthTokens($this->translator, new JsonFile($this->translator, $this->paths->base.'/auth.json'));
     }

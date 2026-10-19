@@ -6,7 +6,7 @@ use ErnestDefoe\Millwright\Exception\RefusedException;
 use Flarum\Locale\TranslatorInterface;
 
 /**
- * Credentials Composer uses to reach private and paid repositories.
+ * Credentials Composer uses to reach protected and paid repositories.
  *
  * 🚨 WRITE-ONLY, and that is the whole design. A stored token is never returned
  * to the browser by any method on this class — `all()` reports which hosts have
@@ -33,7 +33,7 @@ class AuthTokens
 
     public function __construct(
         protected TranslatorInterface $translator,
-        private JsonFile $file,
+        protected JsonFile $file,
     ) {
     }
 

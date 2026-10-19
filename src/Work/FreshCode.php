@@ -27,18 +27,18 @@ use Flarum\Locale\TranslatorInterface;
  *
  * Each wait is one poll of the admin page, about a second and a half.
  */
-final class FreshCode
+class FreshCode
 {
     /** Longer than this and waiting for revalidation is not worth it. */
-    private const WAIT_CAP = 180;
+    protected const WAIT_CAP = 180;
 
     public function __construct(
         protected TranslatorInterface $translator,
-        private string $workDir,
-        private string $installPath,
-        private Opcache $opcache,
-        private ?string $sapi = null,
-        private ?float $requestStart = null,
+        protected string $workDir,
+        protected string $installPath,
+        protected Opcache $opcache,
+        protected ?string $sapi = null,
+        protected ?float $requestStart = null,
     ) {
     }
 
@@ -98,7 +98,7 @@ final class FreshCode
     }
 
     /** The newest write this run made that changes which code runs. */
-    private function lastChange(): float
+    protected function lastChange(): float
     {
         clearstatcache();
 

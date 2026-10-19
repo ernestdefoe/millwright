@@ -22,7 +22,7 @@ namespace ErnestDefoe\Millwright\Plan;
 class CoreOverrides
 {
     /** Bytes read from each file: a namespace and the classes in it are near the top. */
-    private const HEAD = 16384;
+    protected const HEAD = 16384;
 
     /**
      * @param list<array<string,mixed>> $lockPackages composer.lock's packages
@@ -115,7 +115,7 @@ class CoreOverrides
      *
      * @return array<string,list<string>> namespace => directories
      */
-    private function flarumNamespaces(array $lockPackages, string $vendorDir): array
+    protected function flarumNamespaces(array $lockPackages, string $vendorDir): array
     {
         $map = [];
 
@@ -141,7 +141,7 @@ class CoreOverrides
      *
      * @param array<string,list<string>> $flarums
      */
-    private function flarumHas(array $flarums, string $name, bool $namespace): bool
+    protected function flarumHas(array $flarums, string $name, bool $namespace): bool
     {
         foreach ($flarums as $prefix => $dirs) {
             if ($name !== $prefix && ! str_starts_with($name, $prefix.'\\')) {
@@ -161,7 +161,7 @@ class CoreOverrides
     }
 
     /** @return list<string> */
-    private function flarumClassesIn(string $path): array
+    protected function flarumClassesIn(string $path): array
     {
         $head = @file_get_contents($path, false, null, 0, self::HEAD);
 
@@ -174,7 +174,7 @@ class CoreOverrides
         return array_map(fn (string $class) => $ns[1].'\\'.$class, $m[1]);
     }
 
-    private static function isFlarums(string $namespace): bool
+    protected static function isFlarums(string $namespace): bool
     {
         return $namespace === 'Flarum' || str_starts_with(ltrim($namespace, '\\'), 'Flarum\\');
     }

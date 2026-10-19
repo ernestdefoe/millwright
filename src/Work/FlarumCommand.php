@@ -17,12 +17,12 @@ use RuntimeException;
  * and Restore — and the copy of "how to run a flarum command" that drifted
  * would be the one somebody only meets on a host without proc_open.
  */
-final class FlarumCommand
+class FlarumCommand
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        private string $installPath,
-        private ComposerRunner $composer,
+        protected string $installPath,
+        protected ComposerRunner $composer,
     ) {
     }
 
@@ -81,7 +81,7 @@ final class FlarumCommand
      * @param array<string,bool|string> $options
      * @return array{code:int, output:string}
      */
-    private function inProcess(string $command, array $options): array
+    protected function inProcess(string $command, array $options): array
     {
         $container = \Illuminate\Container\Container::getInstance();
 

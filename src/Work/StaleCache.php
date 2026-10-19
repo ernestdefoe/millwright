@@ -25,11 +25,11 @@ use Flarum\Locale\TranslatorInterface;
  * offending entries are renamed hidden inside it instead (see setAside).
  * Only when neither is possible does Permissions refuse, as before.
  */
-final class StaleCache
+class StaleCache
 {
-    private const DIRS = ['cache', 'formatter'];
+    protected const DIRS = ['cache', 'formatter'];
 
-    private const HIDDEN = '.root-owned-';
+    protected const HIDDEN = '.root-owned-';
 
     /** @return string[] the directories moved aside */
     public static function setAside(string $storagePath): array
@@ -95,7 +95,7 @@ final class StaleCache
     }
 
     /** This entry, or anything under it, cannot be changed by this process. */
-    private static function blocks(string $path): bool
+    protected static function blocks(string $path): bool
     {
         if (! is_writable($path)) {
             return true;
@@ -111,7 +111,7 @@ final class StaleCache
             .implode(' ', array_map('escapeshellarg', $moved));
     }
 
-    private static function hasUnwritable(string $root): bool
+    protected static function hasUnwritable(string $root): bool
     {
         $found = [];
         Permissions::walkInto($root, $found);

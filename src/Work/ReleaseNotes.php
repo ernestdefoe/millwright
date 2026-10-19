@@ -27,18 +27,18 @@ use ErnestDefoe\Millwright\Config\AuthTokens;
  */
 class ReleaseNotes
 {
-    private const ALLOWED = [
+    protected const ALLOWED = [
         'p', 'br', 'hr', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li',
         'a', 'strong', 'b', 'em', 'i', 'code', 'pre', 'blockquote', 'del',
         'table', 'thead', 'tbody', 'tr', 'th', 'td', 'details', 'summary',
     ];
 
     public function __construct(
-        private string $cacheDir,
-        private AuthTokens $auth,
+        protected string $cacheDir,
+        protected AuthTokens $auth,
         protected ClientInterface $http,
-        private int $freshFor = 21600,
-        private int $timeout = 15,
+        protected int $freshFor = 21600,
+        protected int $timeout = 15,
     ) {
     }
 
@@ -109,7 +109,7 @@ class ReleaseNotes
     }
 
     /** Newer than what is installed, and no newer than what is on offer. */
-    private function inRange(string $tag, string $from, string $to): bool
+    protected function inRange(string $tag, string $from, string $to): bool
     {
         $v = ltrim($tag, 'v');
 
@@ -154,7 +154,7 @@ class ReleaseNotes
         return $out;
     }
 
-    private static function walk(DOMNode $node): void
+    protected static function walk(DOMNode $node): void
     {
         foreach (iterator_to_array($node->childNodes) as $child) {
             if ($child->nodeType === XML_COMMENT_NODE) {

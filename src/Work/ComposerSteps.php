@@ -47,24 +47,24 @@ class ComposerSteps implements Steps
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        private string $installPath,
-        private string $workDir,
-        private ComposerRunner $composer,
-        private Fetcher $fetcher,
-        private Applier $applier,
-        private Journal $journal,
+        protected string $installPath,
+        protected string $workDir,
+        protected ComposerRunner $composer,
+        protected Fetcher $fetcher,
+        protected Applier $applier,
+        protected Journal $journal,
         /** @var list<string> the packages the user asked to change */
-        private array $requested = [],
+        protected array $requested = [],
         /** 'update', 'install' for something new, or 'remove' to take one out */
-        private string $mode = 'update',
+        protected string $mode = 'update',
         /*
          * 🚨 Optional, and every one of them degrades to "cannot check" rather
          * than to "fine". A host that cannot be asked whether its site is up
          * must not have that read as a yes — see verify().
          */
-        private string $vendorPath = '',
-        private string $storagePath = '',
-        private string $siteUrl = '',
+        protected string $vendorPath = '',
+        protected string $storagePath = '',
+        protected string $siteUrl = '',
         /**
          * 🚨 Requirements this run is authorised to RAISE, package => version.
          *
@@ -76,7 +76,7 @@ class ComposerSteps implements Steps
          *
          * @var array<string,string>
          */
-        private array $repin = [],
+        protected array $repin = [],
     ) {
     }
 
@@ -129,7 +129,7 @@ class ComposerSteps implements Steps
      * mutated vendor directory. The install is ours to do, one package at a
      * time, after the user has seen the list.
      */
-    private function resolve(): string
+    protected function resolve(): string
     {
         $lockPath = $this->installPath.'/composer.lock';
 
@@ -257,18 +257,18 @@ class ComposerSteps implements Steps
      * How many times a resolve killed by the host is tried before giving up.
      *
      * 🚨 Six, from a measurement rather than a feeling: on dev's real
-     * composer.json (346 packages, 22 private GitHub repositories) a cold
+     * composer.json (346 packages, 22 protected GitHub repositories) a cold
      * in-process resolve took 144s and a warm one 27s. Each killed attempt
      * keeps what it downloaded, so a host that cuts requests at 30 seconds gets
      * there in about five tries; three would give up on it with the cache
      * nearly full.
      */
-    private const RESOLVE_ATTEMPTS = 6;
+    protected const RESOLVE_ATTEMPTS = 6;
 
     /**
      * Copy the manifests aside the first time; put them back on every retry.
      */
-    private function startFromSaved(): void
+    protected function startFromSaved(): void
     {
         foreach (['composer.lock', 'composer.json'] as $file) {
             $saved = $this->workDir.'/'.$file.'.before';
@@ -306,7 +306,7 @@ class ComposerSteps implements Steps
      * @param list<string> $args
      * @return array{code:int, output:string}
      */
-    private function resolveInProcess(array $args): array
+    protected function resolveInProcess(array $args): array
     {
         $path = $this->workDir.'/resolve.attempt.json';
         $prev = is_file($path) ? (array) json_decode((string) @file_get_contents($path), true) : [];
@@ -376,7 +376,7 @@ class ComposerSteps implements Steps
     }
 
     /** @param array<string,mixed> $attempt */
-    private function howItStopped(array $attempt): string
+    protected function howItStopped(array $attempt): string
     {
         $seconds = (int) ($attempt['seconds'] ?? 0);
 
@@ -389,7 +389,7 @@ class ComposerSteps implements Steps
     }
 
     /** @param array<string,mixed> $attempt */
-    private function limitAdvice(array $attempt): string
+    protected function limitAdvice(array $attempt): string
     {
         return match ($attempt['stopped'] ?? null) {
             'memory' => $this->translator->trans('ernestdefoe-millwright.api.composer.advice_memory'),
@@ -398,7 +398,7 @@ class ComposerSteps implements Steps
     }
 
     /** Copy beside, then rename over: never a half-written file in place. */
-    private static function replaceFile(string $from, string $to): bool
+    protected static function replaceFile(string $from, string $to): bool
     {
         $tmp = $to.'.millwright-'.bin2hex(random_bytes(3));
 
@@ -426,7 +426,7 @@ class ComposerSteps implements Steps
      *
      * @return list<string> what changed, for the log
      */
-    private function raisePins(): array
+    protected function raisePins(): array
     {
         if ($this->repin === [] || $this->mode !== 'update') {
             return [];
@@ -477,7 +477,7 @@ class ComposerSteps implements Steps
      * So when a requested package did not move, name its constraint. The admin
      * can then do the one thing that would help.
      */
-    private function whyNothingMoved(): string
+    protected function whyNothingMoved(): string
     {
         $json = $this->readJson($this->installPath.'/composer.json');
         $pinned = [];
@@ -524,7 +524,7 @@ class ComposerSteps implements Steps
      * @param array<string,mixed> $before
      * @param array<string,mixed> $after
      */
-    private function didWhatWasAsked(array $before, array $after): bool
+    protected function didWhatWasAsked(array $before, array $after): bool
     {
         if ($this->mode !== 'remove' || $this->requested === []) {
             return false;
@@ -544,7 +544,7 @@ class ComposerSteps implements Steps
         return true;
     }
 
-    private function fetchOne(string $package): string
+    protected function fetchOne(string $package): string
     {
         $plan = $this->planFile();
         $source = $plan['sources'][$package] ?? null;
@@ -571,7 +571,7 @@ class ComposerSteps implements Steps
      *
      * @return list<Change>
      */
-    private function applyOrder(): array
+    protected function applyOrder(): array
     {
         $plan = $this->plan();
         usort($plan, fn (Change $a, Change $b) => (int) ($a->package === 'flarum/core') <=> (int) ($b->package === 'flarum/core'));
@@ -579,7 +579,7 @@ class ComposerSteps implements Steps
         return $plan;
     }
 
-    private function applyOne(string $package): string
+    protected function applyOne(string $package): string
     {
         $plan = $this->applyOrder();
 
@@ -613,7 +613,7 @@ class ComposerSteps implements Steps
     }
 
     /** @param list<Change> $plan */
-    private function movesCore(array $plan): bool
+    protected function movesCore(array $plan): bool
     {
         foreach ($plan as $change) {
             if ($change->package === 'flarum/core' && $change->op === Change::REPLACE) {
@@ -635,7 +635,7 @@ class ComposerSteps implements Steps
      * updater is asked to (see FlarumUpdater). If neither works, this request
      * undoes the update before it ends, because no later one could.
      */
-    private function bridgeCore(): string
+    protected function bridgeCore(): string
     {
         $db = resolve(ConnectionInterface::class);
         $ledger = new MigrationLedger($this->translator, $this->workDir);
@@ -701,7 +701,7 @@ class ComposerSteps implements Steps
      * the nightly prune. The time budget keeps a host that cuts requests at 30
      * seconds from killing this step mid-way — what is left is picked up later.
      */
-    private function tidyTrash(): string
+    protected function tidyTrash(): string
     {
         if ($this->storagePath === '') {
             return $this->translator->trans('ernestdefoe-millwright.api.composer.tidy_no_storage');
@@ -723,9 +723,9 @@ class ComposerSteps implements Steps
     }
 
     /** Longer than this and telling the truth beats parking the admin screen. */
-    private const WAIT_CAP = 180;
+    protected const WAIT_CAP = 180;
 
-    private function finalise(string $item, Run $run): string
+    protected function finalise(string $item, Run $run): string
     {
         return match ($item) {
             'register' => $this->register(),
@@ -791,7 +791,7 @@ class ComposerSteps implements Steps
      * The repair command forgets the entry through the formatter's OWN cache and
      * rebuilds both halves together.
      */
-    private function clearCaches(): string
+    protected function clearCaches(): string
     {
         // A cache left root-owned (a `php flarum cache:clear` run as root while
         // this run waited) would fail the clear below; see StaleCache.
@@ -834,7 +834,7 @@ class ComposerSteps implements Steps
      * judged by whether the site answers", and the only way to know is to have
      * asked before.
      */
-    private function baseline(): string
+    protected function baseline(): string
     {
         $health = $this->health();
 
@@ -860,7 +860,7 @@ class ComposerSteps implements Steps
      * is a real question: a check that ran before then would be asking whether
      * the OLD code still works, and would pass every time.
      */
-    private function verify(Run $run): string
+    protected function verify(Run $run): string
     {
         $health = $this->health();
         $before = $this->rememberedHealth();
@@ -946,7 +946,7 @@ class ComposerSteps implements Steps
     }
 
     /** @return list<array{package:string, classes:list<string>}> */
-    private function coreOverrides(): array
+    protected function coreOverrides(): array
     {
         $lock = json_decode((string) @file_get_contents($this->installPath.'/composer.lock'), true);
         $vendor = $this->vendorPath !== '' ? $this->vendorPath : $this->installPath.'/vendor';
@@ -959,7 +959,7 @@ class ComposerSteps implements Steps
      * wait briefly for a request to take it up. True when it did. On the web
      * this process can reset its own, so there is nothing to ask.
      */
-    private function clearWebCache(): bool
+    protected function clearWebCache(): bool
     {
         if (PHP_SAPI !== 'cli' || $this->storagePath === '' || ($health = $this->health()) === null) {
             return false;
@@ -989,7 +989,7 @@ class ComposerSteps implements Steps
      * beta still registered, and every page and the admin panel on fbsfb.com
      * answered "class not found" until the cache was cleared (2026-10-15).
      */
-    private function dropStaleCode(): void
+    protected function dropStaleCode(): void
     {
         if (PHP_SAPI !== 'cli') {
             (new Opcache($this->translator))->clear();
@@ -998,12 +998,12 @@ class ComposerSteps implements Steps
         }
     }
 
-    private function health(): ?SiteHealth
+    protected function health(): ?SiteHealth
     {
         return $this->siteUrl === '' ? null : new SiteHealth($this->translator, new Client(), $this->siteUrl);
     }
 
-    private function restore(): ?Restore
+    protected function restore(): ?Restore
     {
         if ($this->vendorPath === '' || $this->storagePath === '') {
             return null;
@@ -1027,12 +1027,12 @@ class ComposerSteps implements Steps
      * memory it would simply be absent by then, which reads as "never checked"
      * and quietly disables the whole safety net.
      */
-    private function rememberHealth(string $state): void
+    protected function rememberHealth(string $state): void
     {
         @file_put_contents($this->workDir.'/health.before', $state);
     }
 
-    private function rememberedHealth(): string
+    protected function rememberedHealth(): string
     {
         $saved = @file_get_contents($this->workDir.'/health.before');
 
@@ -1057,7 +1057,7 @@ class ComposerSteps implements Steps
      * So the run stays in progress until the web tier can actually see the new
      * files. Finished now means in effect.
      */
-    private function codeCache(): string
+    protected function codeCache(): string
     {
         if ($this->clearWebCache()) {
             return $this->translator->trans('ernestdefoe-millwright.api.composer.web_cache_cleared');
@@ -1115,7 +1115,7 @@ class ComposerSteps implements Steps
      * checked a file, not from when the file changed, so the worst case is one
      * full window after the write.
      */
-    private function codeLiveAt(int $freq): int
+    protected function codeLiveAt(int $freq): int
     {
         /*
          * 🚨 Timed from Composer's install record as well as the autoloader.
@@ -1140,7 +1140,7 @@ class ComposerSteps implements Steps
      * it cannot change. See Permissions for the two half-finished runs this
      * replaces. Skipped, not passed, when the paths were never supplied.
      */
-    private function checkPermissions(): string
+    protected function checkPermissions(): string
     {
         if ($this->vendorPath === '' || $this->storagePath === '') {
             return $this->translator->trans('ernestdefoe-millwright.api.composer.permissions_not_checked');
@@ -1178,7 +1178,7 @@ class ComposerSteps implements Steps
      * delete its own dependencies is how a site goes down. Stopping here leaves
      * the applied tree in place and rollback available.
      */
-    private function register(): string
+    protected function register(): string
     {
         $this->needsFreshCode();
 
@@ -1201,7 +1201,7 @@ class ComposerSteps implements Steps
         }
     }
 
-    private function registerWith(?string $snapshot): string
+    protected function registerWith(?string $snapshot): string
     {
         (new InstalledRecord($this->translator, $this->installPath))->syncFromLock();
 
@@ -1247,7 +1247,7 @@ class ComposerSteps implements Steps
     /**
      * Copy Composer's record and autoloader aside before an in-process install.
      */
-    private function snapshotAutoloader(): string
+    protected function snapshotAutoloader(): string
     {
         $dir = $this->workDir.'/register.before';
         $source = $this->installPath.'/vendor/composer';
@@ -1265,7 +1265,7 @@ class ComposerSteps implements Steps
         return $dir;
     }
 
-    private function restoreAutoloader(string $dir): void
+    protected function restoreAutoloader(string $dir): void
     {
         foreach (glob($dir.'/*') ?: [] as $saved) {
             $name = basename($saved);
@@ -1277,12 +1277,12 @@ class ComposerSteps implements Steps
         }
     }
 
-    private function snapshotName(string $file): string
+    protected function snapshotName(string $file): string
     {
         return basename(dirname($file)) === 'composer' ? 'composer.'.basename($file) : basename($file);
     }
 
-    private function composerCommand(array $args, string $note): string
+    protected function composerCommand(array $args, string $note): string
     {
         $raised = $this->raisePins();
 
@@ -1296,7 +1296,7 @@ class ComposerSteps implements Steps
     }
 
     /** `flarum migrate`, writing down what it ran so undo can reverse it. See MigrationLedger. */
-    private function migrate(): string
+    protected function migrate(): string
     {
         $ledger = new MigrationLedger($this->translator, $this->workDir);
         $db = resolve(ConnectionInterface::class);
@@ -1308,7 +1308,7 @@ class ComposerSteps implements Steps
         return $added === [] ? $this->translator->trans('ernestdefoe-millwright.api.composer.migrations_none') : $this->translator->trans('ernestdefoe-millwright.api.composer.migrations_run', ['count' => count($added)]);
     }
 
-    private function flarum(string $command, string $note): string
+    protected function flarum(string $command, string $note): string
     {
         /*
          * 🚨 After the swap, and in a process that has the new code: its own
@@ -1339,7 +1339,7 @@ class ComposerSteps implements Steps
      * Wait for a fresh request before running post-swap code in this process.
      * A no-op wherever a subprocess does the work.
      */
-    private function needsFreshCode(): void
+    protected function needsFreshCode(): void
     {
         if (! $this->composer->canSpawn()) {
             (new FreshCode($this->translator, $this->workDir, $this->installPath, new Opcache($this->translator)))->ensure();
@@ -1347,7 +1347,7 @@ class ComposerSteps implements Steps
     }
 
     /** @return list<Change> */
-    private function plan(): array
+    protected function plan(): array
     {
         return array_map(
             fn (array $row) => Change::fromArray($row),
@@ -1356,7 +1356,7 @@ class ComposerSteps implements Steps
     }
 
     /** @return list<Change> */
-    private function downloadable(): array
+    protected function downloadable(): array
     {
         $sources = $this->planFile()['sources'] ?? [];
 
@@ -1367,7 +1367,7 @@ class ComposerSteps implements Steps
     }
 
     /** @return array<string,mixed> */
-    private function planFile(): array
+    protected function planFile(): array
     {
         $path = $this->workDir.'/plan.json';
 
@@ -1379,7 +1379,7 @@ class ComposerSteps implements Steps
     }
 
     /** @return array<string,mixed> */
-    private function readJson(string $path): array
+    protected function readJson(string $path): array
     {
         return (array) json_decode((string) file_get_contents($path), true);
     }

@@ -18,7 +18,7 @@ namespace ErnestDefoe\Millwright\Work;
  * and that rebuild, so it does the least that can: drop the entries whose file
  * is gone, in the same request that moved it.
  */
-final class AutoloadFiles
+class AutoloadFiles
 {
     /** @return list<string> the files no longer required */
     public static function pruneMissing(string $vendorDir): array

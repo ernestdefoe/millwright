@@ -38,11 +38,11 @@ class PhpBinary
     public const PANEL_PLESK = 'plesk';
     public const PANEL_CPANEL = 'cpanel';
 
-    private ?string $resolved = null;
-    private bool $searched = false;
+    protected ?string $resolved = null;
+    protected bool $searched = false;
 
     /** @var array<string, array{ok:bool, hidden:bool, ran:bool, sapi:?string, version:?string, error:?string}> */
-    private array $probes = [];
+    protected array $probes = [];
 
     /**
      * Everything but the first argument is for tests — they stand in for the
@@ -54,13 +54,13 @@ class PhpBinary
      */
     public function __construct(
         protected TranslatorInterface $translator,
-        private ?string $override = null,
-        private ?array $candidates = null,
-        private ?string $openBasedir = null,
-        private ?\Closure $runner = null,
-        private ?string $phpBinary = null,
-        private ?string $sapi = null,
-        private ?string $disabledFunctions = null,
+        protected ?string $override = null,
+        protected ?array $candidates = null,
+        protected ?string $openBasedir = null,
+        protected ?\Closure $runner = null,
+        protected ?string $phpBinary = null,
+        protected ?string $sapi = null,
+        protected ?string $disabledFunctions = null,
     ) {
     }
 
@@ -351,26 +351,26 @@ class PhpBinary
         return $this->candidates = array_values(array_unique($candidates));
     }
 
-    private function looksLikePanelPhp(string $path): bool
+    protected function looksLikePanelPhp(string $path): bool
     {
         return str_starts_with($path, '/opt/plesk/php/')
             || str_starts_with($path, '/opt/cpanel/')
             || str_starts_with($path, dirname($this->phpBinary()).'/');
     }
 
-    private function iniFile(): ?string
+    protected function iniFile(): ?string
     {
         $file = php_ini_loaded_file();
 
         return $file === false ? null : $file;
     }
 
-    private function phpBinary(): string
+    protected function phpBinary(): string
     {
         return $this->phpBinary ?? PHP_BINARY;
     }
 
-    private function sapi(): string
+    protected function sapi(): string
     {
         return $this->sapi ?? PHP_SAPI;
     }
@@ -379,7 +379,7 @@ class PhpBinary
      * @param list<string> $command
      * @return array{code:int, out:string, err:string}
      */
-    private function run(array $command): array
+    protected function run(array $command): array
     {
         if ($this->runner !== null) {
             return ($this->runner)($command[0]);

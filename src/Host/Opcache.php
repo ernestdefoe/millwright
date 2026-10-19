@@ -168,7 +168,7 @@ class Opcache
     }
 
     /** A reset has been asked for and not happened yet: the cache is bypassed meanwhile. */
-    private function resetPending(): bool
+    protected function resetPending(): bool
     {
         $status = function_exists('opcache_get_status') ? @opcache_get_status(false) : false;
 

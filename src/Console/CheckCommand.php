@@ -24,7 +24,7 @@ class CheckCommand extends AbstractCommand
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        private Paths $paths,
+        protected Paths $paths,
     ) {
         parent::__construct();
     }
@@ -48,11 +48,11 @@ class CheckCommand extends AbstractCommand
 
         /*
          * 🚨 Extensions, Flarum, and what composer.json requires itself, asked
-         * of Packagist first and then the site's own private repositories — see
+         * of Packagist first and then the site's own protected repositories — see
          * UpdateCheck::interesting() and refreshWith(). A premium extension is
          * not on Packagist, so it used to come back "uncheckable" and its owner
          * was never told a new version existed. Packagist stays FIRST so a
-         * private repository can never shadow a public package.
+         * protected repository can never shadow a public package.
          */
         $result = $check->refreshSite($this->translator, $this->paths->base);
 

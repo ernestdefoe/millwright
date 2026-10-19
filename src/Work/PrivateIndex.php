@@ -14,44 +14,44 @@ use ErnestDefoe\Millwright\Config\Repositories;
  * extensions somebody paid for.
  *
  * `millwright:check` asks Packagist about every installed extension. A premium
- * extension is not on Packagist — it comes from a private Composer repository —
+ * extension is not on Packagist — it comes from a protected Composer repository —
  * so it came back `uncheckable` and the forum was never told a new version
  * existed. On Ernest's two sites that was 7 and 9 packages, and they were the
  * paid ones.
  *
- * A private Composer repository is just `packages.json` at a URL, which is the
+ * A protected Composer repository is just `packages.json` at a URL, which is the
  * same shape Composer itself reads. So the fix is not special-cased to anybody:
  * whatever `composer` repositories the site has configured get asked, with
  * whatever credentials the site already has for them.
  *
  * 🚨 It fetches each repository ONCE per check, not once per package. A forum
- * with nine private extensions would otherwise be nine downloads of the same
+ * with nine protected extensions would otherwise be nine downloads of the same
  * index, on a schedule, for one question.
  */
 class PrivateIndex
 {
     /** @var array<string, array<string, list<string>>|null> url => index, or null if it could not be read */
-    private array $indexes = [];
+    protected array $indexes = [];
 
     /** @var array<string, list<string>|null> owner/repo => tags */
-    private array $tagLists = [];
+    protected array $tagLists = [];
 
     /** @var array<string, string|null> vcs url => the package it publishes */
-    private array $packageNames = [];
+    protected array $packageNames = [];
 
     /** @var array<string, array<string,string>> package => version => release URL */
-    private array $releaseNotes = [];
+    protected array $releaseNotes = [];
 
     public function __construct(
-        private Repositories $repositories,
-        private AuthTokens $auth,
+        protected Repositories $repositories,
+        protected AuthTokens $auth,
         protected ClientInterface $http,
-        private int $timeout = 15,
+        protected int $timeout = 15,
     ) {
     }
 
     /**
-     * Every version of $package any configured private repository offers.
+     * Every version of $package any configured protected repository offers.
      *
      * @return list<string>|null null when no repository knows the package —
      *                           which keeps it honestly "uncheckable" rather
@@ -120,7 +120,7 @@ class PrivateIndex
     /**
      * @return array<string,string> owner/repo => the original url
      */
-    private function githubRepositories(): array
+    protected function githubRepositories(): array
     {
         $out = [];
 
@@ -148,7 +148,7 @@ class PrivateIndex
      * `ernestdefoe/gameday` — matching on the URL would check the wrong package
      * or, worse, silently check nothing while appearing to work.
      */
-    private function packageOf(string $url): ?string
+    protected function packageOf(string $url): ?string
     {
         if (array_key_exists($url, $this->packageNames)) {
             return $this->packageNames[$url];
@@ -167,7 +167,7 @@ class PrivateIndex
     }
 
     /** @return list<string>|null */
-    private function tags(string $repo): ?array
+    protected function tags(string $repo): ?array
     {
         if (array_key_exists($repo, $this->tagLists)) {
             return $this->tagLists[$repo];
@@ -192,7 +192,7 @@ class PrivateIndex
     }
 
     /** @return list<string> */
-    private function composerRepositories(): array
+    protected function composerRepositories(): array
     {
         $urls = [];
 
@@ -220,7 +220,7 @@ class PrivateIndex
     /**
      * @return array<string, list<string>>|null package => versions
      */
-    private function index(string $url): ?array
+    protected function index(string $url): ?array
     {
         if (array_key_exists($url, $this->indexes)) {
             return $this->indexes[$url];
@@ -237,7 +237,7 @@ class PrivateIndex
      * up by URL finds nothing and the request 401s with no visible reason.
      *
      * `http_errors` off, so a 401 or 404 comes back as a body rather than as
-     * an exception. A private repository the site has no credential for is
+     * an exception. A protected repository the site has no credential for is
      * a normal state — a lapsed subscription, a token not pasted in yet — and
      * the honest outcome is "could not check", never a failed scheduled command
      * that also abandons the packages it COULD have checked.
@@ -261,7 +261,7 @@ class PrivateIndex
     }
 
     /** @return array<string, list<string>>|null */
-    private function fetchIndex(string $url): ?array
+    protected function fetchIndex(string $url): ?array
     {
         $body = $this->get($url.'/packages.json');
 

@@ -56,13 +56,13 @@ class UpdateCommand extends AbstractCommand
      *
      * @var array<int,string>
      */
-    private array $printed = [];
+    protected array $printed = [];
 
     public function __construct(
         protected TranslatorInterface $translator,
-        private Paths $paths,
-        private RunStore $runs,
-        private StepRunner $runner,
+        protected Paths $paths,
+        protected RunStore $runs,
+        protected StepRunner $runner,
     ) {
         parent::__construct();
     }
@@ -242,7 +242,7 @@ class UpdateCommand extends AbstractCommand
      * closed, or by a worker that died, is exactly the state that used to need
      * someone to know what a work directory was.
      */
-    private function resume(): int
+    protected function resume(): int
     {
         $run = $this->runs->latest();
 
@@ -266,7 +266,7 @@ class UpdateCommand extends AbstractCommand
     /**
      * Turn the handle until the run stops, printing what it says as it says it.
      */
-    private function pump(Run $run): int
+    protected function pump(Run $run): int
     {
         $deadline = time() + max(60, (int) $this->input->getOption('timeout'));
 
@@ -342,7 +342,7 @@ class UpdateCommand extends AbstractCommand
      *
      * @param list<string> $log
      */
-    private function emit(array $log): void
+    protected function emit(array $log): void
     {
         foreach ($log as $i => $line) {
             if (($this->printed[$i] ?? null) === $line) {
@@ -355,7 +355,7 @@ class UpdateCommand extends AbstractCommand
     }
 
     /** Which of these the site does not actually have, if any. */
-    private function notInstalled(array $packages): ?string
+    protected function notInstalled(array $packages): ?string
     {
         $lock = @file_get_contents($this->paths->base.'/composer.lock');
 
@@ -384,7 +384,7 @@ class UpdateCommand extends AbstractCommand
     }
 
     /** See Plan\Nightly: the server works out what moves, and to which branch. */
-    private function nightly(): int
+    protected function nightly(): int
     {
         $existing = $this->runs->latest();
 
@@ -411,7 +411,7 @@ class UpdateCommand extends AbstractCommand
     }
 
     /** An update whose plan was worked out and came to nothing. */
-    private function movedNothing(Run $run): bool
+    protected function movedNothing(Run $run): bool
     {
         $plan = (new WorkDir($this->translator, $this->paths->storage, $run->id))->root().'/plan.json';
 
@@ -419,7 +419,7 @@ class UpdateCommand extends AbstractCommand
     }
 
     /**
-     * Ask Packagist and the site's private repositories again, as
+     * Ask Packagist and the site's protected repositories again, as
      * millwright:check --force does. Overridable so the tests need no network.
      */
     protected function recheck(): void
@@ -427,12 +427,12 @@ class UpdateCommand extends AbstractCommand
         $this->check()->refreshSite($this->translator, $this->paths->base);
     }
 
-    private function check(): UpdateCheck
+    protected function check(): UpdateCheck
     {
         return new UpdateCheck($this->storagePath('updates.json'));
     }
 
-    private function storagePath(string $file): string
+    protected function storagePath(string $file): string
     {
         return StorageDir::of($this->paths->storage).'/'.$file;
     }

@@ -21,7 +21,7 @@ class PhpOverride
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        private string $storagePath,
+        protected string $storagePath,
     ) {
     }
 
@@ -95,7 +95,7 @@ class PhpOverride
         (new JsonFile($this->translator, $this->file()))->write(['path' => $path]);
     }
 
-    private function file(): string
+    protected function file(): string
     {
         return StorageDir::of($this->storagePath).'/php.json';
     }

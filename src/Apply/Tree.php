@@ -118,7 +118,7 @@ class Tree
     }
 
     /** A link is copied as a link, never followed — see delete(). */
-    private static function copy(string $from, string $to): bool
+    protected static function copy(string $from, string $to): bool
     {
         if (is_link($from)) {
             $target = readlink($from);

@@ -28,7 +28,7 @@ class Compatibility
     /**
      * @param string $coreVersion the flarum/core version installed, e.g. 2.0.0
      */
-    public function __construct(private string $coreVersion = '2.0.0')
+    public function __construct(protected string $coreVersion = '2.0.0')
     {
     }
 
@@ -109,7 +109,7 @@ class Compatibility
      * @param array<string,mixed> $latest the newest release, expanded
      * @return array{replaced:bool, replacedBy:?string, source:?array<string,mixed>}
      */
-    private function replacement(string $name, array $latest): array
+    protected function replacement(string $name, array $latest): array
     {
         $abandoned = $latest['abandoned'] ?? null;
 
@@ -128,7 +128,7 @@ class Compatibility
      * @param list<array<string,mixed>> $versions expanded
      * @return array{compatible:?bool, version:?string, requires:?string, stability:?string}
      */
-    private function judge(string $name, array $versions): array
+    protected function judge(string $name, array $versions): array
     {
         $best = null;
 
@@ -196,7 +196,7 @@ class Compatibility
      * An unparseable constraint IS a real verdict: the author wrote something
      * Composer cannot read, so Composer will not install it either.
      */
-    private function admits(string $constraint): bool
+    protected function admits(string $constraint): bool
     {
         try {
             return Semver::satisfies($this->coreVersion, $constraint);
@@ -211,7 +211,7 @@ class Compatibility
      *
      * @param array<int,mixed> $versions
      */
-    private function latestConstraint(array $versions): ?string
+    protected function latestConstraint(array $versions): ?string
     {
         foreach ($versions as $release) {
             $constraint = $release['require']['flarum/core'] ?? null;
@@ -224,7 +224,7 @@ class Compatibility
         return null;
     }
 
-    private function stability(string $version): string
+    protected function stability(string $version): string
     {
         $v = strtolower($version);
 

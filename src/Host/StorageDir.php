@@ -8,7 +8,7 @@ namespace ErnestDefoe\Millwright\Host;
  *
  * One place, so the directory can move without a hunt for every caller.
  */
-final class StorageDir
+class StorageDir
 {
     public static function of(string $storage): string
     {

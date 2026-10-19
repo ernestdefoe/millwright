@@ -33,25 +33,25 @@ class Capability
      * with proc_open disabled — a cold Composer cache, then a warm one. Shown
      * on the panel so a short time limit can be judged against a real number.
      */
-    private const RESOLVE_COLD = '145';
-    private const RESOLVE_WARM = '27';
+    protected const RESOLVE_COLD = '145';
+    protected const RESOLVE_WARM = '27';
 
-    private PhpBinary $php;
+    protected PhpBinary $php;
 
     /** @var array{memory:bool, time:bool, timeLimit:int}|null */
-    private ?array $limits = null;
+    protected ?array $limits = null;
 
     /** @var list<array{url:string, why:string}>|null */
-    private ?array $blockers = null;
+    protected ?array $blockers = null;
 
     /**
      * @param array{memory:bool, time:bool, timeLimit:int}|null $limits for tests: what the host lets be lifted
      */
     public function __construct(
         protected TranslatorInterface $translator,
-        private string $installPath,
+        protected string $installPath,
         PhpBinary $php,
-        private ?string $composerHome = null,
+        protected ?string $composerHome = null,
         ?array $limits = null,
     ) {
         $this->php = $php;
@@ -68,7 +68,7 @@ class Capability
     }
 
     /** @return array{memory:bool, time:bool, timeLimit:int} */
-    private function limits(): array
+    protected function limits(): array
     {
         return $this->limits ??= \ErnestDefoe\Millwright\Work\InProcess::limits();
     }
@@ -138,7 +138,7 @@ class Capability
         return 'journal';
     }
 
-    private function memoryCheck(int $bytes): array
+    protected function memoryCheck(int $bytes): array
     {
         if ($this->inProcess() && $this->limits()['memory']) {
             return [
@@ -167,7 +167,7 @@ class Capability
         ];
     }
 
-    private function timeCheck(): array
+    protected function timeCheck(): array
     {
         $limit = (int) ini_get('max_execution_time');
 
@@ -206,7 +206,7 @@ class Capability
         ];
     }
 
-    private function subprocessCheck(): array
+    protected function subprocessCheck(): array
     {
         /*
          * 🚨 It names the php.ini, and says that it is the WEBSITE's. The
@@ -258,7 +258,7 @@ class Capability
      *
      * @return list<array<string,mixed>>
      */
-    private function gitCheck(): array
+    protected function gitCheck(): array
     {
         if (! $this->inProcess()) {
             return [];
@@ -299,7 +299,7 @@ class Capability
      *
      * @return list<array<string,mixed>>
      */
-    private function phpCheck(): array
+    protected function phpCheck(): array
     {
         if (! $this->canSpawn()) {
             return [];     // the row above already says why nothing can run
@@ -371,7 +371,7 @@ class Capability
      * validate_timestamps off, new files land, every phase reports success, and
      * the site serves the old code until PHP is restarted.
      */
-    private function opcacheCheck(): array
+    protected function opcacheCheck(): array
     {
         $o = (new Opcache($this->translator))->situation();
 
@@ -406,7 +406,7 @@ class Capability
         ];
     }
 
-    private function diskCheck(): array
+    protected function diskCheck(): array
     {
         $free = @disk_free_space($this->installPath);
         $gb = $free === false ? null : round($free / 1073741824, 1);
@@ -420,7 +420,7 @@ class Capability
         ];
     }
 
-    private function summary(int $bytes): string
+    protected function summary(int $bytes): string
     {
         return match ($this->resolveTier($bytes)) {
             self::FULL => $this->translator->trans('ernestdefoe-millwright.api.capability.summary_full'),
@@ -430,7 +430,7 @@ class Capability
     }
 
     /** The summary when Composer runs in-process, which the English one would call "everything works". */
-    private function summaryKey(): ?string
+    protected function summaryKey(): ?string
     {
         if (! $this->inProcess() || $this->resolveTier() === self::NONE) {
             return null;
@@ -445,7 +445,7 @@ class Capability
             : 'host.summary_in_process_time';
     }
 
-    private function memoryBytes(): int
+    protected function memoryBytes(): int
     {
         // In-process, Millwright lifts the limit for the resolve if it may.
         if ($this->inProcess() && $this->limits()['memory']) {
@@ -469,7 +469,7 @@ class Capability
         };
     }
 
-    private function canSpawn(): bool
+    protected function canSpawn(): bool
     {
         return $this->php->canSpawn();
     }

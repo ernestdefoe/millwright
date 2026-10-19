@@ -13,7 +13,7 @@ namespace Flarum\ExtensionManager\Host;
  * Where the Extension Manager keeps its own files, under Flarum's storage
  * directory: runs, rollback copies, the update check, caches and locks.
  */
-final class StorageDir
+class StorageDir
 {
     public const NAME = 'extension-manager';
 

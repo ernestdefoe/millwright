@@ -18,7 +18,7 @@ use Flarum\Locale\TranslatorInterface;
  *     definition.
  *   - A `vcs` repository on a host Composer has no API driver for is git.
  *   - GitHub with `"no-api": true` is git.
- *   - GitHub WITHOUT a token: Composer tries the API, and a private repository
+ *   - GitHub WITHOUT a token: Composer tries the API, and a protected repository
  *     answers 404, which Composer treats as "fall back to git". A public one
  *     works until the shared host's IP uses up GitHub's 60 anonymous calls an
  *     hour — then it, too, falls back to git. A token fixes both.
@@ -26,18 +26,18 @@ use Flarum\Locale\TranslatorInterface;
  *     what branch the directory is on.
  *
  * GitLab and Bitbucket are left alone without a token: a public repository
- * there works through the API, and a private one fails with a sentence from
+ * there works through the API, and a protected one fails with a sentence from
  * ComposerRunner::explainThrowable rather than a trace.
  */
-final class NeedsGit
+class NeedsGit
 {
     public const WHY_TOKEN = 'token';
     public const WHY_GIT = 'git';
 
     public function __construct(
         protected TranslatorInterface $translator,
-        private string $installPath,
-        private string $composerHome,
+        protected string $installPath,
+        protected string $composerHome,
     )
     {
     }
@@ -127,7 +127,7 @@ final class NeedsGit
      * @param array<string,mixed> $config composer.json's own config block
      * @return list<string>
      */
-    private function githubTokenHosts(array $config): array
+    protected function githubTokenHosts(array $config): array
     {
         $sources = [
             (array) ($config['github-oauth'] ?? []),
@@ -154,7 +154,7 @@ final class NeedsGit
     }
 
     /** @param array<string,mixed> $options */
-    private function pathNeedsGit(string $url, array $options): bool
+    protected function pathNeedsGit(string $url, array $options): bool
     {
         $pattern = str_starts_with($url, '/') ? $url : $this->installPath.'/'.$url;
 
@@ -174,7 +174,7 @@ final class NeedsGit
     }
 
     /** @return array<string,mixed> */
-    private function read(string $path): array
+    protected function read(string $path): array
     {
         $data = is_file($path) ? json_decode((string) @file_get_contents($path), true) : null;
 

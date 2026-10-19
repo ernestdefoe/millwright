@@ -16,7 +16,7 @@ namespace ErnestDefoe\Millwright\Host;
  * Separated from the network so every combination can be asserted, rather than
  * only the ones a test host happens to be able to produce.
  */
-final class Verdict
+class Verdict
 {
     /** Nothing to judge by: the check could not run before OR after. */
     public const NOT_JUDGED = 'not-judged';

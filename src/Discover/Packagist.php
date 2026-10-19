@@ -40,8 +40,8 @@ class Packagist
     /** @param ?callable(string):?string $get overridable so tests never touch a network */
     public function __construct(
         protected TranslatorInterface $translator,
-        private Cache $cache,
-        private $get = null,
+        protected Cache $cache,
+        protected $get = null,
     ) {
         $this->get ??= fn (string $url) => $this->fetch($url);
     }
@@ -174,7 +174,7 @@ class Packagist
     }
 
     /** @return array<string,mixed> */
-    private function one(string $name, Compatibility $compat, string $scope): array
+    protected function one(string $name, Compatibility $compat, string $scope): array
     {
         $cached = $this->cache->get($scope.$name);
 
@@ -215,7 +215,7 @@ class Packagist
      *
      * @param array<string,mixed> $source
      */
-    private function realName(string $name, array $source): ?string
+    protected function realName(string $name, array $source): ?string
     {
         $url = (string) ($source['url'] ?? '');
         $ref = (string) ($source['reference'] ?? '');
@@ -233,7 +233,7 @@ class Packagist
             : null;
     }
 
-    private function fetch(string $url): ?string
+    protected function fetch(string $url): ?string
     {
         $context = stream_context_create(['http' => [
             'timeout' => 15,

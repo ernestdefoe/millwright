@@ -26,8 +26,8 @@ class Fetcher
     public function __construct(
         protected TranslatorInterface $translator,
         protected ClientInterface $http,
-        private string $stagingDir,
-        private ?string $authPath = null,
+        protected string $stagingDir,
+        protected ?string $authPath = null,
     ) {
     }
 
@@ -107,8 +107,8 @@ class Fetcher
             @unlink($tmp);
 
             /*
-             * A 404 from a private repository means "not authenticated", not
-             * "does not exist": GitHub hides private resources behind 404
+             * A 404 from a protected repository means "not authenticated", not
+             * "does not exist": GitHub hides protected resources behind 404
              * rather than 403. Saying so saves the hour it otherwise costs to
              * work out that the commit is fine and the token is not.
              */
@@ -135,7 +135,7 @@ class Fetcher
     }
 
     /** @return array<string,mixed> */
-    private function auth(): array
+    protected function auth(): array
     {
         if ($this->authPath === null || ! is_file($this->authPath)) {
             return [];
@@ -150,7 +150,7 @@ class Fetcher
      * what lands in staging is the package itself and the apply phase can move
      * it straight into place.
      */
-    private function unzip(string $archive, string $target, string $package): void
+    protected function unzip(string $archive, string $target, string $package): void
     {
         $zip = new ZipArchive();
 
@@ -199,7 +199,7 @@ class Fetcher
     }
 
     /** The single wrapping directory, if every entry shares one. */
-    private function commonRoot(ZipArchive $zip): ?string
+    protected function commonRoot(ZipArchive $zip): ?string
     {
         $root = null;
 
@@ -223,7 +223,7 @@ class Fetcher
         return $root;
     }
 
-    private function safePath(string $package): string
+    protected function safePath(string $package): string
     {
         foreach (explode('/', $package) as $part) {
             if (! preg_match('/^[A-Za-z0-9._-]+$/', $part) || $part === '.' || $part === '..') {
@@ -234,7 +234,7 @@ class Fetcher
         return $package;
     }
 
-    private function deleteTree(string $dir): void
+    protected function deleteTree(string $dir): void
     {
         if (! is_dir($dir)) {
             return;

@@ -29,11 +29,11 @@ use ErnestDefoe\Millwright\Work\UpdateCheck;
  * still has to have been given permission — `repin: true` from the screen, or
  * `--repin` on the command line.
  */
-final class Repin
+class Repin
 {
     public function __construct(
-        private string $composerJsonPath,
-        private string $updatesJsonPath,
+        protected string $composerJsonPath,
+        protected string $updatesJsonPath,
     ) {
     }
 
@@ -112,13 +112,13 @@ final class Repin
     }
 
     /** @return array<string,mixed> */
-    private function cachedUpdates(): array
+    protected function cachedUpdates(): array
     {
         return (array) ((new UpdateCheck($this->updatesJsonPath))->cached()['updates'] ?? []);
     }
 
     /** @return array<string,mixed> */
-    private function readJson(string $path): array
+    protected function readJson(string $path): array
     {
         $data = is_file($path) ? json_decode((string) file_get_contents($path), true) : null;
 

@@ -16,7 +16,7 @@ use Throwable;
  * undo request itself. Called by whatever the admin page asks next — its
  * state, or the next step — so it finishes even if the page was closed.
  */
-final class PendingUndo
+class PendingUndo
 {
     /** @return string|null why it could not finish, or null when there was nothing to do or it is done */
     public static function finish(TranslatorInterface $translator, ?Run $run, Paths $paths): ?string

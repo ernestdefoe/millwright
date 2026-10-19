@@ -51,12 +51,12 @@ class Pruner
     public const GRACE = 86400;
 
     /** @var callable():int */
-    private $clock;
+    protected $clock;
 
     public function __construct(
         protected TranslatorInterface $translator,
-        private string $millwrightDir,
-        private Retention $retention,
+        protected string $millwrightDir,
+        protected Retention $retention,
         ?callable $clock = null,
     ) {
         $this->clock = $clock ?? fn () => time();
@@ -254,7 +254,7 @@ class Pruner
      * @param array{keepDays:int, keepRuns:int} $settings
      * @return array<string,string> run id => reason
      */
-    private function protectedRuns(array $runs, array $unreadable, array $settings, int $now): array
+    protected function protectedRuns(array $runs, array $unreadable, array $settings, int $now): array
     {
         $out = [];
 
@@ -297,7 +297,7 @@ class Pruner
      * @param array<string,string> $protected run id => reason
      * @return list<array<string,mixed>>
      */
-    private function trashEntries(int $now, array $protectedRefs, array $otherRefs, array $protected): array
+    protected function trashEntries(int $now, array $protectedRefs, array $otherRefs, array $protected): array
     {
         if (! is_dir($this->trashDir())) {
             return [];
@@ -340,7 +340,7 @@ class Pruner
      * @param array<string,string> $protected
      * @return list<array<string,mixed>>
      */
-    private function runDirs(int $now, array $runs, array $protected): array
+    protected function runDirs(int $now, array $runs, array $protected): array
     {
         if (! is_dir($this->runsDir())) {
             return [];
@@ -389,7 +389,7 @@ class Pruner
      *
      * @return array{0: list<Run>, 1: array<string,true>}
      */
-    private function runs(): array
+    protected function runs(): array
     {
         $runs = [];
         $unreadable = [];
@@ -422,7 +422,7 @@ class Pruner
      *
      * @return list<string>
      */
-    private function references(string $id, bool $mustRead): array
+    protected function references(string $id, bool $mustRead): array
     {
         if (! preg_match('/^[A-Za-z0-9_-]{1,64}$/', $id)) {
             return [];

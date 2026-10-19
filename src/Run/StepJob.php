@@ -30,7 +30,7 @@ class StepJob extends AbstractJob
      * single long turn overruns it by however long that turn takes. Planning is
      * the one that does — see $timeout below.
      */
-    private const BUDGET_SECONDS = 20;
+    protected const BUDGET_SECONDS = 20;
 
     /**
      * 🚨 One try, on purpose.
@@ -59,7 +59,7 @@ class StepJob extends AbstractJob
      */
     public int $timeout = 900;
 
-    public function __construct(private string $runId)
+    public function __construct(protected string $runId)
     {
         parent::__construct();
     }

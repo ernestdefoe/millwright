@@ -35,20 +35,20 @@ class StepRunner
      * already working on the run. Not an error — the caller should report it and
      * carry on polling.
      */
-    private bool $busy = false;
+    protected bool $busy = false;
 
     /**
      * True when the last call to step() left the run on the same item on
      * purpose — the work is done but its effect is not live yet. The caller
      * should keep polling, and should not treat the pause as progress.
      */
-    private bool $waiting = false;
+    protected bool $waiting = false;
 
     /**
      * True when the wait can only be ended by a web request — see
      * NeedsWebRequest. A queue worker or terminal should stop asking.
      */
-    private bool $needsWeb = false;
+    protected bool $needsWeb = false;
 
     /**
      * 🚨 A factory is preferred over a fixed Steps, so the run id is an argument
@@ -62,14 +62,14 @@ class StepRunner
      */
     public function __construct(
         protected TranslatorInterface $translator,
-        private RunStore $store,
-        private Steps|StepsFactory $steps,
-        private $clock,
-        private ?string $lockDir = null,
+        protected RunStore $store,
+        protected Steps|StepsFactory $steps,
+        protected $clock,
+        protected ?string $lockDir = null,
     ) {
     }
 
-    private function stepsFor(string $runId): Steps
+    protected function stepsFor(string $runId): Steps
     {
         return $this->steps instanceof StepsFactory
             ? $this->steps->for($runId)
@@ -148,7 +148,7 @@ class StepRunner
     }
 
     /** @return resource|null */
-    private function acquire(string $id)
+    protected function acquire(string $id)
     {
         $dir = $this->lockDir;
 
@@ -175,7 +175,7 @@ class StepRunner
         return $handle;
     }
 
-    private function work(Run $run): Run
+    protected function work(Run $run): Run
     {
         $id = $run->id;
 
@@ -284,7 +284,7 @@ class StepRunner
     }
 
     /** Move to the next phase, or finish if that was the last one. */
-    private function leavePhase(Run $run): Run
+    protected function leavePhase(Run $run): Run
     {
         $order = Run::PHASES;
         $at = array_search($run->phase, $order, true);
@@ -311,7 +311,7 @@ class StepRunner
         return implode(', ', $undone) ?: $this->translator->trans('ernestdefoe-millwright.api.run.nothing_to_undo');
     }
 
-    private function now(): int
+    protected function now(): int
     {
         return ($this->clock)();
     }

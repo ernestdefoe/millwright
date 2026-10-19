@@ -33,13 +33,13 @@ use RuntimeException;
  */
 class ComposerRunner
 {
-    private PhpBinary $php;
+    protected PhpBinary $php;
 
     public function __construct(
         protected TranslatorInterface $translator,
-        private string $installPath,
-        private ?string $composerBin = null,
-        private ?string $composerHome = null,
+        protected string $installPath,
+        protected ?string $composerBin = null,
+        protected ?string $composerHome = null,
         ?string $phpBin = null,
     ) {
         $this->php = new PhpBinary($translator, $phpBin);
@@ -180,7 +180,7 @@ class ComposerRunner
      *
      * @return array<string,string>
      */
-    private function inProcessEnv(): array
+    protected function inProcessEnv(): array
     {
         $env = [
             'COMPOSER_HOME' => $this->composerHome(),
@@ -258,7 +258,7 @@ class ComposerRunner
      * process, own limit. The in-process fallback uses this same bundled
      * library through its autoloader.
      */
-    private function binary(): ?string
+    protected function binary(): ?string
     {
         if ($this->composerBin !== null) {
             return $this->composerBin;
@@ -285,7 +285,7 @@ class ComposerRunner
      * Reached only when neither way can work: no subprocess, and no Composer
      * library to run in-process either.
      */
-    private function whyNot(): string
+    protected function whyNot(): string
     {
         return $this->translator->trans('ernestdefoe-millwright.api.composer.missing');
     }

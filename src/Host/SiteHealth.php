@@ -24,12 +24,12 @@ use GuzzleHttp\Exception\GuzzleException;
 class SiteHealth
 {
     /** Long enough for a cold boot on a small host, short enough not to hang a run. */
-    private const TIMEOUT = 15;
+    protected const TIMEOUT = 15;
 
     public function __construct(
         protected TranslatorInterface $translator,
         protected ClientInterface $http,
-        private string $url,
+        protected string $url,
     ) {
     }
 
@@ -73,7 +73,7 @@ class SiteHealth
     /**
      * @return array{ok:bool, status:int|null, why:string, body?:string}
      */
-    private function once(string $url): array
+    protected function once(string $url): array
     {
         $direct = $this->request($url);
 
@@ -147,7 +147,7 @@ class SiteHealth
 
         /*
          * Only 5xx is a broken site. A 403 or a 404 is a site making a
-         * decision, which needs a working boot to make, and a private forum
+         * decision, which needs a working boot to make, and a protected forum
          * answering 403 to a signed-out request is not an outage, it is that
          * forum working exactly as configured.
          */

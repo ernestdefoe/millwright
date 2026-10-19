@@ -149,7 +149,7 @@ class CoreUpgrade
      * @param list<array<string,mixed>> $rows
      * @return list<array<string,mixed>>
      */
-    private function worstFirst(array $rows): array
+    protected function worstFirst(array $rows): array
     {
         $order = [self::BLOCKED => 0, self::UNKNOWN => 1, self::NEEDS_UPDATE => 2, self::READY => 3];
 

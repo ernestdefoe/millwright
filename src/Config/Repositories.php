@@ -9,7 +9,7 @@ use Flarum\Locale\TranslatorInterface;
  * Where Composer is allowed to look for packages.
  *
  * 🚨 This is the setting that makes a forum's own extensions installable at all.
- * On the site this was built for, eleven of the twelve entries are private
+ * On the site this was built for, eleven of the twelve entries are protected
  * GitHub repositories and the twelfth is a paid marketplace — remove them and
  * nothing that forum runs can be resolved. It is not an advanced nicety, it is
  * the reason `composer require` finds anything.
@@ -21,7 +21,7 @@ class Repositories
 
     public function __construct(
         protected TranslatorInterface $translator,
-        private JsonFile $file,
+        protected JsonFile $file,
     ) {
     }
 

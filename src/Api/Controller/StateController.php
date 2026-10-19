@@ -29,9 +29,9 @@ class StateController implements RequestHandlerInterface
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        private ExtensionManager $extensions,
-        private Paths $paths,
-        private RunStore $runs,
+        protected ExtensionManager $extensions,
+        protected Paths $paths,
+        protected RunStore $runs,
     ) {
     }
 
@@ -75,7 +75,7 @@ class StateController implements RequestHandlerInterface
     }
 
     /** @return list<array<string,mixed>> */
-    private function installed(array $updates): array
+    protected function installed(array $updates): array
     {
         $require = (array) ($this->readJson($this->paths->base.'/composer.json')['require'] ?? []);
         $out = [];
@@ -152,7 +152,7 @@ class StateController implements RequestHandlerInterface
     }
 
     /** @return array<string,mixed> */
-    private function readJson(string $path): array
+    protected function readJson(string $path): array
     {
         $data = is_file($path) ? json_decode((string) file_get_contents($path), true) : null;
 

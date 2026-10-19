@@ -40,15 +40,15 @@ class Applier
      */
     public function __construct(
         protected TranslatorInterface $translator,
-        private string $vendorDir,
-        private string $stagingDir,
-        private string $trashDir,
-        private Journal $journal,
-        private $observer = null,
+        protected string $vendorDir,
+        protected string $stagingDir,
+        protected string $trashDir,
+        protected Journal $journal,
+        protected $observer = null,
     ) {
     }
 
-    private function observe(string $label, Change $change): void
+    protected function observe(string $label, Change $change): void
     {
         if ($this->observer !== null) {
             ($this->observer)($label, $change);
@@ -131,7 +131,7 @@ class Applier
      * symptom, because "could not move" would send somebody hunting for a
      * permissions problem that does not exist.
      */
-    private function refusePathInstall(Change $change): void
+    protected function refusePathInstall(Change $change): void
     {
         $live = $this->path($this->vendorDir, $change->relativePath());
 
@@ -142,7 +142,7 @@ class Applier
         }
     }
 
-    private function replace(Change $change): void
+    protected function replace(Change $change): void
     {
         $this->stash($change);
         $this->observe('stashed', $change);
@@ -151,13 +151,13 @@ class Applier
         $this->observe('installed', $change);
     }
 
-    private function add(Change $change): void
+    protected function add(Change $change): void
     {
         $this->install($change);
         $this->observe('installed', $change);
     }
 
-    private function remove(Change $change): void
+    protected function remove(Change $change): void
     {
         $this->stash($change);
         $this->observe('stashed', $change);
@@ -179,7 +179,7 @@ class Applier
      * unfinished, and it is the sort of litter that makes somebody wonder what
      * else was left half done.
      */
-    private function tidyVendorDir(string $dir): void
+    protected function tidyVendorDir(string $dir): void
     {
         $vendor = rtrim($this->vendorDir, DIRECTORY_SEPARATOR);
 
@@ -191,7 +191,7 @@ class Applier
     }
 
     /** Move the installed version aside. Kept, never deleted. */
-    private function stash(Change $change): void
+    protected function stash(Change $change): void
     {
         $live = $this->path($this->vendorDir, $change->relativePath());
 
@@ -226,7 +226,7 @@ class Applier
     }
 
     /** Move the staged version into place. */
-    private function install(Change $change): void
+    protected function install(Change $change): void
     {
         $staged = $this->path($this->stagingDir, $change->relativePath());
 
@@ -262,12 +262,12 @@ class Applier
      * validated by Change::relativePath(). Kept in one place so there is one
      * thing to audit rather than five string concatenations.
      */
-    private function path(string $base, string $relative): string
+    protected function path(string $base, string $relative): string
     {
         return rtrim($base, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.$relative;
     }
 
-    private function ensureDir(string $dir): void
+    protected function ensureDir(string $dir): void
     {
         if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
             throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fs.create_failed', ['path' => $dir]));

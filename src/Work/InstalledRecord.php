@@ -32,7 +32,7 @@ class InstalledRecord
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        private string $installPath,
+        protected string $installPath,
     ) {
     }
 
@@ -109,7 +109,7 @@ class InstalledRecord
         return (int) $m[1] + (int) $m[2] + (int) $m[3];
     }
 
-    private function read(string $path): array
+    protected function read(string $path): array
     {
         $data = json_decode((string) @file_get_contents($path), true);
 

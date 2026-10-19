@@ -32,7 +32,7 @@ class TrashController implements RequestHandlerInterface
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        private Paths $paths,
+        protected Paths $paths,
     ) {
     }
 

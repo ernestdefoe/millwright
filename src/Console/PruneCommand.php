@@ -25,7 +25,7 @@ class PruneCommand extends AbstractCommand
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        private Paths $paths,
+        protected Paths $paths,
     ) {
         parent::__construct();
     }
@@ -67,7 +67,7 @@ class PruneCommand extends AbstractCommand
         return $summary['failed'] === [] ? 0 : 1;
     }
 
-    private function dryRun(Pruner $pruner): int
+    protected function dryRun(Pruner $pruner): int
     {
         $plan = $pruner->plan(true);
 

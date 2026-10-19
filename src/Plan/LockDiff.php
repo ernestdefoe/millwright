@@ -143,7 +143,7 @@ class LockDiff
     }
 
     /** @return array<string,string> package => version */
-    private function index(array $lock): array
+    protected function index(array $lock): array
     {
         $out = [];
 
@@ -163,7 +163,7 @@ class LockDiff
      * on disk, and a plan that omitted it would be wrong about what it is about
      * to do.
      */
-    private function packages(array $lock): array
+    protected function packages(array $lock): array
     {
         return array_merge(
             array_values((array) ($lock['packages'] ?? [])),

@@ -24,7 +24,7 @@ class CheckController implements RequestHandlerInterface
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        private Paths $paths,
+        protected Paths $paths,
     ) {
     }
 
@@ -34,7 +34,7 @@ class CheckController implements RequestHandlerInterface
 
         $check = new UpdateCheck(StorageDir::of($this->paths->storage).'/updates.json');
 
-        // 🚨 The same check as the console command, private repositories
+        // 🚨 The same check as the console command, protected repositories
         // included: see UpdateCheck::refreshSite().
         $result = $check->refreshSite($this->translator, $this->paths->base);
 

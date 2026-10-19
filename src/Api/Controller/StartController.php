@@ -38,12 +38,12 @@ class StartController implements RequestHandlerInterface
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        private RunStore $runs,
-        private StepRunner $runner,
-        private Drivers $drivers,
-        private Paths $paths,
-        private ExtensionManager $extensions,
-        private Application $app,
+        protected RunStore $runs,
+        protected StepRunner $runner,
+        protected Drivers $drivers,
+        protected Paths $paths,
+        protected ExtensionManager $extensions,
+        protected Application $app,
     ) {
     }
 
@@ -57,7 +57,7 @@ class StartController implements RequestHandlerInterface
      *
      * @param list<string> $packages
      */
-    private function replaced(array $packages): ?string
+    protected function replaced(array $packages): ?string
     {
         $packagist = new Packagist($this->translator, new Cache(StorageDir::of($this->paths->storage).'/packagist'));
         $verdicts = $packagist->verdicts(array_slice($packages, 0, 5), new Compatibility(ltrim($this->app->version(), 'v')));
@@ -78,7 +78,7 @@ class StartController implements RequestHandlerInterface
      *
      * @param list<string> $packages
      */
-    private function cannotRemove(array $packages): ?string
+    protected function cannotRemove(array $packages): ?string
     {
         $json = (array) json_decode((string) @file_get_contents($this->paths->base.'/composer.json'), true);
         $direct = array_merge((array) ($json['require'] ?? []), (array) ($json['require-dev'] ?? []));
@@ -110,7 +110,7 @@ class StartController implements RequestHandlerInterface
         return null;
     }
 
-    private function isEnabled(string $package): bool
+    protected function isEnabled(string $package): bool
     {
         foreach ($this->extensions->getExtensions() as $extension) {
             if ($extension->name === $package) {
@@ -222,7 +222,7 @@ class StartController implements RequestHandlerInterface
      * @param array<string,mixed> $body
      * @return array<string,string>
      */
-    private function repinFor(array $packages, array $body, string $mode): array
+    protected function repinFor(array $packages, array $body, string $mode): array
     {
         if ($mode !== 'update' || ! filter_var(Arr::get($body, 'repin', false), FILTER_VALIDATE_BOOL)) {
             return [];

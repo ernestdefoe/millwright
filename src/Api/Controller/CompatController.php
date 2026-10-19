@@ -28,12 +28,12 @@ use Psr\Http\Server\RequestHandlerInterface;
 class CompatController implements RequestHandlerInterface
 {
     /** A page of results, and a hard ceiling on the work one request can ask for. */
-    private const MOST = 24;
+    protected const MOST = 24;
 
     public function __construct(
         protected TranslatorInterface $translator,
-        private Paths $paths,
-        private Application $app,
+        protected Paths $paths,
+        protected Application $app,
     ) {
     }
 
@@ -75,7 +75,7 @@ class CompatController implements RequestHandlerInterface
         ]);
     }
 
-    private function targetOr(string $fallback, mixed $given): string
+    protected function targetOr(string $fallback, mixed $given): string
     {
         if (! is_string($given) || $given === '') {
             return $fallback;
@@ -90,7 +90,7 @@ class CompatController implements RequestHandlerInterface
         return $given;
     }
 
-    private function coreVersion(): string
+    protected function coreVersion(): string
     {
         // Application::version() is what this forum is actually running, and it
         // is the only version any of this should be answered against.

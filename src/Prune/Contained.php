@@ -26,7 +26,7 @@ use RuntimeException;
  */
 class Contained
 {
-    private string $base;
+    protected string $base;
 
     public function __construct(
         protected TranslatorInterface $translator,
@@ -108,7 +108,7 @@ class Contained
         return array_values(array_filter($names, fn ($n) => $n !== '.' && $n !== '..'));
     }
 
-    private function entry(string $name): string
+    protected function entry(string $name): string
     {
         if ($name === '' || $name === '.' || $name === '..' || str_contains($name, '/')
             || str_contains($name, '\\') || str_contains($name, "\0")) {
@@ -118,7 +118,7 @@ class Contained
         return $this->base.DIRECTORY_SEPARATOR.$name;
     }
 
-    private function removePath(string $path): int
+    protected function removePath(string $path): int
     {
         $stat = @lstat($path);
 
@@ -139,7 +139,7 @@ class Contained
         return $this->removeDir($path);
     }
 
-    private function removeDir(string $dir): int
+    protected function removeDir(string $dir): int
     {
         $this->assertInside($dir);
 
@@ -178,7 +178,7 @@ class Contained
         return $bytes;
     }
 
-    private function measure(string $path): int
+    protected function measure(string $path): int
     {
         $stat = @lstat($path);
 
@@ -207,7 +207,7 @@ class Contained
      * is exactly why it is here: if it ever does, something about the tree is
      * not what this class assumes, and stopping is the only safe response.
      */
-    private function assertInside(string $dir): void
+    protected function assertInside(string $dir): void
     {
         $real = realpath($dir);
 
@@ -217,7 +217,7 @@ class Contained
     }
 
     /** @param array<string|int,int> $stat */
-    private function bytes(array $stat): int
+    protected function bytes(array $stat): int
     {
         // Blocks, like du, when the platform reports them; size otherwise.
         $blocks = (int) ($stat['blocks'] ?? -1);

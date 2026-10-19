@@ -29,12 +29,12 @@ class RollbackController implements RequestHandlerInterface
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        private RunStore $runs,
-        private Paths $paths,
+        protected RunStore $runs,
+        protected Paths $paths,
     ) {
     }
 
-    private function composer(): ComposerRunner
+    protected function composer(): ComposerRunner
     {
         return new ComposerRunner($this->translator, 
             $this->paths->base,

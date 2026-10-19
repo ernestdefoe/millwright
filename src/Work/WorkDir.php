@@ -21,8 +21,8 @@ class WorkDir
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        private string $storagePath,
-        private string $runId,
+        protected string $storagePath,
+        protected string $runId,
     ) {
         if (! preg_match('/^[A-Za-z0-9_-]{1,64}$/', $runId)) {
             throw new RuntimeException("Refusing to build a work directory for run id: $runId");
@@ -143,7 +143,7 @@ class WorkDir
     }
 
     /** @return array<string,mixed> */
-    private function manifest(): array
+    protected function manifest(): array
     {
         $path = $this->root().'/requested.json';
 

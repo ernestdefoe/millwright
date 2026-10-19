@@ -22,7 +22,7 @@ class Stability
 
     public function __construct(
         protected TranslatorInterface $translator,
-        private JsonFile $file,
+        protected JsonFile $file,
     ) {
     }
 

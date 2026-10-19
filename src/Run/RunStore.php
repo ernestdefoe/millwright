@@ -23,7 +23,7 @@ class RunStore
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        private string $dir,
+        protected string $dir,
     ) {
     }
 
@@ -140,7 +140,7 @@ class RunStore
         @unlink($this->path($id));
     }
 
-    private function path(string $id): string
+    protected function path(string $id): string
     {
         // 🚨 Ids are generated, never taken from a request — but this is the
         // second place a name reaches the filesystem, so it is checked here too
@@ -152,7 +152,7 @@ class RunStore
         return rtrim($this->dir, '/').'/'.$id.'.json';
     }
 
-    private function ensureDir(): void
+    protected function ensureDir(): void
     {
         if (! is_dir($this->dir) && ! mkdir($this->dir, 0775, true) && ! is_dir($this->dir)) {
             throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.run.dir_failed', ['path' => $this->dir]));

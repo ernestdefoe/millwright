@@ -26,9 +26,9 @@ use Psr\Http\Server\RequestHandlerInterface;
 class StepController implements RequestHandlerInterface
 {
     public function __construct(
-        private RunStore $runs,
-        private StepRunner $runner,
-        private Drivers $drivers,
+        protected RunStore $runs,
+        protected StepRunner $runner,
+        protected Drivers $drivers,
     ) {
     }
 
