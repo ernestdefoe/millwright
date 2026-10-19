@@ -1,12 +1,13 @@
 import app from 'flarum/admin/app';
-import t from '../t';
 import Component from 'flarum/common/Component';
+import Alert from 'flarum/common/components/Alert';
+import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
-import extractText from 'flarum/common/utils/extractText';
+import type Mithril from 'mithril';
 import apiUrl from '../apiUrl';
-
-declare const m: any;
-
+import { alertError, serverMessage } from '../errors';
+import type { TrashPayload } from '../types';
+import ConfirmModal from './ConfirmModal';
 
 function human(bytes: number): string {
   const units: [string, number][] = [
@@ -26,7 +27,7 @@ function human(bytes: number): string {
  * The rollback copies: how much room they take, how long they are kept, and a
  * button to tidy them now.
  *
- * 🚨 The confirm quotes numbers the SERVER just worked out with the same rule
+ * The confirm quotes numbers the SERVER just worked out with the same rule
  * the prune will use, and the prune recomputes rather than taking a list from
  * here. The browser asks whether to prune, never what — so what somebody agrees
  * to and what happens cannot drift apart.
@@ -34,22 +35,28 @@ function human(bytes: number): string {
 export default class TrashPanel extends Component {
   private loading = true;
   private busy = false;
-  private data: any = null;
-  private error: string | null = null;
-  private done: string | null = null;
+  private data: TrashPayload | null = null;
+  /** Why the copies could not be read at all, when they could not. */
+  private loadError: string | null = null;
 
   private keepDays = '';
   private keepRuns = '';
 
-  oninit(vnode: any) {
+  oninit(vnode: Mithril.Vnode) {
     super.oninit(vnode);
-    this.send('GET');
+    this.load();
   }
 
   view() {
     if (this.loading) return <LoadingIndicator />;
 
-    if (!this.data) return <div className="Millwright-notice">{this.error || t('trash_failed')}</div>;
+    if (!this.data) {
+      return (
+        <Alert type="error" dismissible={false} className="Millwright-alert">
+          {this.loadError || app.translator.trans('ernestdefoe-millwright.admin.trash.failed')}
+        </Alert>
+      );
+    }
 
     const d = this.data;
     const last = d.lastPrune;
@@ -57,35 +64,33 @@ export default class TrashPanel extends Component {
     return (
       <section className="Millwright-card Millwright-trash">
         <header className="Millwright-cardHead">
-          <h3>{t('trash_title')}</h3>
-          <p>{t('trash_help')}</p>
+          <h3>{app.translator.trans('ernestdefoe-millwright.admin.trash.title')}</h3>
+          <p>{app.translator.trans('ernestdefoe-millwright.admin.trash.help')}</p>
         </header>
-
-        {this.error ? <div className="Millwright-notice Millwright-trashNotice">{this.error}</div> : null}
 
         <dl className="Millwright-trashStats">
           <div>
-            <dt>{t('trash_size')}</dt>
-            <dd>{t('trash_size_value', { size: human(d.trashBytes || 0), count: d.trashCount })}</dd>
+            <dt>{app.translator.trans('ernestdefoe-millwright.admin.trash.size')}</dt>
+            <dd>{app.translator.trans('ernestdefoe-millwright.admin.trash.size_value', { size: human(d.trashBytes || 0), count: d.trashCount })}</dd>
           </div>
           <div>
-            <dt>{t('trash_freeable')}</dt>
+            <dt>{app.translator.trans('ernestdefoe-millwright.admin.trash.freeable')}</dt>
             <dd>
               {d.removeCount > 0
-                ? t('trash_freeable_value', { size: human(d.removeBytes), count: d.removeCount })
-                : t('trash_freeable_none')}
+                ? app.translator.trans('ernestdefoe-millwright.admin.trash.freeable_value', { size: human(d.removeBytes), count: d.removeCount })
+                : app.translator.trans('ernestdefoe-millwright.admin.trash.freeable_none')}
             </dd>
           </div>
           <div>
-            <dt>{t('trash_last')}</dt>
+            <dt>{app.translator.trans('ernestdefoe-millwright.admin.trash.last')}</dt>
             <dd>
               {last
-                ? t('trash_last_value', {
+                ? app.translator.trans('ernestdefoe-millwright.admin.trash.last_value', {
                     when: new Date(last.at * 1000).toLocaleString(),
                     count: last.removed,
                     size: human(last.freed || 0),
                   })
-                : t('trash_last_never')}
+                : app.translator.trans('ernestdefoe-millwright.admin.trash.last_never')}
             </dd>
           </div>
         </dl>
@@ -94,94 +99,112 @@ export default class TrashPanel extends Component {
           className="Millwright-cardFoot Millwright-cardFoot--wrap Millwright-trashForm"
           onsubmit={(e: Event) => {
             e.preventDefault();
-            this.send('POST', { action: 'settings', keepDays: this.keepDays, keepRuns: this.keepRuns }, t('trash_saved'));
+            this.send(
+              { action: 'settings', keepDays: this.keepDays, keepRuns: this.keepRuns },
+              app.translator.trans('ernestdefoe-millwright.admin.trash.saved', {}, true)
+            );
           }}
         >
           <label className="Millwright-trashField">
-            <span>{t('trash_keep_days')}</span>
+            <span>{app.translator.trans('ernestdefoe-millwright.admin.trash.keep_days')}</span>
             <input
               className="FormControl"
               type="number"
               min="0"
               max="3650"
               value={this.keepDays}
-              oninput={(e: any) => (this.keepDays = e.target.value)}
+              oninput={(e: InputEvent) => (this.keepDays = (e.target as HTMLInputElement).value)}
             />
-            <span>{t('trash_days')}</span>
+            <span>{app.translator.trans('ernestdefoe-millwright.admin.trash.days')}</span>
           </label>
           <label className="Millwright-trashField">
-            <span>{t('trash_keep_runs')}</span>
+            <span>{app.translator.trans('ernestdefoe-millwright.admin.trash.keep_runs')}</span>
             <input
               className="FormControl"
               type="number"
               min="0"
               max="1000"
               value={this.keepRuns}
-              oninput={(e: any) => (this.keepRuns = e.target.value)}
+              oninput={(e: InputEvent) => (this.keepRuns = (e.target as HTMLInputElement).value)}
             />
-            <span>{t('trash_runs')}</span>
+            <span>{app.translator.trans('ernestdefoe-millwright.admin.trash.runs')}</span>
           </label>
-          <button className="Button" type="submit" disabled={this.busy}>
-            {t('save')}
-          </button>
+          <Button className="Button" type="submit" disabled={this.busy}>
+            {app.translator.trans('ernestdefoe-millwright.admin.actions.save')}
+          </Button>
           <span className="Millwright-trashSpacer" />
-          <button
-            className="Button Button--primary"
-            type="button"
-            disabled={this.busy || d.removeCount === 0}
-            onclick={() => this.prune()}
-          >
-            {this.busy ? t('trash_pruning') : t('trash_prune')}
-          </button>
+          <Button className="Button Button--primary" disabled={this.busy || d.removeCount === 0} onclick={() => this.confirmPrune(d)}>
+            {this.busy
+              ? app.translator.trans('ernestdefoe-millwright.admin.trash.pruning')
+              : app.translator.trans('ernestdefoe-millwright.admin.trash.prune')}
+          </Button>
         </form>
 
-        {this.done ? <div className="Millwright-trashDone" role="status">{this.done}</div> : null}
-
-        <div className="Millwright-callout">{t('trash_rule', { days: d.settings.keepDays, runs: d.settings.keepRuns })}</div>
+        <div className="Millwright-callout">
+          {app.translator.trans('ernestdefoe-millwright.admin.trash.rule', { days: d.settings.keepDays, runs: d.settings.keepRuns })}
+        </div>
       </section>
     );
   }
 
-  prune() {
-    const d = this.data;
-
-    // 🚨 extractText: a translation with parameters is an ARRAY, and String() of
-    // one joins it with commas — "Remove ,4, items" in the dialog.
-    if (!confirm(extractText(t('trash_confirm', { count: d.removeCount, size: human(d.removeBytes) })))) return;
-
-    this.send('POST', { action: 'prune' });
+  confirmPrune(d: TrashPayload) {
+    app.modal.show(ConfirmModal, {
+      title: app.translator.trans('ernestdefoe-millwright.admin.trash.prune'),
+      message: app.translator.trans('ernestdefoe-millwright.admin.trash.confirm', { count: d.removeCount, size: human(d.removeBytes) }),
+      confirmText: app.translator.trans('ernestdefoe-millwright.admin.trash.prune'),
+      danger: true,
+      onconfirm: () => this.send({ action: 'prune' }),
+    });
   }
 
-  send(method: 'GET' | 'POST', body?: any, doneText?: any) {
+  load() {
+    app
+      .request<TrashPayload>({ method: 'GET', url: apiUrl() + '/millwright/trash', errorHandler: () => {} })
+      .then((data) => this.show(data))
+      .catch((e) => {
+        this.loading = false;
+        this.loadError = serverMessage(e);
+        m.redraw();
+      });
+  }
+
+  /** A change: its outcome is announced through Flarum's alerts, and a refusal in the server's own words. */
+  send(body: Record<string, string>, doneText?: string) {
     this.busy = true;
-    this.error = null;
     m.redraw();
 
     app
-      .request({ method, url: apiUrl() + '/millwright/trash', body })
-      .then((data: any) => {
-        this.data = data;
-        this.keepDays = String(data.settings.keepDays);
-        this.keepRuns = String(data.settings.keepRuns);
-        this.loading = false;
-        this.busy = false;
-
-        this.done = null;
+      .request<TrashPayload>({
+        method: 'POST',
+        url: apiUrl() + '/millwright/trash',
+        body,
+        // A refusal here names the run it is protecting.
+        errorHandler: alertError('ernestdefoe-millwright.admin.trash.failed'),
+      })
+      .then((data) => {
+        this.show(data);
 
         if (data.pruned) {
-          this.done = t('trash_done', { count: data.pruned.removed, size: human(data.pruned.freed || 0) });
+          app.alerts.show(
+            { type: 'success' },
+            app.translator.trans('ernestdefoe-millwright.admin.trash.done', { count: data.pruned.removed, size: human(data.pruned.freed || 0) })
+          );
         } else if (doneText) {
-          this.done = doneText as unknown as string;
+          app.alerts.show({ type: 'success' }, doneText);
         }
-
-        m.redraw();
       })
-      .catch((e: any) => {
-        // 🚨 The server's own words: a refusal here names the run it is protecting.
-        this.loading = false;
+      .catch(() => {
         this.busy = false;
-        this.error = e?.response?.error || t('trash_failed');
         m.redraw();
       });
+  }
+
+  private show(data: TrashPayload) {
+    this.data = data;
+    this.keepDays = String(data.settings.keepDays);
+    this.keepRuns = String(data.settings.keepRuns);
+    this.loading = false;
+    this.busy = false;
+    m.redraw();
   }
 }

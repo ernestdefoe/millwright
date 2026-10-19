@@ -1,35 +1,22 @@
 import app from 'flarum/admin/app';
-import t from '../t';
 import apiUrl from '../apiUrl';
 import { liveSearchPlan, submittedSearchPlan } from '../searchPolicy';
-import Component from 'flarum/common/Component';
+import type { CompatPayload, DiscoverPayload, Found, Verdict } from '../types';
+import Component, { type ComponentAttrs } from 'flarum/common/Component';
+import Alert from 'flarum/common/components/Alert';
+import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
+import type Mithril from 'mithril';
 
-declare const m: any;
+/** '' is everything; the rest are the keys of Packagist::CATEGORIES, each with its label. */
+const CATEGORIES: { id: string; label: string }[] = [
+  { id: '', label: 'ernestdefoe-millwright.admin.sections.discover.tabs.all' },
+  { id: 'theme', label: 'ernestdefoe-millwright.admin.sections.discover.tabs.themes' },
+  { id: 'language', label: 'ernestdefoe-millwright.admin.sections.discover.tabs.languages' },
+  { id: 'widget', label: 'ernestdefoe-millwright.admin.sections.discover.tabs.widgets' },
+];
 
-
-interface Found {
-  name: string;
-  description: string;
-  downloads: number;
-  favers: number;
-  repository: string;
-  abandoned: boolean | string;
-  installed: boolean;
-}
-
-interface Verdict {
-  compatible: boolean | null;
-  version: string | null;
-  requires: string | null;
-  stability: string | null;
-  /** True when this name is a dead end another package took over. */
-  replaced?: boolean;
-  /** That package, when it could be named. */
-  replacedBy?: string | null;
-}
-
-interface DiscoverAttrs {
+interface DiscoverAttrs extends ComponentAttrs {
   starting: boolean;
   oninstall: (packageName: string) => void;
 }
@@ -37,20 +24,19 @@ interface DiscoverAttrs {
 /**
  * Finding something to install.
  *
- * 🚨 The one thing this does that the current tooling does not: it says whether
- * a result works with the Flarum you actually have, BEFORE you press anything.
- * Extension Manager lists all of Packagist and lets you discover at install time
- * that an extension is Flarum 1 only — after the resolve, after the wait, and in
- * the form of a constraint error rather than a sentence.
+ * The one thing this does that a bare Packagist search does not: it says
+ * whether a result works with the Flarum you actually have, BEFORE you press
+ * anything — not at install time, after the resolve, after the wait, and in the
+ * form of a constraint error rather than a sentence.
  *
- * 🚨 Verdicts arrive in a second request, so results appear immediately and the
+ * Verdicts arrive in a second request, so results appear immediately and the
  * badges fill in. Waiting on a dozen round trips before showing anything would
  * be the slower, worse version of the same screen.
  */
 export default class DiscoverTab extends Component<DiscoverAttrs> {
   /*
-   * 🚨 The list loads on open, with no query. Extension Manager shows everything
-   * installable straight away, and that is the right behaviour: somebody opening
+   * The list loads on open, with no query, showing everything installable
+   * straight away, which is the right behaviour: somebody opening
    * a tab called "Find extensions" is asking what exists, not to guess a search
    * term first. The first version required typing before anything appeared,
    * which made a catalogue behave like a command line.
@@ -58,7 +44,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
    * Packagist orders an untyped `type=flarum-extension` query by popularity, so
    * the default view is the extensions most forums actually run.
    */
-  oninit(vnode: any) {
+  oninit(vnode: Mithril.Vnode<DiscoverAttrs, this>) {
     super.oninit(vnode);
     this.search();
   }
@@ -92,7 +78,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
             e.preventDefault();
 
             /*
-             * 🚨 Cancel the pending keystroke search first, or Return fires one
+             * Cancel the pending keystroke search first, or Return fires one
              * search immediately and a second one 350ms later for the same
              * query — two round trips and a list that redraws under the reader.
              */
@@ -104,58 +90,72 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
           <input
             className="FormControl"
             type="search"
-            placeholder={t('discover_placeholder')}
+            placeholder={app.translator.trans('ernestdefoe-millwright.admin.sections.discover.search', {}, true)}
             value={this.query}
-            oninput={(e: any) => {
-              this.query = e.target.value;
+            oninput={(e: InputEvent) => {
+              this.query = (e.target as HTMLInputElement).value;
               this.queueSearch();
             }}
           />
           {/*
-            * Kept, and not decorative: it forces a search the typing rule
-            * declines — a one-character vendor prefix, or the same query again
-            * after an error.
-            */}
-          <button className="Button Button--primary" type="submit" disabled={this.searching}>
-            {this.searching ? t('searching') : t('search')}
-          </button>
+           * Kept, and not decorative: it forces a search the typing rule
+           * declines — a one-character vendor prefix, or the same query again
+           * after an error.
+           */}
+          <Button className="Button Button--primary" type="submit" disabled={this.searching}>
+            {this.searching
+              ? app.translator.trans('ernestdefoe-millwright.admin.sections.discover.searching')
+              : app.translator.trans('ernestdefoe-millwright.admin.sections.discover.search_button')}
+          </Button>
         </form>
 
         {/*
-          * Under the search rather than as tabs: the tab row above is already the
-          * page's own navigation, and a second row of tabs reads as a level of it.
-          * A row of chips, so every category is visible without opening anything.
-          */}
-        <div className="Millwright-chips" role="radiogroup" aria-label={t('category_label')}>
-          {['', 'theme', 'language', 'widget'].map((c) => (
+         * Under the search rather than as tabs: the tab row above is already the
+         * page's own navigation, and a second row of tabs reads as a level of it.
+         * A row of chips, so every category is visible without opening anything.
+         */}
+        <div
+          className="Millwright-chips"
+          role="radiogroup"
+          aria-label={app.translator.trans('ernestdefoe-millwright.admin.sections.discover.tabs.label', {}, true)}
+        >
+          {CATEGORIES.map((c) => (
             <button
               type="button"
               role="radio"
-              aria-checked={this.category === c ? 'true' : 'false'}
-              className={'Millwright-chip' + (this.category === c ? ' is-on' : '')}
+              aria-checked={this.category === c.id ? 'true' : 'false'}
+              className={'Millwright-chip' + (this.category === c.id ? ' is-on' : '')}
               onclick={() => {
-                if (this.category === c) return;
-                this.category = c;
+                if (this.category === c.id) return;
+                this.category = c.id;
                 this.stopTyping();
                 this.search();
               }}
             >
-              {t('category_' + (c || 'all'))}
+              {app.translator.trans(c.label)}
             </button>
           ))}
         </div>
 
         <div className="Millwright-searchNote">
-          {this.core ? t('discover_against', { version: this.core }) : t('discover_hint')}
+          {this.core
+            ? app.translator.trans('ernestdefoe-millwright.admin.sections.discover.against', { version: this.core })
+            : app.translator.trans('ernestdefoe-millwright.admin.sections.discover.hint')}
         </div>
 
-        {this.error ? <div className="Millwright-notice">{this.error}</div> : null}
+        {this.error ? (
+          <Alert type="error" dismissible={false} className="Millwright-alert">
+            {this.error}
+          </Alert>
+        ) : null}
 
         {this.searching ? <LoadingIndicator /> : null}
 
         {!this.searching && this.searched && this.results.length === 0 && !this.error ? (
           <div className="Millwright-empty">
-            {this.query ? t('discover_none', { query: this.query }) : t('discover_empty')}
+            {this.query
+              ? app.translator.trans('ernestdefoe-millwright.admin.sections.discover.no_match', { query: this.query })
+              : app.translator.trans('ernestdefoe-millwright.admin.sections.discover.empty_results')}
           </div>
         ) : null}
 
@@ -163,9 +163,11 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
 
         {this.more && !this.searching ? (
           <div className="Millwright-more">
-            <button className="Button" disabled={this.loadingMore} onclick={() => this.showMore()}>
-              {this.loadingMore ? t('loading_more') : t('show_more')}
-            </button>
+            <Button className="Button" disabled={this.loadingMore} onclick={() => this.showMore()}>
+              {this.loadingMore
+                ? app.translator.trans('ernestdefoe-millwright.admin.sections.discover.loading_more')
+                : app.translator.trans('ernestdefoe-millwright.admin.sections.discover.show_more')}
+            </Button>
           </div>
         ) : null}
       </div>
@@ -182,7 +184,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
 
     this.stopTyping();
 
-    if (! plan.search) return;
+    if (!plan.search) return;
 
     this.typing = setTimeout(() => {
       this.typing = null;
@@ -198,7 +200,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
   }
 
   /*
-   * 🚨 A timer that outlives its component fires into a dead tab: it redraws a
+   * A timer that outlives its component fires into a dead tab: it redraws a
    * page that has moved on, and on a slow search it can overwrite the results
    * of whatever the reader opened next.
    */
@@ -214,16 +216,14 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
     return (
       <div className="Millwright-card" key={r.name}>
         <div className="Millwright-cardTop">
-          <div className="Millwright-icon" style={{ background: 'var(--control-bg)', color: 'var(--muted-color)' }}>
-            {(short || vendor || '?').charAt(0).toUpperCase()}
-          </div>
+          <div className="Millwright-icon Millwright-icon--plain">{(short || vendor || '?').charAt(0).toUpperCase()}</div>
           <div>
             <a
               className="Millwright-name"
               href={'https://packagist.org/packages/' + r.name}
               target="_blank"
               rel="noopener noreferrer"
-              title={t('open_packagist', { name: r.name })}
+              title={app.translator.trans('ernestdefoe-millwright.admin.sections.discover.open_packagist', { name: r.name }, true)}
             >
               {short}
             </a>
@@ -232,37 +232,49 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
         </div>
 
         {/* Clamped to two lines, so the whole of it on hover. */}
-        <div className="Millwright-desc" title={r.description}>{r.description}</div>
+        <div className="Millwright-desc" title={r.description}>
+          {r.description}
+        </div>
 
         <div className="Millwright-meta">
           <span>
-            <i className="fas fa-circle-down" aria-hidden="true" /> {t('downloads', { count: this.short(r.downloads) })}
+            <i className="fas fa-circle-down" aria-hidden="true" />{' '}
+            {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.extension.downloads', {
+              count: r.downloads,
+              formattedCount: this.short(r.downloads),
+            })}
           </span>
         </div>
 
         <div className="Millwright-foot">
           <span className="Millwright-tags">
             {/*
-              * 🚨 Abandoned and "does it work" are separate facts and both are
-              * shown. Putting abandoned in the single badge slot hid the
-              * compatibility answer while still offering Install, so the tag
-              * beside the button read like a verdict on the wrong question.
-              */}
+             * Abandoned and "does it work" are separate facts and both are
+             * shown. Putting abandoned in the single badge slot hid the
+             * compatibility answer while still offering Install, so the tag
+             * beside the button read like a verdict on the wrong question.
+             */}
             {/*
-              * "Installed as X" already says it was replaced, and by what, so
-              * "replaced by X" beside it only said it twice (ClaudiusH, 2026-10-13).
-              */}
+             * "Installed as X" already says it was replaced, and by what, so
+             * "replaced by X" beside it only said it twice (ClaudiusH, 2026-10-13).
+             */}
             {instead && this.installedNames.includes(instead) ? null : instead ? (
-              <span className="Millwright-tag Millwright-tag--warn" title={t('replaced_why')}>
-                {t('replaced_by', { replacement: instead })}
+              <span
+                className="Millwright-tag Millwright-tag--warn"
+                title={app.translator.trans('ernestdefoe-millwright.admin.sections.discover.extension.replaced_why', {}, true)}
+              >
+                {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.extension.replaced_by', { replacement: instead })}
               </span>
             ) : v?.replaced ? (
-              <span className="Millwright-tag Millwright-tag--warn" title={t('replaced_why')}>
-                {t('replaced')}
+              <span
+                className="Millwright-tag Millwright-tag--warn"
+                title={app.translator.trans('ernestdefoe-millwright.admin.sections.discover.extension.replaced_why', {}, true)}
+              >
+                {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.extension.replaced')}
               </span>
             ) : r.abandoned ? (
               <span className="Millwright-tag Millwright-tag--warn" title={this.abandonedTitle(r)}>
-                {t('abandoned')}
+                {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.extension.badges.abandoned')}
               </span>
             ) : null}
             {this.badge(v)}
@@ -274,32 +286,49 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
   }
 
   /**
-   * 🚨 Four states, and "we don't know yet" is one of them. Collapsing unknown
+   * Four states, and "we don't know yet" is one of them. Collapsing unknown
    * into "no" hides working extensions; collapsing it into "yes" offers ones
    * that cannot install. Either way somebody stops believing the badge.
    */
   badge(v?: Verdict) {
     if (!v) {
-      return <span className="Millwright-tag Millwright-tag--muted">{this.checking ? t('checking') : '—'}</span>;
-    }
-
-    if (v.compatible === null) {
-      return <span className="Millwright-tag Millwright-tag--muted">{t('compat_unknown')}</span>;
-    }
-
-    if (!v.compatible) {
       return (
-        <span className="Millwright-tag Millwright-tag--muted" title={t('compat_no_why', { requires: v.requires || '?' })}>
-          {t('compat_no')}
+        <span className="Millwright-tag Millwright-tag--muted">
+          {this.checking ? app.translator.trans('ernestdefoe-millwright.admin.sections.discover.compat.checking') : '—'}
         </span>
       );
     }
 
-    // 🚨 A pre-release is labelled as one. Most forums are on stable minimum
+    if (v.compatible === null) {
+      return (
+        <span className="Millwright-tag Millwright-tag--muted">
+          {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.compat.unknown')}
+        </span>
+      );
+    }
+
+    if (!v.compatible) {
+      return (
+        <span
+          className="Millwright-tag Millwright-tag--muted"
+          title={app.translator.trans(
+            'ernestdefoe-millwright.admin.sections.discover.compat.incompatible_why',
+            { requires: v.requires || '?' },
+            true
+          )}
+        >
+          {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.compat.incompatible')}
+        </span>
+      );
+    }
+
+    // A pre-release is labelled as one. Most forums are on stable minimum
     // stability and cannot install it at all, and somebody who can should still
     // be told that is what they are getting.
     return v.stability && v.stability !== 'stable' ? (
-      <span className="Millwright-tag Millwright-tag--warn">{t('compat_prerelease', { version: v.version })}</span>
+      <span className="Millwright-tag Millwright-tag--warn">
+        {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.compat.prerelease', { version: v.version })}
+      </span>
     ) : (
       <span className="Millwright-tag Millwright-tag--ok">{v.version}</span>
     );
@@ -311,8 +340,8 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
    */
   abandonedTitle(r: Found): string {
     return typeof r.abandoned === 'string' && r.abandoned
-      ? t('abandoned_for', { replacement: r.abandoned })
-      : t('abandoned_why');
+      ? app.translator.trans('ernestdefoe-millwright.admin.sections.discover.extension.abandoned_for', { replacement: r.abandoned }, true)
+      : app.translator.trans('ernestdefoe-millwright.admin.sections.discover.extension.abandoned_why', {}, true);
   }
 
   /**
@@ -326,12 +355,14 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
 
   action(r: Found, v?: Verdict) {
     if (r.installed) {
-      return <span className="Millwright-tag Millwright-tag--ok">{t('already_installed')}</span>;
+      return (
+        <span className="Millwright-tag Millwright-tag--ok">{app.translator.trans('ernestdefoe-millwright.admin.extensions.already_installed')}</span>
+      );
     }
 
     /*
-     * 🚨 A replaced package is never offered under its old name. Installing
-     * v17development/flarum-seo gave Extension Manager users FoF SEO under the
+     * A replaced package is never offered under its old name. Installing
+     * v17development/flarum-seo gave people FoF SEO under the
      * wrong id, which then refused to enable (discuss.flarum.org d/40012). The
      * button installs what replaced it, and the server refuses the old name
      * whatever the screen offered.
@@ -340,13 +371,17 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
 
     if (instead) {
       if (this.installedNames.includes(instead)) {
-        return <span className="Millwright-tag Millwright-tag--ok">{t('installed_as', { replacement: instead })}</span>;
+        return (
+          <span className="Millwright-tag Millwright-tag--ok">
+            {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.extension.installed_as', { replacement: instead })}
+          </span>
+        );
       }
 
       return this.verdicts[instead]?.compatible !== true ? null : (
-        <button className="Button Button--primary Button--sm" disabled={this.attrs.starting} onclick={() => this.attrs.oninstall(instead)}>
-          {t('install_replacement', { replacement: instead })}
-        </button>
+        <Button className="Button Button--primary Button--sm" disabled={this.attrs.starting} onclick={() => this.attrs.oninstall(instead)}>
+          {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.extension.install_replacement', { replacement: instead })}
+        </Button>
       );
     }
 
@@ -356,13 +391,9 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
     if (!v || v.compatible !== true) return null;
 
     return (
-      <button
-        className="Button Button--primary Button--sm"
-        disabled={this.attrs.starting}
-        onclick={() => this.attrs.oninstall(r.name)}
-      >
-        {t('install')}
-      </button>
+      <Button className="Button Button--primary Button--sm" disabled={this.attrs.starting} onclick={() => this.attrs.oninstall(r.name)}>
+        {app.translator.trans('ernestdefoe-millwright.admin.extensions.install')}
+      </Button>
     );
   }
 
@@ -376,7 +407,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
     const q = this.query.trim();
 
     /*
-     * 🚨 Every search carries a number, and a reply is dropped unless it is the
+     * Every search carries a number, and a reply is dropped unless it is the
      * newest. Typing fast means several searches in flight, and without this the
      * slowest one wins — the results end up belonging to a query the person
      * already moved on from.
@@ -398,8 +429,8 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
     m.redraw();
 
     app
-      .request({ method: 'GET', url: apiUrl() + '/millwright/discover?q=' + encodeURIComponent(q) + '&category=' + this.category })
-      .then((data: any) => {
+      .request<DiscoverPayload>({ method: 'GET', url: apiUrl() + '/millwright/discover?q=' + encodeURIComponent(q) + '&category=' + this.category })
+      .then((data) => {
         if (mine !== this.seq) return;
 
         this.searching = false;
@@ -409,19 +440,23 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
         this.error = data.error || null;
         m.redraw();
 
-        if (this.results.length) this.checkCompat(this.results.map((r) => r.name), mine);
+        if (this.results.length)
+          this.checkCompat(
+            this.results.map((r) => r.name),
+            mine
+          );
       })
       .catch(() => {
         if (mine !== this.seq) return;
         this.searching = false;
         /*
-         * 🚨 Forget the query on failure, so the same one can be tried again.
+         * Forget the query on failure, so the same one can be tried again.
          * Otherwise a network blip leaves the box holding a query the typing
          * rule now considers already-shown, and nothing the reader types —
          * short of changing it — will retry.
          */
         this.lastSearched = null;
-        this.error = t('discover_failed');
+        this.error = app.translator.trans('ernestdefoe-millwright.admin.sections.discover.server_error', {}, true);
         m.redraw();
       });
   }
@@ -429,7 +464,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
   /**
    * The next page, appended.
    *
-   * 🚨 Appended rather than replacing, because browsing is a scroll and losing
+   * Appended rather than replacing, because browsing is a scroll and losing
    * what you already looked at to see more of it is the wrong trade. Each page
    * costs its own compatibility pass, which is why they are fetched a page at a
    * time rather than all 2306 at once.
@@ -440,11 +475,11 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
     m.redraw();
 
     app
-      .request({
+      .request<DiscoverPayload>({
         method: 'GET',
         url: apiUrl() + '/millwright/discover?page=' + (this.page + 1) + '&q=' + encodeURIComponent(this.query.trim()) + '&category=' + this.category,
       })
-      .then((data: any) => {
+      .then((data) => {
         if (mine !== this.seq) return;
 
         this.page += 1;
@@ -455,7 +490,11 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
         this.results = this.results.concat(fresh);
         m.redraw();
 
-        if (fresh.length) this.checkCompat(fresh.map((r) => r.name), mine);
+        if (fresh.length)
+          this.checkCompat(
+            fresh.map((r) => r.name),
+            mine
+          );
       })
       .catch(() => {
         if (mine !== this.seq) return;
@@ -470,12 +509,12 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
     m.redraw();
 
     app
-      .request({
+      .request<CompatPayload>({
         method: 'POST',
         url: apiUrl() + '/millwright/discover/compat',
         body: { packages: names },
       })
-      .then((data: any) => {
+      .then((data) => {
         if (mine !== this.seq) return;
         this.checking = false;
         this.verdicts = { ...this.verdicts, ...(data.verdicts || {}) };
@@ -492,7 +531,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
       })
       .catch(() => {
         if (mine !== this.seq) return;
-        // 🚨 The results stay. Failing to work out compatibility is not a
+        // The results stay. Failing to work out compatibility is not a
         // reason to throw away a search that worked — the badges just stay
         // unknown, which is what they honestly are.
         this.checking = false;
