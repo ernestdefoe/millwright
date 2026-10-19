@@ -23,7 +23,7 @@ describe('a finished run must not take over the page', () => {
   const running = { id: 'r2', state: 'running' };
 
   /*
-   * 🚨 THE BUG. `showingRun()` was `!!run && !dismissed` and was used both to
+   * THE BUG. `showingRun()` was `!!run && !dismissed` and was used both to
    * draw the panel AND to hide the tabs. `dismissed` was component state, so it
    * reset on every page load: after any run had ever happened, opening
    * Millwright showed nothing but that run's log — no tabs, no extension grid,
@@ -68,7 +68,7 @@ describe('dismissing a run', () => {
   });
 
   /*
-   * 🚨 Dismissing must not become a way to hide an update that is halfway
+   * Dismissing must not become a way to hide an update that is halfway
    * through applying itself.
    */
   it('is never restored for a run that is still going', () => {
@@ -86,7 +86,7 @@ describe('a poll that cannot drive the run', () => {
   });
 
   /*
-   * 🚨 THE BUG. /millwright/step is a POST that takes the lock; it was the
+   * THE BUG. /millwright/step is a POST that takes the lock; it was the
    * panel's only source of state. When it failed, the panel froze on whatever
    * it mounted with while the queue worker carried the update to completion —
    * so a finished update looked stuck on step one. Watching is a different job
@@ -128,7 +128,7 @@ describe('what a card in the grid offers', () => {
   });
 
   /*
-   * 🚨 A path install is a symlink into a checkout on this machine — how every
+   * A path install is a symlink into a checkout on this machine — how every
    * extension developer runs their own work. Millwright will not replace one,
    * and offering the button then refusing is a worse way to learn that.
    */
@@ -193,7 +193,7 @@ describe('a requirement that admits exactly one version', () => {
   });
 
   /*
-   * 🚨 THE BUG. A forum pinned to 3.5.1 was told 3.6.0 existed, pressed Update,
+   * THE BUG. A forum pinned to 3.5.1 was told 3.6.0 existed, pressed Update,
    * and nothing happened — the resolve cannot cross the constraint. The card
    * has to offer to raise the requirement instead of pretending otherwise.
    */
@@ -226,7 +226,7 @@ describe('a requirement that admits exactly one version', () => {
 
 describe('a new run must be followed even when a finished one was on screen', () => {
   /*
-   * 🚨 THE BUG. The panel only began polling when it was created, and stopped
+   * THE BUG. The panel only began polling when it was created, and stopped
    * for good on a finished run. A finished run's panel stays mounted, so the
    * next Update handed a live run to a panel that was no longer polling, and
    * it showed the first step until the page was reloaded.
