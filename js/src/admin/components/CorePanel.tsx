@@ -5,7 +5,7 @@ import Component, { type ComponentAttrs } from 'flarum/common/Component';
 import Alert from 'flarum/common/components/Alert';
 import Button from 'flarum/common/components/Button';
 import type Mithril from 'mithril';
-import ConfirmModal from './ConfirmModal';
+import { confirmAction } from './ConfirmModal';
 
 interface CoreAttrs extends ComponentAttrs {
   starting: boolean;
@@ -132,7 +132,7 @@ export default class CorePanel extends Component<CoreAttrs> {
   }
 
   confirmNightly() {
-    app.modal.show(ConfirmModal, {
+    confirmAction({
       title: app.translator.trans('ernestdefoe-millwright.admin.updater.core.nightly.button'),
       message: app.translator.trans('ernestdefoe-millwright.admin.updater.core.nightly.confirm'),
       confirmText: app.translator.trans('ernestdefoe-millwright.admin.updater.core.nightly.button'),

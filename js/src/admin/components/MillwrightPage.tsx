@@ -22,7 +22,7 @@ import Link from 'flarum/common/components/Link';
 import Button from 'flarum/common/components/Button';
 import Alert from 'flarum/common/components/Alert';
 import type Mithril from 'mithril';
-import ConfirmModal from './ConfirmModal';
+import { confirmAction } from './ConfirmModal';
 import HostPanel from './HostPanel';
 import TrashPanel from './TrashPanel';
 import RunPanel from './RunPanel';
@@ -447,7 +447,7 @@ export default class MillwrightPage extends ExtensionPage<MillwrightPageAttrs> {
     const list = Array.isArray(entry) ? entry : [entry];
     const names = packages ?? list.map((e) => e.package);
 
-    app.modal.show(ConfirmModal, {
+    confirmAction({
       title: app.translator.trans('ernestdefoe-millwright.admin.extensions.update'),
       message: app.translator.trans('ernestdefoe-millwright.admin.extensions.repin_confirm', { count: list.length }),
       details: (
@@ -470,7 +470,7 @@ export default class MillwrightPage extends ExtensionPage<MillwrightPageAttrs> {
    * removal can too, but somebody should still mean it.
    */
   confirmRemove(e: Installed) {
-    app.modal.show(ConfirmModal, {
+    confirmAction({
       title: app.translator.trans('ernestdefoe-millwright.admin.extensions.remove_files'),
       message: app.translator.trans('ernestdefoe-millwright.admin.extensions.remove_confirm', { name: e.name }),
       confirmText: app.translator.trans('ernestdefoe-millwright.admin.extensions.remove'),

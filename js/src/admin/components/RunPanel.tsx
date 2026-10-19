@@ -7,7 +7,7 @@ import Component, { type ComponentAttrs } from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import type RequestError from 'flarum/common/utils/RequestError';
 import type Mithril from 'mithril';
-import ConfirmModal from './ConfirmModal';
+import { confirmAction } from './ConfirmModal';
 
 const PHASES = ['plan', 'fetch', 'apply', 'finalise'];
 
@@ -462,7 +462,7 @@ export default class RunPanel extends Component<RunPanelAttrs> {
   confirmRollback(run: Run) {
     const count = run.migrations?.length || 0;
 
-    app.modal.show(ConfirmModal, {
+    confirmAction({
       title: app.translator.trans('ernestdefoe-millwright.admin.run.roll_back'),
       message: count
         ? app.translator.trans('ernestdefoe-millwright.admin.run.roll_back_confirm_db', { count })

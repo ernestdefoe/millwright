@@ -1,5 +1,5 @@
 import app from 'flarum/admin/app';
-import Component from 'flarum/common/Component';
+import Component, { type ComponentAttrs } from 'flarum/common/Component';
 import Alert from 'flarum/common/components/Alert';
 import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
@@ -7,7 +7,7 @@ import type Mithril from 'mithril';
 import apiUrl from '../apiUrl';
 import { alertError, serverMessage } from '../errors';
 import type { TrashPayload } from '../types';
-import ConfirmModal from './ConfirmModal';
+import { confirmAction } from './ConfirmModal';
 
 function human(bytes: number): string {
   const units: [string, number][] = [
@@ -42,7 +42,7 @@ export default class TrashPanel extends Component {
   private keepDays = '';
   private keepRuns = '';
 
-  oninit(vnode: Mithril.Vnode) {
+  oninit(vnode: Mithril.Vnode<ComponentAttrs, this>) {
     super.oninit(vnode);
     this.load();
   }
@@ -148,7 +148,7 @@ export default class TrashPanel extends Component {
   }
 
   confirmPrune(d: TrashPayload) {
-    app.modal.show(ConfirmModal, {
+    confirmAction({
       title: app.translator.trans('ernestdefoe-millwright.admin.trash.prune'),
       message: app.translator.trans('ernestdefoe-millwright.admin.trash.confirm', { count: d.removeCount, size: human(d.removeBytes) }),
       confirmText: app.translator.trans('ernestdefoe-millwright.admin.trash.prune'),

@@ -57,3 +57,13 @@ export default class ConfirmModal extends Modal<IConfirmModalAttrs> {
     this.$('.Millwright-confirm-actions .Button:last-child').trigger('focus');
   }
 }
+
+/**
+ * Show a confirmation. Core's `app.modal.show` is typed for modals without
+ * required attributes, so a modal with its own needs the cast core's bundled
+ * extensions use (gdpr's DeleteUserModal does the same); it is made once,
+ * here, rather than at every call.
+ */
+export function confirmAction(attrs: Omit<IConfirmModalAttrs, keyof IInternalModalAttrs>): void {
+  app.modal.show(ConfirmModal as unknown as Parameters<typeof app.modal.show>[0], attrs);
+}

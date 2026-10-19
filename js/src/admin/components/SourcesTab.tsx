@@ -1,5 +1,5 @@
 import app from 'flarum/admin/app';
-import Component from 'flarum/common/Component';
+import Component, { type ComponentAttrs } from 'flarum/common/Component';
 import Alert from 'flarum/common/components/Alert';
 import Button from 'flarum/common/components/Button';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
@@ -82,7 +82,7 @@ export default class SourcesTab extends Component {
   private reveal = false;
   private confirmAuth: string | null = null;
 
-  oninit(vnode: Mithril.Vnode) {
+  oninit(vnode: Mithril.Vnode<ComponentAttrs, this>) {
     super.oninit(vnode);
     this.load();
   }

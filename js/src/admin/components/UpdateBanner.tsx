@@ -1,7 +1,7 @@
 import app from 'flarum/admin/app';
 import apiUrl from '../apiUrl';
 import type { StatePayload, Updates } from '../types';
-import Component from 'flarum/common/Component';
+import Component, { type ComponentAttrs } from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import LinkButton from 'flarum/common/components/LinkButton';
 import type Mithril from 'mithril';
@@ -43,7 +43,7 @@ export default class UpdateBanner extends Component {
   uncheckable = 0;
   dismissed = false;
 
-  oninit(vnode: Mithril.Vnode) {
+  oninit(vnode: Mithril.Vnode<ComponentAttrs, this>) {
     super.oninit(vnode);
 
     app

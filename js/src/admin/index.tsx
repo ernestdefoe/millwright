@@ -8,7 +8,7 @@ import type { Extension } from 'flarum/admin/AdminApplication';
 import type ItemList from 'flarum/common/utils/ItemList';
 import type Mithril from 'mithril';
 import UpdateBanner from './components/UpdateBanner';
-import ConfirmModal from './components/ConfirmModal';
+import { confirmAction } from './components/ConfirmModal';
 import apiUrl from './apiUrl';
 import { alertError } from './errors';
 
@@ -60,7 +60,7 @@ app.initializers.add('ernestdefoe/millwright', () => {
 function confirmRemove(extension: Extension) {
   const name = extension.extra?.['flarum-extension']?.title || extension.name;
 
-  app.modal.show(ConfirmModal, {
+  confirmAction({
     title: app.translator.trans('ernestdefoe-millwright.admin.extensions.remove_files'),
     message: app.translator.trans('ernestdefoe-millwright.admin.extensions.remove_confirm', { name }),
     confirmText: app.translator.trans('ernestdefoe-millwright.admin.extensions.remove_files'),
