@@ -92,6 +92,11 @@ perl -pi -e 's#^require __DIR__\.\x27/\.\./\.\./vendor/autoload\.php\x27;#requir
 cp -R "$HERE/overlay/." "$DEST/"
 php "$HERE/patch-extend.php" "$DEST/extend.php"
 
+# StyleCI's import order and the blank line after the imports. The rename
+# changes how the imports sort, so this can only be done on the exported copy.
+find "$DEST" -path "$DEST/js/node_modules" -prune -o -path "$DEST/vendor" -prune -o -name '*.php' -type f -print0 \
+    | xargs -0 php "$HERE/sort-imports.php"
+
 # Flarum's own Prettier rules, so the framework's format check passes on the
 # renamed code. Uses the monorepo's Prettier and config; skipped, with a
 # warning, until the monorepo's node_modules are installed.
