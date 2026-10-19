@@ -8,6 +8,7 @@ use ErnestDefoe\Millwright\Plan\CoreUpgrade;
 use Flarum\Foundation\Application;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
+use ErnestDefoe\Millwright\Exception\RefusedException;
 use Flarum\Locale\TranslatorInterface;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -44,9 +45,7 @@ class CoreController implements RequestHandlerInterface
         $packages = array_values((array) ($lock['packages'] ?? []));
 
         if ($packages === []) {
-            return new JsonResponse([
-                'error' => $this->translator->trans('ernestdefoe-millwright.api.core.no_lock'),
-            ], 500);
+            throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.core.no_lock'), 'missing_lock_file', 500);
         }
 
         if ($target === '') {

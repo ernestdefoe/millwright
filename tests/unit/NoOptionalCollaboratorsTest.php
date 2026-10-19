@@ -33,9 +33,11 @@ class NoOptionalCollaboratorsTest extends TestCase
         $offenders = [];
 
         foreach ($this->classes() as $class) {
-            $constructor = (new ReflectionClass($class))->getConstructor();
+            $reflection = new ReflectionClass($class);
+            $constructor = $reflection->getConstructor();
 
-            if ($constructor === null) {
+            // An exception is not a service, and its previous one is optional by nature.
+            if ($constructor === null || $reflection->isSubclassOf(\Throwable::class)) {
                 continue;
             }
 

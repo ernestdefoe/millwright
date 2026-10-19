@@ -525,8 +525,8 @@ ernestdefoe-millwright:
     php_path_did_not_run: "{path} did not run. {error}"
     php_path_not_cli: '{path} is PHP, but the "{sapi}" kind, not the command-line PHP. Use the php binary beside it, not php-fpm or php-cgi.'
 
-  # Messages the server writes: API errors, run notes, host checks. Read
-  # through ErnestDefoe\Millwright\Lang.
+  # Messages the server writes: API errors, run notes, host checks.
+  # Translated on the server through Flarum's translator.
   api:
     unknown_action: "Unknown action."
     apply:
@@ -713,6 +713,16 @@ ernestdefoe-millwright:
     php:
       exit_code: "exit code {code}"
       wrong_sapi: "reports SAPI \"{sapi}\", not cli"
+    php_path:
+      not_absolute: Enter the full path, starting with /.
+      missing: "There is nothing at {path}."
+      not_executable: "{path} exists but is not executable."
+      hidden_and_silent: >-
+        {path} is outside this site's open_basedir, so Millwright cannot look at
+        it, and running it did nothing. Check the path, or add its folder to
+        open_basedir.
+      did_not_run: "{path} did not run. {error}"
+      not_cli: '{path} is PHP, but the "{sapi}" kind, not the command-line PHP. Use the php binary beside it, not php-fpm or php-cgi.'
     process:
       start_failed: "Could not start {command}."
       the_command: "the command"

@@ -5,6 +5,7 @@ namespace ErnestDefoe\Millwright\Api\Controller;
 use ErnestDefoe\Millwright\Discover\Cache;
 use ErnestDefoe\Millwright\Discover\Compatibility;
 use ErnestDefoe\Millwright\Discover\Packagist;
+use ErnestDefoe\Millwright\Exception\RefusedException;
 use ErnestDefoe\Millwright\Host\Capability;
 use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Plan\Nightly;
@@ -16,6 +17,7 @@ use ErnestDefoe\Millwright\Work\WorkDir;
 use Flarum\Extension\ExtensionManager;
 use Flarum\Foundation\Application;
 use Flarum\Foundation\Paths;
+use Flarum\Foundation\ValidationException;
 use Flarum\Http\RequestUtil;
 use Flarum\Locale\TranslatorInterface;
 use Illuminate\Support\Arr;
@@ -135,7 +137,7 @@ class StartController implements RequestHandlerInterface
             : null;
 
         if ($nightly === []) {
-            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-millwright.api.start.no_nightly')], 422);
+            throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.start.no_nightly'), 'nothing_to_update');
         }
 
         if ($nightly !== null) {
@@ -148,47 +150,42 @@ class StartController implements RequestHandlerInterface
         foreach ($packages as $package) {
             // The only user-supplied value that reaches a command line.
             if (! preg_match('#^[a-z0-9]([_.-]?[a-z0-9]+)*/[a-z0-9](([_.]|-{1,2})?[a-z0-9]+)*$#', (string) $package)) {
-                return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-millwright.api.start.not_a_package', ['package' => (string) $package])], 422);
+                throw new ValidationException(['packages' => $this->translator->trans('ernestdefoe-millwright.api.start.not_a_package', ['package' => (string) $package])]);
             }
         }
 
         $capability = new Capability($this->translator, $this->paths->base, \ErnestDefoe\Millwright\Host\PhpBinary::forStorage($this->translator, $this->paths->storage), $this->paths->storage.'/.composer');
 
         if ($packages === []) {
-            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-millwright.api.start.nothing_selected')], 422);
+            throw new ValidationException(['packages' => $this->translator->trans('ernestdefoe-millwright.api.start.nothing_selected')]);
         }
 
         if ($mode === 'install' && ($refusal = $this->replaced($packages)) !== null) {
-            return new JsonResponse(['error' => $refusal], 422);
+            throw new RefusedException($refusal, 'package_replaced');
         }
 
         if ($mode === 'remove' && ($refusal = $this->cannotRemove($packages)) !== null) {
-            return new JsonResponse(['error' => $refusal], 422);
+            throw new RefusedException($refusal, 'cannot_remove_package');
         }
 
         if ($capability->resolveTier() === Capability::NONE) {
-            return new JsonResponse([
-                'error' => $this->translator->trans('ernestdefoe-millwright.api.start.not_enough_memory'),
-            ], 422);
+            throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.start.not_enough_memory'), 'not_enough_memory');
         }
 
         $existing = $this->runs->latest();
 
         if ($existing !== null && ! $existing->isFinished()) {
             /*
-             * 🚨 Refused, but LOUDLY, and with the age of the thing in the way
-             * so the admin can tell a working update from a dead one. The screen
-             * offers to abandon it; this endpoint never decides that for them.
+             * Refused, but loudly, and with the age of the thing in the way so
+             * the admin can tell a working update from a dead one. The screen
+             * reloads the state, which carries the run, and offers to abandon
+             * it; this endpoint never decides that for them.
              */
             $age = time() - $existing->movedAt;
 
-            return new JsonResponse([
-                'error' => $age > 120
-                    ? $this->translator->trans('ernestdefoe-millwright.api.start.in_progress_stale', ['minutes' => round($age / 60)])
-                    : $this->translator->trans('ernestdefoe-millwright.api.start.in_progress'),
-                'run' => $this->runs->present($existing),
-                'stale' => $existing->isStale(time()),
-            ], 409);
+            throw new RefusedException($age > 120
+                ? $this->translator->trans('ernestdefoe-millwright.api.start.in_progress_stale', ['minutes' => round($age / 60)])
+                : $this->translator->trans('ernestdefoe-millwright.api.start.in_progress'), 'run_in_progress', 409);
         }
 
         $id = 'r'.date('Ymd-His').'-'.bin2hex(random_bytes(3));

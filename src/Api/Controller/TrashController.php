@@ -6,6 +6,7 @@ use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Prune\Pruner;
 use ErnestDefoe\Millwright\Prune\Retention;
 use Flarum\Foundation\Paths;
+use Flarum\Foundation\ValidationException;
 use Flarum\Http\RequestUtil;
 use Flarum\Locale\TranslatorInterface;
 use Illuminate\Support\Arr;
@@ -44,21 +45,17 @@ class TrashController implements RequestHandlerInterface
         $pruner = new Pruner($this->translator, $dir, $retention);
         $pruned = null;
 
-        try {
-            if ($request->getMethod() === 'POST') {
-                $body = (array) $request->getParsedBody();
+        if ($request->getMethod() === 'POST') {
+            $body = (array) $request->getParsedBody();
 
-                match ((string) Arr::get($body, 'action', '')) {
-                    'prune' => $pruned = $pruner->prune('admin'),
-                    'settings' => $retention->save(Arr::get($body, 'keepDays'), Arr::get($body, 'keepRuns')),
-                    default => throw new \InvalidArgumentException($this->translator->trans('ernestdefoe-millwright.api.unknown_action')),
-                };
-            }
-
-            $plan = $pruner->plan(true);
-        } catch (Throwable $e) {
-            return new JsonResponse(['error' => $e->getMessage()], 422);
+            match ((string) Arr::get($body, 'action', '')) {
+                'prune' => $pruned = $pruner->prune('admin'),
+                'settings' => $retention->save(Arr::get($body, 'keepDays'), Arr::get($body, 'keepRuns')),
+                default => throw new ValidationException(['action' => $this->translator->trans('ernestdefoe-millwright.api.unknown_action')]),
+            };
         }
+
+        $plan = $pruner->plan(true);
 
         $keptTrash = array_values(array_filter($plan['keep'], fn ($r) => $r['kind'] === 'trash'));
 

@@ -37,7 +37,8 @@ class PhpOverride
     }
 
     /**
-     * Why this path cannot be used, as a translation key and its parameters,
+     * Why this path cannot be used, as the last part of a translation key under
+     * api.php_path and its parameters,
      * or null when it is a working command-line PHP.
      *
      * @return array{0:string, 1:array<string,string>}|null
@@ -47,7 +48,7 @@ class PhpOverride
         $php ??= new PhpBinary($this->translator);
 
         if ($path === '' || $path[0] !== '/') {
-            return ['php_path_not_absolute', []];
+            return ['not_absolute', []];
         }
 
         $probe = $php->probe($path);
@@ -57,24 +58,24 @@ class PhpOverride
         }
 
         if (! $probe['hidden'] && ! is_file($path)) {
-            return ['php_path_missing', ['path' => $path]];
+            return ['missing', ['path' => $path]];
         }
 
         if ($probe['error'] === 'not executable') {
-            return ['php_path_not_executable', ['path' => $path]];
+            return ['not_executable', ['path' => $path]];
         }
 
         if (! $probe['ran']) {
             return $probe['hidden']
-                ? ['php_path_hidden_and_silent', ['path' => $path]]
-                : ['php_path_did_not_run', ['path' => $path, 'error' => '']];
+                ? ['hidden_and_silent', ['path' => $path]]
+                : ['did_not_run', ['path' => $path, 'error' => '']];
         }
 
         if ($probe['sapi'] !== null && $probe['sapi'] !== 'cli') {
-            return ['php_path_not_cli', ['path' => $path, 'sapi' => (string) $probe['sapi']]];
+            return ['not_cli', ['path' => $path, 'sapi' => (string) $probe['sapi']]];
         }
 
-        return ['php_path_did_not_run', ['path' => $path, 'error' => (string) $probe['error']]];
+        return ['did_not_run', ['path' => $path, 'error' => (string) $probe['error']]];
     }
 
     public function set(?string $path): void

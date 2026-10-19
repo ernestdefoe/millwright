@@ -2,8 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Config;
 
+use ErnestDefoe\Millwright\Exception\RefusedException;
 use Flarum\Locale\TranslatorInterface;
-use RuntimeException;
 
 /**
  * Credentials Composer uses to reach private and paid repositories.
@@ -117,7 +117,7 @@ class AuthTokens
     public function set(string $kind, string $host, string $secret, ?string $username = null): void
     {
         if (! in_array($kind, self::KINDS, true)) {
-            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.unknown_credential_type', ['kinds' => implode(', ', self::KINDS)]));
+            throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.config.unknown_credential_type', ['kinds' => implode(', ', self::KINDS)]));
         }
 
         $host = strtolower(trim($host));
@@ -125,15 +125,15 @@ class AuthTokens
         // A host, not a URL: Composer matches on the hostname, and pasting a full
         // URL here silently never matches anything.
         if (! preg_match('/^[a-z0-9.-]+\.[a-z]{2,}$/', $host)) {
-            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.not_a_hostname'));
+            throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.config.not_a_hostname'));
         }
 
         if (trim($secret) === '') {
-            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.credential_empty'));
+            throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.config.credential_empty'));
         }
 
         if ($kind === 'http-basic' && ($username === null || trim($username) === '')) {
-            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.basic_needs_username'));
+            throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.config.basic_needs_username'));
         }
 
         $data = $this->file->read();
@@ -155,7 +155,7 @@ class AuthTokens
         $host = strtolower(trim($host));
 
         if (! isset($data[$kind][$host])) {
-            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.no_credential'));
+            throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.config.no_credential'));
         }
 
         unset($data[$kind][$host]);

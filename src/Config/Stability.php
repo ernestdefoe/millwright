@@ -2,8 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Config;
 
+use ErnestDefoe\Millwright\Exception\RefusedException;
 use Flarum\Locale\TranslatorInterface;
-use RuntimeException;
 
 /**
  * How finished a release has to be before Composer will install it.
@@ -42,7 +42,7 @@ class Stability
     public function set(string $level, bool $preferStable): void
     {
         if (! in_array($level, self::LEVELS, true)) {
-            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.stability_invalid', ['levels' => implode(', ', self::LEVELS)]));
+            throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.config.stability_invalid', ['levels' => implode(', ', self::LEVELS)]));
         }
 
         $data = $this->file->read();

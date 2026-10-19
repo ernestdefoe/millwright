@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Exception\RefusedException;
 use Flarum\Database\Migrator;
 use Flarum\Extension\ExtensionManager;
 use Flarum\Locale\TranslatorInterface;
@@ -171,10 +172,12 @@ final class MigrationLedger
             $migration = $migrator->resolve($dir, $m['migration']);
 
             if (! isset($migration['down']) || ! is_callable($migration['down'])) {
-                throw new RuntimeException(
+                throw new RefusedException(
                     $m['extension']
                         ? $this->translator->trans('ernestdefoe-millwright.api.migrations.irreversible_ext', ['migration' => $m['migration'], 'extension' => $m['extension']])
-                        : $this->translator->trans('ernestdefoe-millwright.api.migrations.irreversible', ['migration' => $m['migration']])
+                        : $this->translator->trans('ernestdefoe-millwright.api.migrations.irreversible', ['migration' => $m['migration']]),
+                    'irreversible_migration',
+                    409
                 );
             }
 

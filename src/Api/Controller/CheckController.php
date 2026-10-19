@@ -6,6 +6,7 @@ use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
+use ErnestDefoe\Millwright\Exception\RefusedException;
 use Flarum\Locale\TranslatorInterface;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -38,9 +39,7 @@ class CheckController implements RequestHandlerInterface
         $result = $check->refreshSite($this->translator, $this->paths->base);
 
         if ($result === null) {
-            return new JsonResponse([
-                'error' => $this->translator->trans('ernestdefoe-millwright.api.check.no_lock'),
-            ], 500);
+            throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.check.no_lock'), 'missing_lock_file', 500);
         }
 
         return new JsonResponse([

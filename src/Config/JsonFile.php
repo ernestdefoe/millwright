@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Config;
 
+use ErnestDefoe\Millwright\Exception\RefusedException;
 use Flarum\Locale\TranslatorInterface;
 use RuntimeException;
 
@@ -53,7 +54,7 @@ class JsonFile
              * one built from nothing — turning a file somebody could still fix
              * by hand into one whose contents are gone.
              */
-            throw new RuntimeException(
+            throw new RefusedException(
                 $this->translator->trans('ernestdefoe-millwright.api.config.json_invalid', ['file' => basename($this->path), 'error' => json_last_error_msg() ?: $this->translator->trans('ernestdefoe-millwright.api.config.unknown_error')])
             );
         }

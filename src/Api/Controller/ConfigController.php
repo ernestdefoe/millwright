@@ -8,6 +8,7 @@ use ErnestDefoe\Millwright\Config\Repositories;
 use ErnestDefoe\Millwright\Config\Stability;
 use ErnestDefoe\Millwright\Host\PhpOverride;
 use Flarum\Foundation\Paths;
+use Flarum\Foundation\ValidationException;
 use Flarum\Http\RequestUtil;
 use Flarum\Locale\TranslatorInterface;
 use Illuminate\Support\Arr;
@@ -15,7 +16,6 @@ use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use RuntimeException;
 
 /**
  * Where Composer looks, what it will accept, and how it authenticates.
@@ -43,61 +43,56 @@ class ConfigController implements RequestHandlerInterface
         $body = (array) $request->getParsedBody();
         $action = (string) Arr::get($body, 'action', '');
 
-        try {
-            if ($method === 'GET') {
-                return new JsonResponse($this->state());
-            }
-
-            /*
-             * The command-line PHP, for the hosts where looking for one cannot
-             * work (open_basedir, an unusual layout). Refused unless it RUNS
-             * and says it is the CLI, and the reason comes back as a key the
-             * page translates.
-             */
-            if ($action === 'set-php') {
-                $override = new PhpOverride($this->translator, $this->paths->storage);
-                $path = trim((string) Arr::get($body, 'path', ''));
-
-                if ($path !== '' && ($refusal = $override->refusal($path)) !== null) {
-                    return new JsonResponse(['errorKey' => $refusal[0], 'errorParams' => $refusal[1]], 422);
-                }
-
-                $override->set($path === '' ? null : $path);
-
-                return new JsonResponse(['php' => $override->get()]);
-            }
-
-            match ($action) {
-                'add-repository' => $this->repositories()->add(
-                    (string) Arr::get($body, 'type', 'vcs'),
-                    (string) Arr::get($body, 'url', ''),
-                    Arr::get($body, 'name')
-                ),
-                'remove-repository' => $this->repositories()->remove((string) Arr::get($body, 'url', '')),
-                'set-stability' => $this->stability()->set(
-                    (string) Arr::get($body, 'minimumStability', 'stable'),
-                    (bool) Arr::get($body, 'preferStable', true)
-                ),
-                'set-auth' => $this->auth()->set(
-                    (string) Arr::get($body, 'kind', ''),
-                    (string) Arr::get($body, 'host', ''),
-                    (string) Arr::get($body, 'secret', ''),
-                    Arr::get($body, 'username')
-                ),
-                'remove-auth' => $this->auth()->remove(
-                    (string) Arr::get($body, 'kind', ''),
-                    (string) Arr::get($body, 'host', '')
-                ),
-                default => throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.unknown_action')),
-            };
-        } catch (RuntimeException $e) {
-            /*
-             * The message, not a generic failure. Every throw in the Config
-             * classes is written to be read by the person who typed the value —
-             * "that is not a hostname" is actionable, "invalid input" is not.
-             */
-            return new JsonResponse(['error' => $e->getMessage()], 422);
+        if ($method === 'GET') {
+            return new JsonResponse($this->state());
         }
+
+        /*
+         * The command-line PHP, for the hosts where looking for one cannot work
+         * (open_basedir, an unusual layout). Refused unless it runs and says it
+         * is the CLI.
+         */
+        if ($action === 'set-php') {
+            $override = new PhpOverride($this->translator, $this->paths->storage);
+            $path = trim((string) Arr::get($body, 'path', ''));
+
+            if ($path !== '' && ($refusal = $override->refusal($path)) !== null) {
+                throw new ValidationException(['path' => $this->translator->trans('ernestdefoe-millwright.api.php_path.'.$refusal[0], $refusal[1])]);
+            }
+
+            $override->set($path === '' ? null : $path);
+
+            return new JsonResponse(['php' => $override->get()]);
+        }
+
+        /*
+         * The Config classes refuse a value that cannot be used with a
+         * RefusedException written for the person who typed it: "that is not
+         * a hostname" is actionable, "invalid input" is not.
+         */
+        match ($action) {
+            'add-repository' => $this->repositories()->add(
+                (string) Arr::get($body, 'type', 'vcs'),
+                (string) Arr::get($body, 'url', ''),
+                Arr::get($body, 'name')
+            ),
+            'remove-repository' => $this->repositories()->remove((string) Arr::get($body, 'url', '')),
+            'set-stability' => $this->stability()->set(
+                (string) Arr::get($body, 'minimumStability', 'stable'),
+                (bool) Arr::get($body, 'preferStable', true)
+            ),
+            'set-auth' => $this->auth()->set(
+                (string) Arr::get($body, 'kind', ''),
+                (string) Arr::get($body, 'host', ''),
+                (string) Arr::get($body, 'secret', ''),
+                Arr::get($body, 'username')
+            ),
+            'remove-auth' => $this->auth()->remove(
+                (string) Arr::get($body, 'kind', ''),
+                (string) Arr::get($body, 'host', '')
+            ),
+            default => throw new ValidationException(['action' => $this->translator->trans('ernestdefoe-millwright.api.unknown_action')]),
+        };
 
         return new JsonResponse($this->state());
     }

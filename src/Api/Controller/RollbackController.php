@@ -9,6 +9,7 @@ use ErnestDefoe\Millwright\Work\ComposerRunner;
 use ErnestDefoe\Millwright\Work\WorkDir;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
+use ErnestDefoe\Millwright\Exception\RefusedException;
 use Flarum\Locale\TranslatorInterface;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -50,7 +51,7 @@ class RollbackController implements RequestHandlerInterface
         $run = $this->runs->latest();
 
         if ($run === null) {
-            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-millwright.api.rollback.nothing')], 404);
+            throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.rollback.nothing'), 'nothing_to_roll_back', 404);
         }
 
         $workDir = new WorkDir($this->translator, $this->paths->storage, $run->id);
@@ -74,9 +75,7 @@ class RollbackController implements RequestHandlerInterface
         $savedLock = $workDir->root().'/composer.lock.before';
 
         if (! $journal->exists() && ! is_file($savedLock)) {
-            return new JsonResponse([
-                'error' => $this->translator->trans('ernestdefoe-millwright.api.rollback.nothing_changed'),
-            ], 422);
+            throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.rollback.nothing_changed'), 'nothing_to_roll_back');
         }
 
         /*
@@ -95,12 +94,9 @@ class RollbackController implements RequestHandlerInterface
             $this->paths->storage
         );
 
-        try {
-            $result = $restore->run();
-        } catch (RuntimeException $e) {
-            // A refusal (a database change that cannot be reversed) changed nothing.
-            return new JsonResponse(['error' => $e->getMessage()], 422);
-        }
+        // A refusal (a database change that cannot be reversed) changes nothing
+        // and reaches the admin as a RefusedException.
+        $result = $restore->run();
 
         $undone = $result['undone'];
         $note = $result['note'];

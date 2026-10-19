@@ -6,6 +6,8 @@ use ErnestDefoe\Millwright\Console\PruneCommand;
 use ErnestDefoe\Millwright\Console\RebuildAssetsCommand;
 use ErnestDefoe\Millwright\Console\RepairFormatterCommand;
 use ErnestDefoe\Millwright\Console\UpdateCommand;
+use ErnestDefoe\Millwright\Exception\RefusedException;
+use ErnestDefoe\Millwright\Exception\RefusedExceptionHandler;
 use ErnestDefoe\Millwright\MillwrightServiceProvider;
 use Flarum\Extend;
 
@@ -54,6 +56,9 @@ return [
         ->schedule(PruneCommand::class, function ($event): void { $event->dailyAt('04:20'); }),
 
     new Extend\Locales(__DIR__.'/resources/locale'),
+
+    (new Extend\ErrorHandling())
+        ->handler(RefusedException::class, RefusedExceptionHandler::class),
 
     /*
      * 🚨 Two endpoints, and the split matters.

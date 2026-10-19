@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Prune;
 
+use ErnestDefoe\Millwright\Exception\RefusedException;
 use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Plan\Change;
 use ErnestDefoe\Millwright\Run\Run;
@@ -441,9 +442,10 @@ class Pruner
             $entries = (new Journal($this->translator, $path))->entries();
         } catch (Throwable $e) {
             if ($mustRead) {
-                throw new RuntimeException(
+                throw new RefusedException(
                     $this->translator->trans('ernestdefoe-millwright.api.prune.journal_unreadable', ['id' => $id]),
-                    0,
+                    'journal_unreadable',
+                    409,
                     $e
                 );
             }

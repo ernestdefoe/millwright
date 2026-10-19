@@ -2,8 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Config;
 
+use ErnestDefoe\Millwright\Exception\RefusedException;
 use Flarum\Locale\TranslatorInterface;
-use RuntimeException;
 
 /**
  * Where Composer is allowed to look for packages.
@@ -51,18 +51,18 @@ class Repositories
     }
 
     /**
-     * @throws RuntimeException when the entry would not be usable
+     * @throws RefusedException when the entry would not be usable
      */
     public function add(string $type, string $url, ?string $name = null): void
     {
         if (! in_array($type, self::TYPES, true)) {
-            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.repo_type_unsupported', ['type' => $type]));
+            throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.config.repo_type_unsupported', ['type' => $type]));
         }
 
         $url = trim($url);
 
         if ($url === '') {
-            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.repo_needs_url'));
+            throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.config.repo_needs_url'));
         }
 
         /*
@@ -73,10 +73,10 @@ class Repositories
          */
         if ($type === 'path') {
             if (! str_starts_with($url, '/') && ! str_starts_with($url, './') && ! str_starts_with($url, '../')) {
-                throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.repo_path_not_url'));
+                throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.config.repo_path_not_url'));
             }
         } elseif (! preg_match('#^(https?://|git@|ssh://|git://)#i', $url)) {
-            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.repo_bad_url'));
+            throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.config.repo_bad_url'));
         }
 
         $data = $this->file->read();
@@ -84,7 +84,7 @@ class Repositories
 
         foreach ($repos as $existing) {
             if (is_array($existing) && rtrim((string) ($existing['url'] ?? ''), '/') === rtrim($url, '/')) {
-                throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.repo_exists'));
+                throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.config.repo_exists'));
             }
         }
 
@@ -123,7 +123,7 @@ class Repositories
         }
 
         if (! $found) {
-            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.repo_missing'));
+            throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.config.repo_missing'));
         }
 
         $data['repositories'] = $keep;

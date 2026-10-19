@@ -9,6 +9,7 @@ use ErnestDefoe\Millwright\Work\ReleaseNotes;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
+use ErnestDefoe\Millwright\Exception\RefusedException;
 use Flarum\Locale\TranslatorInterface;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -43,7 +44,7 @@ class ReleaseNotesController implements RequestHandlerInterface
             : null;
 
         if ($notes === null) {
-            return new JsonResponse(['error' => $this->translator->trans('ernestdefoe-millwright.api.release_notes.none')], 404);
+            throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.release_notes.none'), 'no_release_notes', 404);
         }
 
         return new JsonResponse(['package' => $package, 'from' => $updates[$package]['from'], 'to' => $updates[$package]['to']] + $notes);

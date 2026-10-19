@@ -176,12 +176,12 @@ class PhpBinaryDiagnosisTest extends TestCase
     {
         $override = new PhpOverride(EnglishTranslator::make(), sys_get_temp_dir().'/mw-php-'.uniqid());
 
-        $this->assertSame('php_path_not_absolute', $override->refusal('php', $this->host([]))[0]);
-        $this->assertSame('php_path_not_cli', $override->refusal(self::PLESK_CLI, $this->host([self::PLESK_CLI => ['code' => 0, 'out' => 'fpm-fcgi 8.5.1', 'err' => '']]))[0]);
-        $this->assertSame('php_path_not_cli', $override->refusal('/opt/plesk/php/8.5/sbin/php-fpm', $this->host(['/opt/plesk/php/8.5/sbin/php-fpm' => ['code' => 64, 'out' => 'Usage: php-fpm [-n] [-e] [-h]', 'err' => '']]))[0], 'php-fpm has no -r and prints its usage');
-        $this->assertSame('php_path_hidden_and_silent', $override->refusal('/opt/plesk/php/9.9/bin/php', $this->host([]))[0]);
+        $this->assertSame('not_absolute', $override->refusal('php', $this->host([]))[0]);
+        $this->assertSame('not_cli', $override->refusal(self::PLESK_CLI, $this->host([self::PLESK_CLI => ['code' => 0, 'out' => 'fpm-fcgi 8.5.1', 'err' => '']]))[0]);
+        $this->assertSame('not_cli', $override->refusal('/opt/plesk/php/8.5/sbin/php-fpm', $this->host(['/opt/plesk/php/8.5/sbin/php-fpm' => ['code' => 64, 'out' => 'Usage: php-fpm [-n] [-e] [-h]', 'err' => '']]))[0], 'php-fpm has no -r and prints its usage');
+        $this->assertSame('hidden_and_silent', $override->refusal('/opt/plesk/php/9.9/bin/php', $this->host([]))[0]);
         $this->assertNull($override->refusal(self::PLESK_CLI, $this->host([self::PLESK_CLI => ['code' => 0, 'out' => 'cli 8.5.1', 'err' => '']])));
-        $this->assertSame('php_path_missing', $override->refusal('/nonexistent/php', $this->host([], null, ''))[0]);
+        $this->assertSame('missing', $override->refusal('/nonexistent/php', $this->host([], null, ''))[0]);
     }
 
     public function test_an_override_survives_a_round_trip_and_clears(): void
@@ -199,13 +199,20 @@ class PhpBinaryDiagnosisTest extends TestCase
 
     public function test_every_key_the_host_tab_can_send_is_translated(): void
     {
-        $locale = Yaml::parseFile(__DIR__.'/../../resources/locale/en.yml')['ernestdefoe-millwright']['admin'];
-        $source = file_get_contents(__DIR__.'/../../src/Host/Capability.php').file_get_contents(__DIR__.'/../../src/Host/PhpOverride.php');
+        $locale = Yaml::parseFile(__DIR__.'/../../resources/locale/en.yml')['ernestdefoe-millwright'];
+        $capability = (string) file_get_contents(__DIR__.'/../../src/Host/Capability.php');
+        $override = (string) file_get_contents(__DIR__.'/../../src/Host/PhpOverride.php');
 
-        preg_match_all("/'(host\.[a-z_]+|php_path_[a-z_]+)'/", $source, $m);
-        $this->assertNotEmpty($m[1]);
+        preg_match_all("/'(host\.[a-z_]+)'/", $capability, $host);
+        preg_match_all("/return \\[?'([a-z_]+)', \\[|\\? \\['([a-z_]+)', \\[|: \\['([a-z_]+)', \\[/", $override, $php);
+        $keys = array_merge(
+            array_map(fn ($k) => 'admin.'.$k, $host[1]),
+            array_map(fn ($k) => 'api.php_path.'.$k, array_filter(array_merge($php[1], $php[2], $php[3])))
+        );
+        $this->assertNotEmpty($host[1]);
+        $this->assertCount(6, array_unique(array_filter(array_merge($php[1], $php[2], $php[3]))), 'every refusal PhpOverride can give');
 
-        foreach (array_unique($m[1]) as $key) {
+        foreach (array_unique($keys) as $key) {
             $node = $locale;
             foreach (explode('.', $key) as $part) {
                 $this->assertIsArray($node, $key);
