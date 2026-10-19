@@ -43,7 +43,8 @@ class RollbackManifestTest extends TestCase
 
     private function rollback(): Rollback
     {
-        return new Rollback(EnglishTranslator::make(), 
+        return new Rollback(
+            EnglishTranslator::make(),
             $this->dir.'/install/vendor',
             $this->dir.'/trash',
             new Journal(EnglishTranslator::make(), $this->dir.'/work/journal.jsonl'),
@@ -54,7 +55,8 @@ class RollbackManifestTest extends TestCase
 
     private function applyOne(): void
     {
-        (new Applier(EnglishTranslator::make(), 
+        (new Applier(
+            EnglishTranslator::make(),
             $this->dir.'/install/vendor',
             $this->dir.'/staging',
             $this->dir.'/trash',
@@ -118,7 +120,8 @@ class RollbackManifestTest extends TestCase
         file_put_contents($this->dir.'/staging/newco/thing/it.php', 'new');
         file_put_contents($this->dir.'/work/composer.lock.before', '{"packages":[]}');
 
-        (new Applier(EnglishTranslator::make(), 
+        (new Applier(
+            EnglishTranslator::make(),
             $this->dir.'/install/vendor',
             $this->dir.'/staging',
             $this->dir.'/trash',
@@ -166,7 +169,8 @@ class RollbackManifestTest extends TestCase
         file_put_contents($this->dir.'/install/vendor/lonely/pkg/it.php', 'x');
         file_put_contents($this->dir.'/work/composer.lock.before', '{"packages":[]}');
 
-        (new Applier(EnglishTranslator::make(), 
+        (new Applier(
+            EnglishTranslator::make(),
             $this->dir.'/install/vendor',
             $this->dir.'/staging',
             $this->dir.'/trash',
