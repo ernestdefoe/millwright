@@ -1,4 +1,5 @@
 import app from 'flarum/admin/app';
+import type RequestError from 'flarum/common/utils/RequestError';
 import apiUrl from '../apiUrl';
 import { alertError, errorPayload, serverMessage } from '../errors';
 import { cardOffers, dismissalApplies, hidesPage, runIsLive, showingRun, sortForGrid } from '../runState';
@@ -516,12 +517,10 @@ export default class MillwrightPage extends ExtensionPage<MillwrightPageAttrs> {
       })
       .catch((e) => {
         this.starting = false;
-        // A refusal because a run is already going brings that run, so it can be watched.
-        const body = errorPayload(e);
-        if (body.run) {
+        // Refused because a run is already going (409): load that run, so it can be watched.
+        if ((e as RequestError | null)?.status === 409) {
           this.dismissed = false;
-          this.run = body.run;
-          this.stale = !!body.stale;
+          this.load();
         }
         m.redraw();
       });

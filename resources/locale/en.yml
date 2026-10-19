@@ -540,15 +540,6 @@ ernestdefoe-millwright:
       php_setting_saved: Saved. Millwright will use this PHP.
       php_setting_cleared: Cleared. Millwright will look for the command-line PHP itself.
 
-    php_path_not_absolute: Enter the full path, starting with /.
-    php_path_missing: "There is nothing at {path}."
-    php_path_not_executable: "{path} exists but is not executable."
-    php_path_hidden_and_silent: >-
-      {path} is outside this site's open_basedir, so Millwright cannot look at
-      it, and running it did nothing. Check the path, or add its folder to
-      open_basedir.
-    php_path_did_not_run: "{path} did not run. {error}"
-    php_path_not_cli: '{path} is PHP, but the "{sapi}" kind, not the command-line PHP. Use the php binary beside it, not php-fpm or php-cgi.'
 
   # Messages the server writes: API errors, run notes, host checks.
   # Translated on the server through Flarum's translator.
