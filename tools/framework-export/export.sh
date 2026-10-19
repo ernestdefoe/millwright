@@ -92,4 +92,13 @@ perl -pi -e 's#^require __DIR__\.\x27/\.\./\.\./vendor/autoload\.php\x27;#requir
 cp -R "$HERE/overlay/." "$DEST/"
 php "$HERE/patch-extend.php" "$DEST/extend.php"
 
+# Flarum's own Prettier rules, so the framework's format check passes on the
+# renamed code. Uses the monorepo's Prettier and config; skipped, with a
+# warning, until the monorepo's node_modules are installed.
+if [ -x "$FRAMEWORK/node_modules/.bin/prettier" ]; then
+    (cd "$DEST/js" && "$FRAMEWORK/node_modules/.bin/prettier" --write src >/dev/null)
+else
+    echo "warning: $FRAMEWORK/node_modules is not installed, so js/src was not formatted" >&2
+fi
+
 echo "Exported $(cd "$SRC" && git rev-parse --short HEAD) to $DEST"
