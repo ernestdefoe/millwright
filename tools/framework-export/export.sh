@@ -101,11 +101,12 @@ find "$DEST" -path "$DEST/js/node_modules" -prune -o -path "$DEST/vendor" -prune
 # renamed code. 🚨 Prettier 2.8.8, the version the extensions' `prettier ^2.5.1`
 # resolves to in the monorepo's yarn.lock and the one CI runs; Prettier 3
 # formats differently and failed CI on code it had just passed locally.
-PRETTIER2="$(ls "$FRAMEWORK"/extensions/*/js/node_modules/prettier/bin-prettier.js 2>/dev/null | head -1)"
-if [ -n "$PRETTIER2" ]; then
-    (cd "$DEST/js" && node "$PRETTIER2" --write src >/dev/null)
-else
-    (cd "$DEST/js" && npx -y prettier@2.8.8 --write src >/dev/null)
+# 🚨 Never `npx prettier@2.8.8` here: inside the monorepo npx quietly runs the
+# root's Prettier 3 instead. A copy of its own, outside the monorepo.
+PRETTIER_HOME="${XDG_CACHE_HOME:-$HOME/.cache}/framework-export/prettier-2.8.8"
+if [ ! -f "$PRETTIER_HOME/node_modules/prettier/bin-prettier.js" ]; then
+    npm install --silent --no-save --prefix "$PRETTIER_HOME" prettier@2.8.8 >/dev/null
 fi
+(cd "$DEST/js" && node "$PRETTIER_HOME/node_modules/prettier/bin-prettier.js" --write src >/dev/null)
 
 echo "Exported $(cd "$SRC" && git rev-parse --short HEAD) to $DEST"
