@@ -98,12 +98,14 @@ find "$DEST" -path "$DEST/js/node_modules" -prune -o -path "$DEST/vendor" -prune
     | xargs -0 php "$HERE/sort-imports.php"
 
 # Flarum's own Prettier rules, so the framework's format check passes on the
-# renamed code. Uses the monorepo's Prettier and config; skipped, with a
-# warning, until the monorepo's node_modules are installed.
-if [ -x "$FRAMEWORK/node_modules/.bin/prettier" ]; then
-    (cd "$DEST/js" && "$FRAMEWORK/node_modules/.bin/prettier" --write src >/dev/null)
+# renamed code. 🚨 Prettier 2.8.8, the version the extensions' `prettier ^2.5.1`
+# resolves to in the monorepo's yarn.lock and the one CI runs; Prettier 3
+# formats differently and failed CI on code it had just passed locally.
+PRETTIER2="$(ls "$FRAMEWORK"/extensions/*/js/node_modules/prettier/bin-prettier.js 2>/dev/null | head -1)"
+if [ -n "$PRETTIER2" ]; then
+    (cd "$DEST/js" && node "$PRETTIER2" --write src >/dev/null)
 else
-    echo "warning: $FRAMEWORK/node_modules is not installed, so js/src was not formatted" >&2
+    (cd "$DEST/js" && npx -y prettier@2.8.8 --write src >/dev/null)
 fi
 
 echo "Exported $(cd "$SRC" && git rev-parse --short HEAD) to $DEST"
