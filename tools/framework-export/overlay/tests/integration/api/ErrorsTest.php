@@ -13,8 +13,9 @@ use Flarum\Testing\integration\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
 /**
- * Refusals reach the browser through Flarum's error handling, translated, and
- * nothing else reaches it by its message.
+ * Refusals reach the browser through Flarum's error handling, with a detail
+ * for the admin to read. (The test harness loads only core's translations, so
+ * the detail here is the translation key; the unit tests check the English.)
  */
 class ErrorsTest extends TestCase
 {
@@ -35,7 +36,8 @@ class ErrorsTest extends TestCase
         $this->assertEquals(422, $response->getStatusCode());
         $error = json_decode((string) $response->getBody(), true)['errors'][0];
         $this->assertSame('validation_error', $error['code']);
-        $this->assertSame('Unknown action.', $error['detail']);
+        $this->assertStringEndsWith('unknown_action', $error['detail']);
+        $this->assertSame('/data/attributes/action', $error['source']['pointer']);
     }
 
     #[Test]
