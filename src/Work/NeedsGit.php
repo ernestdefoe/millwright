@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Config\Repositories;
 use Flarum\Locale\TranslatorInterface;
 
 /**
@@ -78,7 +79,8 @@ final class NeedsGit
             };
 
             if ($why !== null) {
-                $out[] = ['url' => $url, 'why' => $why];
+                // Shown to the admin, so never with a credential in it.
+                $out[] = ['url' => Repositories::redact($url), 'why' => $why];
             }
         }
 

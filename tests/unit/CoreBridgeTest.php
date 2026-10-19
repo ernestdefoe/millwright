@@ -95,7 +95,7 @@ class CoreBridgeTest extends TestCase
             $this->dir.'/project',
             $this->dir.'/work',
             (new ComposerRunner(EnglishTranslator::make(), $this->dir.'/project', __FILE__, $this->dir.'/home'))->withPhp($php),
-            new Fetcher(EnglishTranslator::make(), $this->dir.'/work/staging'),
+            new Fetcher(EnglishTranslator::make(), new \GuzzleHttp\Client(), $this->dir.'/work/staging'),
             new Applier(EnglishTranslator::make(), $this->dir.'/project/vendor', $this->dir.'/work/staging', $this->dir.'/work/trash', $journal),
             $journal,
             vendorPath: $this->dir.'/project/vendor',

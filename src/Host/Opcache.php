@@ -176,51 +176,75 @@ class Opcache
     }
 
     /**
-     * 🚨 The command line cannot clear the web server's compiled code, but it
-     * can ask. A flag in storage, honoured by the next web request (see
-     * honourWebReset(), called from the service provider), resets the cache the
-     * whole php-fpm pool shares.
+     * The command line cannot clear the web server's compiled code, but it can
+     * ask. A flag in storage, honoured by the next web request (see
+     * honourWebReset(), called from bootstrap/web-reset.php), resets the cache
+     * the whole php-fpm pool shares.
      *
      * Without it, a core update run from the CLI moved the database to 2.0.0
      * while php-fpm kept serving rc.8 for minutes. Every page was Flarum's 503
      * "Update Flarum", and a request in that window compiled the forum CSS from
      * the old code, failed, and switched the custom LESS off (wowcraft,
      * 2026-10-09).
+     *
+     * Directly in storage/, at a path that never moves, so the web request
+     * checks it with one stat and no class loaded. Touching an existing flag
+     * moves its time on, which is what asks again.
      */
     public static function requestWebReset(string $storagePath): void
     {
-        $dir = StorageDir::of($storagePath);
-
-        if (! is_dir($dir)) {
-            @mkdir($dir, 0775, true);
-        }
-
-        @touch($dir.'/opcache-reset');
+        @touch(self::flag($storagePath));
     }
 
     public static function webResetPending(string $storagePath): bool
     {
-        clearstatcache(true, StorageDir::of($storagePath).'/opcache-reset');
+        clearstatcache(true, self::flag($storagePath));
 
-        return is_file(StorageDir::of($storagePath).'/opcache-reset');
+        return is_file(self::flag($storagePath));
     }
 
     /**
-     * On a web request: one stat, and when the flag is there, take it (a rename,
-     * so only one worker acts) and reset.
+     * On a web request that found the flag: take it (a rename, so one worker
+     * acts) and reset.
+     *
+     * A flag this process cannot take, made by root in a directory the web
+     * server cannot write to, must not leave every request resetting the cache
+     * for ever. The cache's own last restart is the marker: a flag older than
+     * it has been honoured, so the request does nothing more than compare.
+     *
+     * @param array<string,mixed>|false|null $status opcache_get_status(false)
      */
-    public static function honourWebReset(string $storagePath): void
+    public static function honourWebReset(string $storagePath, array|false|null $status = null): void
     {
-        $flag = StorageDir::of($storagePath).'/opcache-reset';
+        $flag = self::flag($storagePath);
+        clearstatcache(true, $flag);
+        $requested = @filemtime($flag);
 
-        if (! is_file($flag) || ! @rename($flag, $flag.'.'.getmypid())) {
+        if ($requested === false) {
             return;
         }
 
-        @unlink($flag.'.'.getmypid());
+        // Handed in only by the tests; otherwise this process's own cache.
+        $status ??= function_exists('opcache_get_status') ? @opcache_get_status(false) : false;
+        $lastReset = is_array($status) ? (int) ($status['opcache_statistics']['last_restart_time'] ?? 0) : null;
 
-        if (function_exists('opcache_reset')) {
+        if ($lastReset !== null && $lastReset > $requested) {
+            return;
+        }
+
+        $taken = $flag.'.'.getmypid();
+
+        if (@rename($flag, $taken)) {
+            @unlink($taken);
+        }
+
+        if ($lastReset !== null && function_exists('opcache_reset')) {
             @opcache_reset();
         }
+    }
+
+    protected static function flag(string $storagePath): string
+    {
+        return $storagePath.'/millwright-opcache-reset';
     }
 }

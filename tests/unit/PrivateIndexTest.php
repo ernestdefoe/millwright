@@ -7,6 +7,10 @@ use ErnestDefoe\Millwright\Config\JsonFile;
 use ErnestDefoe\Millwright\Config\Repositories;
 use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use ErnestDefoe\Millwright\Work\PrivateIndex;
+use GuzzleHttp\Client;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -20,10 +24,13 @@ class PrivateIndexTest extends TestCase
 {
     private string $dir;
 
+    private MockHandler $responses;
+
     protected function setUp(): void
     {
         $this->dir = sys_get_temp_dir().'/mw-private-'.bin2hex(random_bytes(6));
         mkdir($this->dir, 0775, true);
+        $this->responses = new MockHandler();
     }
 
     protected function tearDown(): void
@@ -41,7 +48,8 @@ class PrivateIndexTest extends TestCase
 
         return new PrivateIndex(
             new Repositories(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/composer.json')),
-            new AuthTokens(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/auth.json'))
+            new AuthTokens(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/auth.json')),
+            new Client(['handler' => HandlerStack::create($this->responses)])
         );
     }
 
@@ -126,8 +134,8 @@ class PrivateIndexTest extends TestCase
      * 🚨 The credential never leaves as a credential.
      *
      * `all()` is what the admin API calls, and it must keep reporting hosts and
-     * kinds and nothing else however this file grows. `headerFor()` returns a
-     * finished header so no caller ever holds the secret.
+     * kinds and nothing else however this file grows. `authorizationFor()`
+     * returns a finished header value so no caller ever holds the secret.
      */
     public function test_stored_secrets_are_never_reported(): void
     {
@@ -153,7 +161,7 @@ class PrivateIndexTest extends TestCase
 
         $auth = new AuthTokens(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/auth.json'));
 
-        $this->assertSame('Authorization: Basic '.base64_encode('token:shh'), $auth->headerFor('example.test'));
+        $this->assertSame('Basic '.base64_encode('token:shh'), $auth->authorizationFor('https://example.test/composer/packages.json'));
     }
 
     public function test_a_bearer_token_becomes_a_bearer_header(): void
@@ -164,25 +172,31 @@ class PrivateIndexTest extends TestCase
 
         $auth = new AuthTokens(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/auth.json'));
 
-        $this->assertSame('Authorization: Bearer shh', $auth->headerFor('example.test'));
+        $this->assertSame('Bearer shh', $auth->authorizationFor('https://example.test/packages.json'));
     }
 
     /**
-     * 🚨 Composer matches a credential by HOSTNAME. Looking one up by URL finds
-     * nothing, and the request 401s with no visible reason — the same mistake
-     * that makes a hand-configured private repository fail silently.
+     * Composer matches a credential by the URL's exact host: never a
+     * subdomain, never another host, never over plain HTTP. GitHub's API is
+     * the one alias, as in Composer.
      */
-    public function test_a_credential_is_found_by_host_not_by_url(): void
+    public function test_a_credential_is_sent_only_to_its_exact_host(): void
     {
         file_put_contents($this->dir.'/auth.json', json_encode([
             'http-basic' => ['example.test' => ['username' => 'token', 'password' => 'shh']],
+            'github-oauth' => ['github.com' => 'ghp'],
         ]));
 
         $auth = new AuthTokens(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/auth.json'));
 
-        $this->assertNotNull($auth->headerFor('EXAMPLE.TEST'));
-        $this->assertNull($auth->headerFor('https://example.test/composer'));
-        $this->assertNull($auth->headerFor('other.test'));
+        $this->assertNotNull($auth->authorizationFor('https://EXAMPLE.TEST/composer'));
+        $this->assertNull($auth->authorizationFor('https://cdn.example.test/composer'), 'not a subdomain');
+        $this->assertNull($auth->authorizationFor('https://example.test:8443/composer'), 'not another port');
+        $this->assertNull($auth->authorizationFor('http://example.test/composer'), 'not over plain HTTP');
+        $this->assertNull($auth->authorizationFor('https://other.test/composer'));
+        $this->assertSame('Bearer ghp', $auth->authorizationFor('https://api.github.com/repos/a/b/tags'));
+        $this->assertNull($auth->authorizationFor('https://raw.githubusercontent.com/a/b/HEAD/composer.json'));
+        $this->assertNull($auth->authorizationFor('https://codeload.github.com/a/b/zip/abc'));
     }
 
     /** A repository with no credential is a normal state, not an error. */
@@ -190,7 +204,7 @@ class PrivateIndexTest extends TestCase
     {
         $auth = new AuthTokens(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/auth.json'));
 
-        $this->assertNull($auth->headerFor('example.test'));
+        $this->assertNull($auth->authorizationFor('https://example.test/packages.json'));
     }
 
     public function test_it_recognises_github_vcs_repositories(): void
@@ -278,19 +292,12 @@ class PrivateIndexTest extends TestCase
     /** @return array<string, list<string>> */
     private function parse(PrivateIndex $index, array $payload): array
     {
+        // Served by the mock client, so no network is involved.
+        $this->responses->append(new Response(200, [], (string) json_encode($payload)));
+
         $reflection = new ReflectionClass($index);
-        $method = $reflection->getMethod('fetchIndex');
+        $reflection->getProperty('indexes')->setValue($index, []);
 
-        // Serve the payload from a local file so no network is involved.
-        $file = $this->dir.'/packages-src.json';
-        file_put_contents($file, json_encode($payload));
-
-        // fetchIndex appends /packages.json, so hand it the directory.
-        $property = $reflection->getProperty('indexes');
-        $property->setValue($index, []);
-
-        file_put_contents($this->dir.'/packages.json', json_encode($payload));
-
-        return $method->invoke($index, 'file://'.$this->dir) ?? [];
+        return $reflection->getMethod('fetchIndex')->invoke($index, 'https://repo.example.test') ?? [];
     }
 }

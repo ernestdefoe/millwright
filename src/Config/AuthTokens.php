@@ -73,41 +73,47 @@ class AuthTokens
     }
 
     /**
-     * The Authorization header for a host, or null if there is no credential.
+     * The Authorization header value for a request to $url, or null.
      *
-     * 🚨 THE ONE PLACE A STORED SECRET IS READ, and it is deliberately shaped so
-     * it cannot become an answer to anybody.
-     *
-     * It returns a finished header line, not the credential — nothing that calls
-     * this can accidentally put the token in a response, a log line or an
-     * exception message, because it never holds the token. `all()` remains the
-     * only method any controller uses, and it still reports hosts and kinds and
-     * nothing else.
-     *
-     * 🚨 Never log the return value of this method.
-     *
-     * Composer matches a credential to a request by HOSTNAME, so that is what
-     * this takes. Passing a URL here finds nothing, which is the same mistake
-     * that makes a hand-configured private repository 401 for no visible reason.
+     * The one place a stored secret is read, and it is shaped so it cannot
+     * become an answer to anybody: it returns a finished header value, never
+     * the credential, and `all()` remains the only method any controller uses.
+     * Never log the return value of this method.
      */
-    public function headerFor(string $host): ?string
+    public function authorizationFor(string $url): ?string
     {
-        $host = strtolower(trim($host));
-        $auth = $this->file->read();
+        return self::authorization($this->file->read(), $url);
+    }
 
-        $basic = $auth['http-basic'][$host] ?? null;
+    /**
+     * The credential auth.json holds for exactly this URL's host, as Composer
+     * chooses it: by host and port, never for a subdomain, and only over
+     * HTTPS. The one alias is Composer's own: a github.com token is for
+     * GitHub's API, api.github.com.
+     *
+     * @param array<string,mixed> $auth auth.json
+     */
+    public static function authorization(array $auth, string $url): ?string
+    {
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        $port = parse_url($url, PHP_URL_PORT);
+        $origin = $port ? $host.':'.$port : $host;
 
-        if (is_array($basic) && isset($basic['username'], $basic['password'])) {
-            return 'Authorization: Basic '.base64_encode(
-                (string) $basic['username'].':'.(string) $basic['password']
-            );
+        if ($host === '' || strtolower((string) parse_url($url, PHP_URL_SCHEME)) !== 'https') {
+            return null;
         }
 
-        foreach (['bearer', 'github-oauth', 'gitlab-token'] as $kind) {
-            $token = $auth[$kind][$host] ?? null;
+        $basic = $auth['http-basic'][$origin] ?? null;
 
+        if (is_array($basic) && isset($basic['username'], $basic['password'])) {
+            return 'Basic '.base64_encode((string) $basic['username'].':'.(string) $basic['password']);
+        }
+
+        $github = $auth['github-oauth'][$origin] ?? ($origin === 'api.github.com' ? ($auth['github-oauth']['github.com'] ?? null) : null);
+
+        foreach ([$auth['bearer'][$origin] ?? null, $github, $auth['gitlab-token'][$origin] ?? null] as $token) {
             if (is_string($token) && $token !== '') {
-                return 'Authorization: Bearer '.$token;
+                return 'Bearer '.$token;
             }
         }
 
@@ -143,10 +149,12 @@ class AuthTokens
             ? ['username' => trim((string) $username), 'password' => $secret]
             : $secret;
 
-        // 🚨 0600. auth.json holds credentials in plain text — that is Composer's
-        // format, not a choice available here — so the file being unreadable by
-        // anyone but the web user is the only protection it has.
-        $this->file->write($data, 0600);
+        // 0600, and no backup copy. auth.json holds credentials in plain text
+        // (Composer's format, not a choice available here), so the file being
+        // unreadable by anyone but the web user is the only protection it has,
+        // and a second copy would be one more place to leak from. The write is
+        // atomic and refuses invalid JSON, which is what a backup guards against.
+        $this->file->write($data, 0600, false);
     }
 
     public function remove(string $kind, string $host): void
@@ -164,6 +172,6 @@ class AuthTokens
             unset($data[$kind]);
         }
 
-        $this->file->write($data, 0600);
+        $this->file->write($data, 0600, false);
     }
 }

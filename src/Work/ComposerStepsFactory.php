@@ -8,6 +8,7 @@ use ErnestDefoe\Millwright\Run\Steps;
 use ErnestDefoe\Millwright\Run\StepsFactory;
 use Flarum\Foundation\Config;
 use Flarum\Foundation\Paths;
+use GuzzleHttp\Client;
 use Flarum\Locale\TranslatorInterface;
 
 /**
@@ -72,7 +73,7 @@ class ComposerStepsFactory implements StepsFactory
                 $this->paths->storage.'/.composer',
                 (new \ErnestDefoe\Millwright\Host\PhpOverride($this->translator, $this->paths->storage))->get()
             ),
-            new Fetcher($this->translator, $workDir->staging(), $this->paths->base.'/auth.json'),
+            new Fetcher($this->translator, new Client(), $workDir->staging(), $this->paths->base.'/auth.json'),
             new Applier($this->translator, $this->paths->vendor, $workDir->staging(), $workDir->trash(), $journal),
             $journal,
             $workDir->requested(),

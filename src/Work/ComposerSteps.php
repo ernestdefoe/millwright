@@ -23,6 +23,7 @@ use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Run\Steps;
 use Flarum\Extension\ExtensionManager;
 use Flarum\Foundation\Config;
+use GuzzleHttp\Client;
 use Flarum\Locale\TranslatorInterface;
 use Illuminate\Database\ConnectionInterface;
 use RuntimeException;
@@ -661,7 +662,7 @@ class ComposerSteps implements Steps
                 $this->registerWith(null);
                 $this->flarum('migrate', '');
             } else {
-                (new FlarumUpdater($this->translator, $this->siteUrl, (array) (resolve(Config::class)['database'] ?? [])))->migrate();
+                (new FlarumUpdater($this->translator, new Client(), $this->siteUrl, (array) (resolve(Config::class)['database'] ?? []), $this->storagePath))->migrate();
             }
 
             $now = $db->table('settings')->where('key', 'version')->value('value');
@@ -999,7 +1000,7 @@ class ComposerSteps implements Steps
 
     private function health(): ?SiteHealth
     {
-        return $this->siteUrl === '' ? null : new SiteHealth($this->translator, $this->siteUrl);
+        return $this->siteUrl === '' ? null : new SiteHealth($this->translator, new Client(), $this->siteUrl);
     }
 
     private function restore(): ?Restore

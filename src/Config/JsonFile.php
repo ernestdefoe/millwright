@@ -64,9 +64,12 @@ class JsonFile
 
     /**
      * @param array<string,mixed> $data
-     * @param int $mode permissions for a file we are creating; 0600 for secrets
+     * @param int $mode the most open the file may be; 0600 for secrets. An
+     *                  existing file keeps its own mode where that is tighter.
+     * @param bool $backup false for a file that holds secrets: a copy of one
+     *                     is one more place for them to leak from
      */
-    public function write(array $data, int $mode = 0664): void
+    public function write(array $data, int $mode = 0664, bool $backup = true): void
     {
         $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
@@ -79,14 +82,21 @@ class JsonFile
             throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.json_refuse_write', ['file' => basename($this->path)]));
         }
 
-        $this->backup();
+        if ($this->exists()) {
+            $mode &= fileperms($this->path) & 0777;
+        }
+
+        $backup ? $this->backup($mode) : $this->removeBackups();
 
         $tmp = $this->path.'.millwright-'.bin2hex(random_bytes(4));
-        $handle = @fopen($tmp, 'w');
+        $handle = @fopen($tmp, 'x');
 
         if ($handle === false) {
             throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.json_write_failed', ['path' => $this->path]));
         }
+
+        // Before anything is written, so a secret is never in a file others can read.
+        @chmod($tmp, $mode);
 
         try {
             fwrite($handle, $json."\n");
@@ -98,8 +108,6 @@ class JsonFile
             fclose($handle);
         }
 
-        @chmod($tmp, $mode);
-
         if (! @rename($tmp, $this->path)) {
             @unlink($tmp);
 
@@ -108,21 +116,42 @@ class JsonFile
     }
 
     /**
-     * Keep the previous contents, timestamped.
+     * Keep the previous contents, once, with the file's own permissions.
      *
-     * 🚨 Beside the file rather than in a temp directory, so somebody debugging
-     * a broken site at 2am finds them without being told where to look.
+     * Beside the file rather than in a temp directory, so somebody debugging a
+     * broken site at 2am finds it without being told where to look. One copy,
+     * replaced by the next write, rather than one per write kept for ever.
      */
-    private function backup(): void
+    protected function backup(int $mode): void
     {
+        $this->removeBackups();
+
         if (! $this->exists()) {
             return;
         }
 
-        $to = $this->path.'.millwright-backup-'.date('Ymd-His');
+        $to = $this->path.'.millwright-backup';
+        $tmp = $to.'.'.bin2hex(random_bytes(4));
+        $handle = @fopen($tmp, 'x');
 
-        if (! is_file($to)) {
-            @copy($this->path, $to);
+        if ($handle === false) {
+            return;
+        }
+
+        @chmod($tmp, $mode);
+        fwrite($handle, (string) @file_get_contents($this->path));
+        fclose($handle);
+
+        if (! @rename($tmp, $to)) {
+            @unlink($tmp);
+        }
+    }
+
+    /** Copies earlier versions kept, one per write, and the single copy for a file that no longer wants one. */
+    protected function removeBackups(): void
+    {
+        foreach (glob($this->path.'.millwright-backup*') ?: [] as $old) {
+            @unlink($old);
         }
     }
 }

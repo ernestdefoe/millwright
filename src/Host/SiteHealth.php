@@ -3,6 +3,8 @@
 namespace ErnestDefoe\Millwright\Host;
 
 use Flarum\Locale\TranslatorInterface;
+use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Exception\GuzzleException;
 
 /**
  * Does the site still answer?
@@ -26,6 +28,7 @@ class SiteHealth
 
     public function __construct(
         protected TranslatorInterface $translator,
+        protected ClientInterface $http,
         private string $url,
     ) {
     }
@@ -74,7 +77,7 @@ class SiteHealth
     {
         $direct = $this->request($url);
 
-        if ($direct['status'] !== null || ! function_exists('curl_init')) {
+        if ($direct['status'] !== null) {
             return $direct;
         }
 
@@ -118,48 +121,33 @@ class SiteHealth
     /**
      * @return array{ok:bool, status:int|null, why:string, body?:string}
      */
-    private function request(string $url, ?string $hostHeader = null): array
+    protected function request(string $url, ?string $hostHeader = null): array
     {
-        if (! function_exists('curl_init')) {
+        try {
+            $response = $this->http->request('GET', $url, [
+                'timeout' => self::TIMEOUT,
+                'connect_timeout' => 8,
+                'http_errors' => false,
+                // A redirect is a working site, and following one only adds ways to fail.
+                'allow_redirects' => false,
+                'headers' => ['User-Agent' => 'Millwright health check', 'Cache-Control' => 'no-cache', 'Pragma' => 'no-cache']
+                    + ($hostHeader !== null ? ['Host' => $hostHeader] : []),
+            ]);
+        } catch (GuzzleException $e) {
             /*
-             * 🚨 Reported as UNUSABLE, never as healthy. A check that cannot run
-             * must not be allowed to look like a pass — the caller compares this
-             * answer before and after the update, and "cannot check" is a
-             * perfectly good answer as long as it is the same one both times.
+             * Could not connect, or no way to make a request at all. Reported
+             * as unusable, never as healthy: the caller compares this answer
+             * before and after the update, and "cannot check" is a perfectly
+             * good answer as long as it is the same one both times.
              */
-            return ['ok' => false, 'status' => null, 'why' => $this->translator->trans('ernestdefoe-millwright.api.health.no_http')];
+            return ['ok' => false, 'status' => null, 'why' => $this->translator->trans('ernestdefoe-millwright.api.health.no_answer', ['error' => $e->getMessage() ?: $this->translator->trans('ernestdefoe-millwright.api.health.no_response')])];
         }
 
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_NOBODY => false,
-            CURLOPT_TIMEOUT => self::TIMEOUT,
-            CURLOPT_CONNECTTIMEOUT => 8,
-            // A redirect is a working site, and following one only adds ways to fail.
-            CURLOPT_FOLLOWLOCATION => false,
-            CURLOPT_USERAGENT => 'Millwright health check',
-            CURLOPT_HTTPHEADER => array_merge(['Cache-Control: no-cache', 'Pragma: no-cache'], $hostHeader !== null ? ['Host: '.$hostHeader] : []),
-        ]);
-
-        $body = curl_exec($ch);
-        $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-        $error = curl_error($ch);
+        $status = $response->getStatusCode();
 
         /*
-         * 🚨 No curl_close(). It has done nothing since PHP 8.0 and is
-         * deprecated in 8.5 — and this runs on every update, so keeping it
-         * would write a deprecation notice into the very log the next failure
-         * is read from.
-         */
-
-        if ($body === false || $status === 0) {
-            return ['ok' => false, 'status' => null, 'why' => $this->translator->trans('ernestdefoe-millwright.api.health.no_answer', ['error' => $error ?: $this->translator->trans('ernestdefoe-millwright.api.health.no_response')])];
-        }
-
-        /*
-         * 🚨 Only 5xx is a broken site. A 403 or a 404 is a site making a
-         * decision, which needs a working boot to make — and a private forum
+         * Only 5xx is a broken site. A 403 or a 404 is a site making a
+         * decision, which needs a working boot to make, and a private forum
          * answering 403 to a signed-out request is not an outage, it is that
          * forum working exactly as configured.
          */
@@ -167,6 +155,6 @@ class SiteHealth
             return ['ok' => false, 'status' => $status, 'why' => $this->translator->trans('ernestdefoe-millwright.api.health.answered', ['status' => (string) $status])];
         }
 
-        return ['ok' => true, 'status' => $status, 'why' => $this->translator->trans('ernestdefoe-millwright.api.health.answered', ['status' => (string) $status]), 'body' => (string) $body];
+        return ['ok' => true, 'status' => $status, 'why' => $this->translator->trans('ernestdefoe-millwright.api.health.answered', ['status' => (string) $status]), 'body' => (string) $response->getBody()];
     }
 }

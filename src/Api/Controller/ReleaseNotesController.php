@@ -11,6 +11,7 @@ use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
 use ErnestDefoe\Millwright\Exception\RefusedException;
 use Flarum\Locale\TranslatorInterface;
+use GuzzleHttp\Client;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -40,6 +41,7 @@ class ReleaseNotesController implements RequestHandlerInterface
             ? (new ReleaseNotes(
                 StorageDir::of($this->paths->storage).'/release-notes',
                 new AuthTokens($this->translator, new JsonFile($this->translator, $this->paths->base.'/auth.json')),
+                new Client(),
             ))->between($updates[$package])
             : null;
 

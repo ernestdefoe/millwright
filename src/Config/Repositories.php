@@ -40,9 +40,10 @@ class Repositories
             $out[] = [
                 // Composer accepts repositories as a list or as a keyed map, and
                 // the key is the name when it is a map.
-                'name' => (string) ($repo['name'] ?? (is_string($key) ? $key : ($repo['url'] ?? ''))),
+                'name' => self::redact((string) ($repo['name'] ?? (is_string($key) ? $key : ($repo['url'] ?? '')))),
                 'type' => (string) ($repo['type'] ?? '?'),
-                'url' => (string) ($repo['url'] ?? ''),
+                // Never a credential written into the URL; see redact().
+                'url' => self::redact((string) ($repo['url'] ?? '')),
                 'canonical' => (bool) ($repo['canonical'] ?? true),
             ];
         }
@@ -104,7 +105,8 @@ class Repositories
     }
 
     /**
-     * Remove by URL, which is the only field guaranteed to be there.
+     * Remove by URL, which is the only field guaranteed to be there. The admin
+     * screen only ever has the redacted form, so that is what is compared.
      */
     public function remove(string $url): void
     {
@@ -114,7 +116,7 @@ class Repositories
         $found = false;
 
         foreach ($repos as $repo) {
-            if (is_array($repo) && rtrim((string) ($repo['url'] ?? ''), '/') === rtrim(trim($url), '/')) {
+            if (is_array($repo) && rtrim(self::redact((string) ($repo['url'] ?? '')), '/') === rtrim(self::redact(trim($url)), '/')) {
                 $found = true;
                 continue;
             }
@@ -128,5 +130,19 @@ class Repositories
 
         $data['repositories'] = $keep;
         $this->file->write($data);
+    }
+
+    /**
+     * A URL with any credential written into it (`https://user:token@host`,
+     * or a token alone as the user) replaced by ***, for showing to anybody.
+     * scp-style `git@host:path` names an account, not a secret, and is left.
+     */
+    public static function redact(string $url): string
+    {
+        return (string) preg_replace_callback(
+            '#^([a-z][a-z0-9+.-]*://)([^/@]*)@#i',
+            fn (array $m) => preg_match('#^https?://$#i', $m[1]) || str_contains($m[2], ':') ? $m[1].'***@' : $m[0],
+            $url
+        );
     }
 }

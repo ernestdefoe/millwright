@@ -6,6 +6,7 @@ use ErnestDefoe\Millwright\Config\AuthTokens;
 use ErnestDefoe\Millwright\Config\JsonFile;
 use ErnestDefoe\Millwright\Config\Repositories;
 use Flarum\Locale\TranslatorInterface;
+use GuzzleHttp\Client;
 
 /**
  * Whether anything newer exists, asked cheaply.
@@ -239,6 +240,7 @@ class UpdateCheck
         return $this->refreshWith($this->interesting($packages, self::directRequires($base.'/composer.json')), new PrivateIndex(
             new Repositories($translator, new JsonFile($translator, $base.'/composer.json')),
             new AuthTokens($translator, new JsonFile($translator, $base.'/auth.json')),
+            new Client(),
         ));
     }
 

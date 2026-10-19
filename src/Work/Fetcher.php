@@ -2,7 +2,10 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Config\AuthTokens;
 use Flarum\Locale\TranslatorInterface;
+use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Exception\GuzzleException;
 use RuntimeException;
 use ZipArchive;
 
@@ -22,6 +25,7 @@ class Fetcher
 {
     public function __construct(
         protected TranslatorInterface $translator,
+        protected ClientInterface $http,
         private string $stagingDir,
         private ?string $authPath = null,
     ) {
@@ -66,42 +70,49 @@ class Fetcher
         }
     }
 
-    private function download(string $url): string
+    protected function download(string $url): string
     {
+        /*
+         * Composer's own rule (secure-http): an archive is fetched over HTTPS
+         * or not at all, and a redirect may not leave HTTPS either.
+         */
+        if (strtolower((string) parse_url($url, PHP_URL_SCHEME)) !== 'https') {
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fetch.not_https', ['url' => $url]));
+        }
+
         $tmp = tempnam(sys_get_temp_dir(), 'mw-');
+        $headers = $this->authHeaders($url);
+        $code = 0;
+        $err = '';
 
-        $handle = fopen($tmp, 'wb');
-        $ch = curl_init($url);
+        try {
+            $code = $this->http->request('GET', $url, [
+                'sink' => $tmp,
+                'timeout' => 300,
+                'connect_timeout' => 20,
+                'http_errors' => false,
+                /*
+                 * Guzzle drops the Authorization header when a redirect leaves
+                 * the origin, as GitHub's api.github.com -> codeload.github.com
+                 * does, so a token is only ever sent to the host it is for.
+                 */
+                'allow_redirects' => ['max' => 5, 'protocols' => ['https'], 'referer' => false],
+                'headers' => ['User-Agent' => 'Millwright'] + $headers,
+            ])->getStatusCode();
+        } catch (GuzzleException $e) {
+            $err = $e->getMessage();
+        }
 
-        curl_setopt_array($ch, [
-            CURLOPT_FILE => $handle,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_MAXREDIRS => 5,
-            CURLOPT_TIMEOUT => 300,
-            CURLOPT_CONNECTTIMEOUT => 20,
-            CURLOPT_USERAGENT => 'Millwright',
-            CURLOPT_HTTPHEADER => $this->authHeaders($url),
-        ]);
-
-        $ok = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $err = curl_error($ch);
-
-        // curl_close() has done nothing since PHP 8.0 and is deprecated in 8.5.
-        // The handle is released when it goes out of scope.
-        unset($ch);
-        fclose($handle);
-
-        if ($ok === false || $code >= 400) {
+        if ($code === 0 || $code >= 400) {
             @unlink($tmp);
 
             /*
-             * 🚨 A 404 from a private repository means "not authenticated", not
-             * "does not exist" — GitHub hides private resources behind 404
-             * rather than 403. Saying so here saves the hour it otherwise costs
-             * to work out that the commit is fine and the token is not.
+             * A 404 from a private repository means "not authenticated", not
+             * "does not exist": GitHub hides private resources behind 404
+             * rather than 403. Saying so saves the hour it otherwise costs to
+             * work out that the commit is fine and the token is not.
              */
-            $hint = $code === 404 && $this->authHeaders($url) === []
+            $hint = $code === 404 && $headers === []
                 ? ' '.$this->translator->trans('ernestdefoe-millwright.api.fetch.private_hint')
                 : '';
 
@@ -112,40 +123,15 @@ class Fetcher
     }
 
     /**
-     * @return list<string>
+     * The credential for exactly this URL's host; see AuthTokens::authorization().
+     *
+     * @return array<string,string>
      */
-    private function authHeaders(string $url): array
+    protected function authHeaders(string $url): array
     {
-        $auth = $this->auth();
-        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        $authorization = AuthTokens::authorization($this->auth(), $url);
 
-        foreach (($auth['github-oauth'] ?? []) as $h => $token) {
-            if ($this->hostMatches($host, (string) $h)) {
-                return ['Authorization: Bearer '.$token];
-            }
-        }
-
-        foreach (($auth['bearer'] ?? []) as $h => $token) {
-            if ($this->hostMatches($host, (string) $h)) {
-                return ['Authorization: Bearer '.$token];
-            }
-        }
-
-        foreach (($auth['http-basic'] ?? []) as $h => $cred) {
-            if ($this->hostMatches($host, (string) $h) && isset($cred['username'], $cred['password'])) {
-                return ['Authorization: Basic '.base64_encode($cred['username'].':'.$cred['password'])];
-            }
-        }
-
-        return [];
-    }
-
-    private function hostMatches(string $host, string $configured): bool
-    {
-        $configured = strtolower($configured);
-
-        // api.github.com and codeload.github.com both belong to a github.com entry.
-        return $host === $configured || str_ends_with($host, '.'.$configured);
+        return $authorization === null ? [] : ['Authorization' => $authorization];
     }
 
     /** @return array<string,mixed> */

@@ -637,6 +637,7 @@ ernestdefoe-millwright:
       checksum: "The download of {package} does not match its published checksum. It was not unpacked."
       download_failed: "Could not download {url} (HTTP {code})."
       not_archive: "The download of {package} is not a readable archive."
+      not_https: "Refusing to download {url}: archives are only fetched over HTTPS, as Composer does."
       path_escapes: "Refusing to unpack {package}: the archive contains a path that escapes it."
       private_hint: "If this package is private, Millwright found no credentials for it — check auth.json."
       read_entry_failed: "Could not read {name} out of the {package} archive."

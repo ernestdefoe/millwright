@@ -2,6 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Exception\GuzzleException;
 use DOMDocument;
 use DOMElement;
 use DOMNode;
@@ -34,6 +36,7 @@ class ReleaseNotes
     public function __construct(
         private string $cacheDir,
         private AuthTokens $auth,
+        protected ClientInterface $http,
         private int $freshFor = 21600,
         private int $timeout = 15,
     ) {
@@ -197,21 +200,20 @@ class ReleaseNotes
         }
     }
 
-    private function get(string $url): ?string
+    protected function get(string $url): ?string
     {
-        $headers = "User-Agent: Millwright\r\nAccept: application/vnd.github.html+json\r\n";
-        $header = $this->auth->headerFor('github.com');
+        $authorization = $this->auth->authorizationFor($url);
 
-        if ($header !== null) {
-            $headers .= $header."\r\n";
+        try {
+            return (string) $this->http->request('GET', $url, [
+                'timeout' => $this->timeout,
+                'http_errors' => false,
+                'allow_redirects' => ['max' => 5, 'protocols' => ['https'], 'referer' => false],
+                'headers' => ['User-Agent' => 'Millwright', 'Accept' => 'application/vnd.github.html+json']
+                    + ($authorization !== null ? ['Authorization' => $authorization] : []),
+            ])->getBody();
+        } catch (GuzzleException) {
+            return null;
         }
-
-        $body = @file_get_contents($url, false, stream_context_create(['http' => [
-            'timeout' => $this->timeout,
-            'header' => $headers,
-            'ignore_errors' => true,
-        ]]));
-
-        return is_string($body) ? $body : null;
     }
 }

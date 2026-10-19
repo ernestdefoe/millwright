@@ -211,14 +211,61 @@ class ConfigTest extends TestCase
         (new Repositories(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/composer.json')))->all();
     }
 
-    public function test_the_previous_contents_are_kept(): void
+    public function test_the_previous_contents_are_kept_once_with_the_files_own_mode(): void
     {
-        $s = new Stability(EnglishTranslator::make(), $this->file('composer.json', ['minimum-stability' => 'stable', 'name' => 'flarum/flarum']));
-        $s->set('beta', true);
+        $file = $this->file('composer.json', ['minimum-stability' => 'stable', 'name' => 'flarum/flarum']);
+        chmod($this->dir.'/composer.json', 0640);
+        touch($this->dir.'/composer.json.millwright-backup-20260101-000000');
 
-        $backups = glob($this->dir.'/composer.json.millwright-backup-*');
-        $this->assertNotEmpty($backups, 'a write with no backup is a write that cannot be undone');
-        $this->assertStringContainsString('stable', file_get_contents($backups[0]));
+        $s = new Stability(EnglishTranslator::make(), $file);
+        $s->set('beta', true);
+        $s->set('RC', true);
+
+        $backups = glob($this->dir.'/composer.json.millwright-backup*');
+        $this->assertSame([$this->dir.'/composer.json.millwright-backup'], $backups, 'one copy, not one per write for ever');
+        $this->assertStringContainsString('beta', (string) file_get_contents($backups[0]), 'the contents before the last write');
+        $this->assertSame(0640, fileperms($backups[0]) & 0777);
+        $this->assertSame(0640, fileperms($this->dir.'/composer.json') & 0777, 'a write never loosens the file');
+    }
+
+    /**
+     * No copy of auth.json is kept: it holds credentials, and a backup made
+     * with the default mode was readable by other local users. Copies left by
+     * earlier versions are removed on the next write.
+     */
+    public function test_auth_json_is_never_copied_and_old_copies_go(): void
+    {
+        file_put_contents($this->dir.'/auth.json', json_encode(['bearer' => ['example.test' => 'old-secret']]));
+        chmod($this->dir.'/auth.json', 0600);
+        file_put_contents($this->dir.'/auth.json.millwright-backup-20260101-000000', '{"bearer":{"example.test":"old-secret"}}');
+
+        (new AuthTokens(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/auth.json')))->set('bearer', 'example.test', 'new-secret');
+
+        $this->assertSame([$this->dir.'/auth.json'], glob($this->dir.'/auth.json*'));
+        $this->assertSame(0600, fileperms($this->dir.'/auth.json') & 0777);
+    }
+
+    public function test_a_credential_in_a_repository_url_never_reaches_the_screen(): void
+    {
+        $repos = new Repositories(EnglishTranslator::make(), $this->file('composer.json', ['repositories' => [
+            ['type' => 'composer', 'url' => 'https://user:s3cret@repo.example.test'],
+            ['type' => 'vcs', 'url' => 'https://ghp_token@github.com/a/private'],
+            ['type' => 'vcs', 'url' => 'git@github.com:a/b.git'],
+            'named' => ['type' => 'composer', 'url' => 'https://repo.example.test/plain'],
+        ]]));
+
+        $shown = json_encode($repos->all());
+        $this->assertStringNotContainsString('s3cret', (string) $shown);
+        $this->assertStringNotContainsString('ghp_token', (string) $shown);
+        $this->assertSame(
+            ['https://***@repo.example.test', 'https://***@github.com/a/private', 'git@github.com:a/b.git', 'https://repo.example.test/plain'],
+            array_column($repos->all(), 'url')
+        );
+
+        // The screen removes by what it was shown.
+        $repos->remove('https://***@repo.example.test');
+        $this->assertCount(3, $repos->all());
+        $this->assertStringContainsString('ghp_token', (string) file_get_contents($this->dir.'/composer.json'), 'the others are untouched');
     }
 
     public function test_writing_preserves_everything_else_in_the_file(): void

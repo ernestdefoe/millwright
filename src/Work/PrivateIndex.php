@@ -2,6 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Exception\GuzzleException;
 use ErnestDefoe\Millwright\Config\AuthTokens;
 use ErnestDefoe\Millwright\Config\Repositories;
 
@@ -43,6 +45,7 @@ class PrivateIndex
     public function __construct(
         private Repositories $repositories,
         private AuthTokens $auth,
+        protected ClientInterface $http,
         private int $timeout = 15,
     ) {
     }
@@ -155,7 +158,8 @@ class PrivateIndex
             return $this->packageNames[$url] = null;
         }
 
-        $body = $this->get('https://raw.githubusercontent.com/'.$m[1].'/'.$m[2].'/HEAD/composer.json', 'github.com');
+        // From GitHub's API, the one host a github.com token is sent to.
+        $body = $this->get('https://api.github.com/repos/'.$m[1].'/'.$m[2].'/contents/composer.json', 'application/vnd.github.raw+json');
         $data = is_string($body) ? json_decode($body, true) : null;
         $name = is_array($data) && isset($data['name']) ? (string) $data['name'] : null;
 
@@ -169,7 +173,7 @@ class PrivateIndex
             return $this->tagLists[$repo];
         }
 
-        $body = $this->get('https://api.github.com/repos/'.$repo.'/tags?per_page=100', 'github.com');
+        $body = $this->get('https://api.github.com/repos/'.$repo.'/tags?per_page=100');
         $data = is_string($body) ? json_decode($body, true) : null;
 
         if (! is_array($data)) {
@@ -232,30 +236,28 @@ class PrivateIndex
      * at https://example.com/composer authenticates as example.com — looking one
      * up by URL finds nothing and the request 401s with no visible reason.
      *
-     * 🚨 `ignore_errors` so a 401 or 404 comes back as a body rather than as a
-     * warning-and-false. A private repository the site has no credential for is
+     * `http_errors` off, so a 401 or 404 comes back as a body rather than as
+     * an exception. A private repository the site has no credential for is
      * a normal state — a lapsed subscription, a token not pasted in yet — and
      * the honest outcome is "could not check", never a failed scheduled command
      * that also abandons the packages it COULD have checked.
      */
-    private function get(string $url, ?string $host = null): ?string
+    protected function get(string $url, string $accept = 'application/json'): ?string
     {
-        $headers = "User-Agent: Millwright\r\nAccept: application/json\r\n";
+        $authorization = $this->auth->authorizationFor($url);
 
-        $host ??= (string) (parse_url($url, PHP_URL_HOST) ?: '');
-        $header = $host === '' ? null : $this->auth->headerFor($host);
-
-        if ($header !== null) {
-            $headers .= $header."\r\n";
+        try {
+            return (string) $this->http->request('GET', $url, [
+                'timeout' => $this->timeout,
+                'http_errors' => false,
+                // A redirect may not leave HTTPS, and Guzzle drops the credential when one leaves the host.
+                'allow_redirects' => ['max' => 5, 'protocols' => ['https'], 'referer' => false],
+                'headers' => ['User-Agent' => 'Millwright', 'Accept' => $accept]
+                    + ($authorization !== null ? ['Authorization' => $authorization] : []),
+            ])->getBody();
+        } catch (GuzzleException) {
+            return null;
         }
-
-        $body = @file_get_contents($url, false, stream_context_create(['http' => [
-            'timeout' => $this->timeout,
-            'header' => $headers,
-            'ignore_errors' => true,
-        ]]));
-
-        return is_string($body) ? $body : null;
     }
 
     /** @return array<string, list<string>>|null */
