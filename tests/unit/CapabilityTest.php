@@ -50,7 +50,7 @@ class CapabilityTest extends TestCase
 
     public function test_every_check_explains_itself(): void
     {
-        // 🚨 A capability panel that lists facts without consequences is the same
+        // A capability panel that lists facts without consequences is the same
         // failure as a spinner: technically informative, practically useless.
         $report = (new Capability(EnglishTranslator::make(), sys_get_temp_dir(), new PhpBinary(EnglishTranslator::make())))->report();
 

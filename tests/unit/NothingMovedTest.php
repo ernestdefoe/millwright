@@ -10,7 +10,7 @@ use Flarum\Foundation\Paths;
 use PHPUnit\Framework\TestCase;
 
 /**
- * 🚨 A plan that moved nothing does not migrate, publish assets or clear
+ * A plan that moved nothing does not migrate, publish assets or clear
  * caches. On the live box (2026-10-13) such a run went through every finalise
  * step and looked exactly like an update that happened.
  */

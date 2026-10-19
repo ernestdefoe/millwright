@@ -5,7 +5,7 @@ namespace ErnestDefoe\Millwright\Prune;
 /**
  * How long rollback copies are kept, and when they were last tidied.
  *
- * 🚨 A file under storage/millwright, like everything else Millwright keeps,
+ * A file under storage/millwright, like everything else Millwright keeps,
  * rather than a Flarum setting. The prune runs at the end of an update — inside
  * a queue worker, mid-way through a run whose whole design is that it needs
  * nothing but the disk — and it must read the same answer there as the admin
@@ -54,7 +54,7 @@ class Retention
     }
 
     /**
-     * 🚨 Zero is allowed and means "only what the newest update needs" — the
+     * Zero is allowed and means "only what the newest update needs" — the
      * prune keeps that whatever these say. A value that is not a whole number
      * falls back to the default rather than to zero, so a typo can never be
      * read as "keep nothing".

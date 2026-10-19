@@ -5,7 +5,7 @@ namespace ErnestDefoe\Millwright\Host;
 /**
  * What the site said when it fell over.
  *
- * 🚨 "The update broke the site" is not an answer anybody can act on. The
+ * "The update broke the site" is not an answer anybody can act on. The
  * difference between that and "TypeError: ... in ramon/classifieds/extend.php
  * on line 87" is the difference between an admin filing a bug against the
  * updater and one filing it against the extension that is actually wrong.
@@ -50,7 +50,7 @@ class ErrorLog
         }
 
         /*
-         * 🚨 The tail, not the file. A busy forum's daily log is megabytes and
+         * The tail, not the file. A busy forum's daily log is megabytes and
          * this runs while the site is DOWN — reading the whole thing into
          * memory to find the last line of it is the wrong thing to do at the
          * worst possible moment.

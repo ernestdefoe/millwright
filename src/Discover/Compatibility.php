@@ -7,13 +7,13 @@ use Composer\Semver\Semver;
 /**
  * Whether a package has a release that says it works with this Flarum.
  *
- * 🚨 The single most useful thing discovery can do, and the thing the current
- * tooling does not. Extension Manager lists everything on Packagist and lets you
- * find out at install time that an extension is Flarum 1 only — after the
- * resolve, after the wait, and with an error message about version constraints
- * rather than a sentence. Knowing before you press anything is most of the value.
+ * The single most useful thing discovery can do. Without it, a list of
+ * everything on Packagist lets you find out at install time that an extension is
+ * Flarum 1 only: after the resolve, after the wait, and with an error message
+ * about version constraints rather than a sentence. Knowing before you press
+ * anything is most of the value.
  *
- * 🚨 Constraints are read with Composer's own parser, not a regular expression.
+ * Constraints are read with Composer's own parser, not a regular expression.
  * A Flarum extension's constraint is routinely `^1.8 || ^2.0`, or `>=1.8`, or
  * `^2.0@beta` — every hand-rolled matcher gets one of those wrong, and getting
  * it wrong means either hiding extensions that work or offering ones that
@@ -56,7 +56,7 @@ class Compatibility
     }
 
     /**
-     * 🚨 Packagist's p2 files are minified: only the newest release is complete,
+     * Packagist's p2 files are minified: only the newest release is complete,
      * and every later entry lists just the keys that CHANGED from the one above
      * it, with "__unset" for a key that went away. Read raw, an older release
      * that inherits its flarum/core requirement looks like it has none and is
@@ -97,8 +97,7 @@ class Compatibility
     /**
      * Whether this name is a dead end that another package took over.
      *
-     * 🚨 Two shapes, and Extension Manager catches neither (discuss.flarum.org
-     * d/40012). One is an author marking it abandoned with a replacement. The
+     * Two shapes, and both need catching (discuss.flarum.org d/40012). One is an author marking it abandoned with a replacement. The
      * other is quieter: the repository moved to a new name, and its composer.json
      * now says it REPLACES the old one, so the old name on Packagist serves the
      * new package's code. v17development/flarum-seo is that, and installing it
@@ -146,7 +145,7 @@ class Compatibility
             ];
 
             /*
-             * 🚨 A stable release beats a newer unstable one. Packagist lists
+             * A stable release beats a newer unstable one. Packagist lists
              * versions newest-first, so taking the first match would offer a
              * beta to somebody who has never opted into one — and most forums
              * cannot install it anyway, because minimum-stability is stable.
@@ -185,7 +184,7 @@ class Compatibility
     /**
      * Does this constraint admit the Flarum that is installed?
      *
-     * 🚨 Catches UnexpectedValueException ONLY, and this narrowness is the whole
+     * Catches UnexpectedValueException ONLY, and this narrowness is the whole
      * point. The first version caught \Throwable, which meant that when
      * composer/semver was missing from the autoloader the Error was swallowed
      * and every single package came back "not for this Flarum" — a confident,

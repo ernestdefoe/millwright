@@ -5,7 +5,7 @@ namespace ErnestDefoe\Millwright\Plan;
 /**
  * Extensions that replace part of Flarum itself.
  *
- * 🚨 An extension can ship its own copy of one of Flarum's classes and have
+ * An extension can ship its own copy of one of Flarum's classes and have
  * Composer load it in place of Flarum's. Every check that reads `require`
  * passes, because the extension honestly declares the Flarum it was written
  * for; the copy is still frozen at that version. The first Flarum release that

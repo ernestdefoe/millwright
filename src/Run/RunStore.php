@@ -8,7 +8,7 @@ use RuntimeException;
 /**
  * Where a run's state lives between requests.
  *
- * 🚨 Written atomically — a temp file plus a rename — because this is read by
+ * Written atomically — a temp file plus a rename — because this is read by
  * one request while another is writing it. Every poll of the admin screen reads
  * this file, and every step writes it; a torn read would show a run that never
  * existed, and on a busy forum that would be common rather than rare.
@@ -47,7 +47,7 @@ class RunStore
         fsync($handle);
         fclose($handle);
 
-        // 🚨 rename() is atomic, so a concurrent reader sees either the whole
+        // rename() is atomic, so a concurrent reader sees either the whole
         // previous state or the whole new one, and never a half-written file.
         if (! @rename($temp, $path)) {
             @unlink($temp);
@@ -142,7 +142,7 @@ class RunStore
 
     protected function path(string $id): string
     {
-        // 🚨 Ids are generated, never taken from a request — but this is the
+        // Ids are generated, never taken from a request — but this is the
         // second place a name reaches the filesystem, so it is checked here too
         // rather than trusted because of where it came from.
         if (! preg_match('/^[A-Za-z0-9_-]{1,64}$/', $id)) {

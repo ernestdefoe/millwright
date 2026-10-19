@@ -10,7 +10,7 @@ use ErnestDefoe\Millwright\Config\Repositories;
 /**
  * Versions for packages Packagist has never heard of.
  *
- * 🚨 This exists because the check was silently useless for exactly the
+ * This exists because the check was silently useless for exactly the
  * extensions somebody paid for.
  *
  * `millwright:check` asks Packagist about every installed extension. A premium
@@ -24,7 +24,7 @@ use ErnestDefoe\Millwright\Config\Repositories;
  * whatever `composer` repositories the site has configured get asked, with
  * whatever credentials the site already has for them.
  *
- * 🚨 It fetches each repository ONCE per check, not once per package. A forum
+ * It fetches each repository ONCE per check, not once per package. A forum
  * with nine protected extensions would otherwise be nine downloads of the same
  * index, on a schedule, for one question.
  */
@@ -74,7 +74,7 @@ class PrivateIndex
         }
 
         /*
-         * 🚨 Then the GitHub repositories, because that is how a self-published
+         * Then the GitHub repositories, because that is how a self-published
          * extension is usually installed.
          *
          * Ernest's own two forums install his premium extensions from `vcs`
@@ -142,7 +142,7 @@ class PrivateIndex
     /**
      * Which package a vcs repository provides.
      *
-     * 🚨 Asked of the repository's own composer.json, not guessed from the URL.
+     * Asked of the repository's own composer.json, not guessed from the URL.
      * `github.com/ernestdefoe/fantasy-flarum` publishes `ernestdefoe/fantasy`,
      * and `github.com/ernestdefoe/gameday-flarum` publishes
      * `ernestdefoe/gameday` — matching on the URL would check the wrong package
@@ -198,7 +198,7 @@ class PrivateIndex
 
         foreach ($this->repositories->all() as $repo) {
             /*
-             * 🚨 `composer` type only. A `vcs` repository has no index to read —
+             * `composer` type only. A `vcs` repository has no index to read —
              * answering it would mean cloning, which is not something to do on a
              * nightly schedule — and a `path` repository is a checkout on this
              * machine, which Millwright will not replace anyway.
@@ -232,7 +232,7 @@ class PrivateIndex
     /**
      * One HTTP GET, with the host's credential attached if there is one.
      *
-     * 🚨 Credentials are matched by HOST, the way Composer does it. A repository
+     * Credentials are matched by HOST, the way Composer does it. A repository
      * at https://example.com/composer authenticates as example.com — looking one
      * up by URL finds nothing and the request 401s with no visible reason.
      *

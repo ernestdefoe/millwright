@@ -49,7 +49,7 @@ class Change
     /**
      * The path this package occupies inside a vendor tree.
      *
-     * 🚨 Derived, never taken from input. A package name reaching the filesystem
+     * Derived, never taken from input. A package name reaching the filesystem
      * is exactly where a traversal would get in, and the constructor's check for
      * a single slash is not enough on its own — "a/../../etc" has one slash.
      */

@@ -16,7 +16,7 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
 /**
- * 🚨 The rule these protect: a prune can never take a copy a rollback needs.
+ * The rule these protect: a prune can never take a copy a rollback needs.
  *
  * The trash is the rollback. Everything Millwright promises — "nothing is
  * deleted; an interrupted update loses progress, never your site" — rests on

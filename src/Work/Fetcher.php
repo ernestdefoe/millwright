@@ -12,7 +12,7 @@ use ZipArchive;
 /**
  * Gets one package's archive and unpacks it into the staging area.
  *
- * 🚨 Staging, never `vendor/`. Fetch is the long, failure-prone phase — a slow
+ * Staging, never `vendor/`. Fetch is the long, failure-prone phase — a slow
  * mirror, a 404, a host that cuts the request — and none of that is allowed
  * anywhere near the tree the site is running from. By the time apply starts,
  * every file is already on disk and verified, so the only thing left is two
@@ -52,7 +52,7 @@ class Fetcher
                 $actual = hash_file('sha1', $archive);
 
                 /*
-                 * 🚨 Checked before anything is unpacked. A corrupted or
+                 * Checked before anything is unpacked. A corrupted or
                  * substituted archive that reached the staging area would be
                  * applied by the next phase without further question — this is
                  * the only point where that can still be caught.
@@ -145,7 +145,7 @@ class Fetcher
     }
 
     /**
-     * 🚨 Archives from GitHub and friends wrap everything in a single generated
+     * Archives from GitHub and friends wrap everything in a single generated
      * top-level directory whose name nobody should depend on. It is stripped, so
      * what lands in staging is the package itself and the apply phase can move
      * it straight into place.
@@ -173,7 +173,7 @@ class Fetcher
                 continue;
             }
 
-            // 🚨 An archive is untrusted input, and "../" inside an entry name is
+            // An archive is untrusted input, and "../" inside an entry name is
             // the oldest way out of a target directory there is.
             if (str_contains($rel, '..')) {
                 throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fetch.path_escapes', ['package' => $package]));

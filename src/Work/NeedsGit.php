@@ -9,7 +9,7 @@ use Flarum\Locale\TranslatorInterface;
  * The package sources Composer can only read by running git — which a host
  * that disables proc_open will not let it do.
  *
- * 🚨 Asked BEFORE the resolve, from composer.json alone. Left to Composer, a
+ * Asked BEFORE the resolve, from composer.json alone. Left to Composer, a
  * source like this fails halfway through the resolve as a Symfony LogicException
  * about proc_open, with a stack trace, on a screen whose owner did nothing
  * wrong. Every case below is one where the answer is known in advance.

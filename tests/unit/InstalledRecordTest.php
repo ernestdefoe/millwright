@@ -8,7 +8,7 @@ use ErnestDefoe\Millwright\Work\InstalledRecord;
 use PHPUnit\Framework\TestCase;
 
 /**
- * 🚨 The rule these protect: after an update is applied, the register step's
+ * The rule these protect: after an update is applied, the register step's
  * `composer install` must have NOTHING to do.
  *
  * When it had something to do it re-extracted every changed package, using a

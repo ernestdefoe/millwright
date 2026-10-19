@@ -25,7 +25,7 @@ use RuntimeException;
 /**
  * Composer inside the request, for hosts where proc_open is disabled.
  *
- * 🚨 The two promises that make it acceptable: the process it runs in is left
+ * The two promises that make it acceptable: the process it runs in is left
  * exactly as it was found, and nothing it does can leave a half-written state —
  * not even when the host kills the request part-way.
  */
@@ -44,7 +44,7 @@ class InProcessComposerTest extends TestCase
         mkdir($this->dir.'/home', 0775, true);
 
         /*
-         * 🚨 A token from the environment counts, as it should, so these tests
+         * A token from the environment counts, as it should, so these tests
          * must not inherit one. CI's PHP setup exports COMPOSER_AUTH with a
          * GitHub token, and the "needs a token" cases passed locally and failed
          * there.
@@ -262,7 +262,7 @@ class InProcessComposerTest extends TestCase
     }
 
     /**
-     * 🚨 The IONOS case: the host killed the last attempt mid-resolve. The
+     * The IONOS case: the host killed the last attempt mid-resolve. The
      * retry says so, puts the manifests back, and then succeeds.
      */
     public function test_a_resolve_the_host_killed_is_announced_then_retried_from_the_saved_manifests(): void

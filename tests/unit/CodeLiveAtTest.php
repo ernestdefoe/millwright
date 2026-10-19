@@ -11,7 +11,7 @@ use ErnestDefoe\Millwright\Work\Fetcher;
 use PHPUnit\Framework\TestCase;
 
 /**
- * 🚨 When the web server will have re-read the update's files.
+ * When the web server will have re-read the update's files.
  *
  * Timed from the autoloader alone, an update that changes no classes
  * (2.0.0-rc.8 → 2.0.0) found an old timestamp, skipped the wait, and was

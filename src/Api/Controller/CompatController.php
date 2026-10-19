@@ -20,10 +20,9 @@ use Psr\Http\Server\RequestHandlerInterface;
 /**
  * "Does this work with the Flarum I actually have?", for one page of results.
  *
- * 🚨 Answered against the INSTALLED core version, not against "Flarum 2". A
+ * Answered against the INSTALLED core version, not against "Flarum 2". A
  * forum on 2.0.0-rc.8 and one on 2.1.0 get different answers, and an extension
- * requiring ^2.1 offered to the first would fail at the resolve — which is
- * exactly the experience being replaced.
+ * requiring ^2.1 offered to the first would fail at the resolve, after the wait.
  */
 class CompatController implements RequestHandlerInterface
 {
@@ -51,7 +50,7 @@ class CompatController implements RequestHandlerInterface
         }
 
         /*
-         * 🚨 Capped. This makes one outbound HTTP call per uncached package, and
+         * Capped. This makes one outbound HTTP call per uncached package, and
          * an unbounded list from the browser would be an unbounded number of
          * requests leaving somebody's server — the kind of thing that becomes an
          * outage rather than a slow page.
@@ -59,7 +58,7 @@ class CompatController implements RequestHandlerInterface
         $names = array_slice($names, 0, self::MOST);
 
         /*
-         * 🚨 An optional target, so the core pre-flight can ask "would this
+         * An optional target, so the core pre-flight can ask "would this
          * extension work on the Flarum I am considering" through the same
          * endpoint. Validated with Composer's parser rather than trusted:
          * it reaches a cache key and a constraint check, and junk would fill

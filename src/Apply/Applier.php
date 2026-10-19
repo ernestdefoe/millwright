@@ -10,15 +10,15 @@ use RuntimeException;
  * Puts a plan into the vendor tree, one package at a time, writing down each
  * step before it takes it.
  *
- * 🚨 Two renames, never a delete.
+ * Two renames, never a delete.
  *
  *     vendor/<pkg>   → trash/<pkg>@<version>     (the old one is kept)
  *     staging/<pkg>  → vendor/<pkg>              (the new one arrives)
  *
  * Both are `rename()` (Tree::move), so each is atomic and effectively instantaneous. The
- * package is absent between them, and only between them — microseconds, for one
- * package, against Extension Manager's window of deleting 1.3 GB and moving it
- * back. Nothing is deleted at all during an apply: the old tree waits in the
+ * package is absent between them, and only between them: microseconds, for one
+ * package, where deleting a tree and moving another in takes far longer.
+ * Nothing is deleted at all during an apply: the old tree waits in the
  * trash until somebody prunes it, which is what makes rollback possible long
  * after the fact.
  *
@@ -63,7 +63,7 @@ class Applier
     {
         if ($this->journal->exists() && ! $this->journal->isComplete()) {
             /*
-             * 🚨 Refuse rather than continue. A journal with an unfinished entry
+             * Refuse rather than continue. A journal with an unfinished entry
              * means a previous apply died, and the tree is in a state only that
              * journal can explain. Starting a second apply on top of it would
              * interleave two records and make both unreadable — which is how a
@@ -86,7 +86,7 @@ class Applier
     /**
      * One package, journalled.
      *
-     * 🚨 No "did the last run finish" guard here, unlike apply(). When the step
+     * No "did the last run finish" guard here, unlike apply(). When the step
      * driver is doing the sequencing, an unfinished journal is the NORMAL state
      * — it is the record of the run currently in progress. Refusing on it would
      * make the second step of every update fail.
@@ -118,7 +118,7 @@ class Applier
     }
 
     /**
-     * 🚨 A package installed as a symlink belongs to somebody else.
+     * A package installed as a symlink belongs to somebody else.
      *
      * Composer installs a path repository by linking vendor/<pkg> at a checkout
      * on disk — the way every extension developer runs their own work, and the
@@ -173,7 +173,7 @@ class Applier
     /**
      * Remove the vendor namespace directory if that was the last package in it.
      *
-     * 🚨 Only when empty, and never above the vendor directory itself. rmdir
+     * Only when empty, and never above the vendor directory itself. rmdir
      * refuses a non-empty directory, so the check and the act cannot disagree.
      * An uninstall that leaves vendor/acme/ behind is not wrong so much as
      * unfinished, and it is the sort of litter that makes somebody wonder what
@@ -258,7 +258,7 @@ class Applier
     }
 
     /**
-     * 🚨 Join a trusted base with a relative path that has already been
+     * Join a trusted base with a relative path that has already been
      * validated by Change::relativePath(). Kept in one place so there is one
      * thing to audit rather than five string concatenations.
      */

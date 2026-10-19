@@ -8,7 +8,7 @@ use RuntimeException;
 /**
  * An append-only record of what an apply has done, and what it was about to do.
  *
- * 🚨 This is the whole safety story. Everything else in Millwright is
+ * This is the whole safety story. Everything else in Millwright is
  * convenience; if this file is wrong, an interrupted update is unrecoverable and
  * the product has no reason to exist.
  *
@@ -100,7 +100,7 @@ class Journal
             $row = json_decode($line, true);
 
             /*
-             * 🚨 A malformed final line is NORMAL, not corruption: it is what a
+             * A malformed final line is NORMAL, not corruption: it is what a
              * process killed mid-write leaves behind. Discarding it is correct —
              * the action it described had not been recorded as begun, so it had
              * not started either.
@@ -162,7 +162,7 @@ class Journal
     }
 
     /**
-     * 🚨 Flushed AND fsync'd before returning.
+     * Flushed AND fsync'd before returning.
      *
      * Without the fsync the line sits in the OS page cache, and a power loss or
      * container kill loses the record while keeping the filesystem change it was

@@ -14,7 +14,7 @@ if (substr_count($code, $anchor) !== 1) {
 $aliases = <<<'PHP'
 
         /*
-         * 🚨 Millwright's paths, for the update that replaces Millwright with
+         * Millwright's paths, for the update that replaces Millwright with
          * this package. The admin tab that started it is still running
          * Millwright's script, and once the files swap that script's next
          * poll and step land here. Without them the run stalls at finalise.

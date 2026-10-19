@@ -20,7 +20,7 @@ use Throwable;
  * The rollback copies: how much room they take, what a prune would free, and
  * the button that does it.
  *
- * 🚨 GET is a dry run and nothing else. It is what the screen's confirm quotes,
+ * GET is a dry run and nothing else. It is what the screen's confirm quotes,
  * so the number somebody agrees to is the number the same rule just computed —
  * and the POST recomputes it rather than trusting a list the browser sends
  * back. The browser asks WHETHER to prune, never WHAT.

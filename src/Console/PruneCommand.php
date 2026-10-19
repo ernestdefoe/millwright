@@ -14,7 +14,7 @@ use Throwable;
 /**
  * `php flarum millwright:prune [--dry-run]` — tidy the rollback copies.
  *
- * Scheduled daily with NO arguments. 🚨 A scheduled `['--dry-run' => true]`
+ * Scheduled daily with NO arguments. A scheduled `['--dry-run' => true]`
  * would render as `--dry-run='1'`, which a no-value option refuses — every
  * night, into /dev/null. The flag is for a person at a terminal.
  *

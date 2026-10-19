@@ -8,7 +8,7 @@ use Flarum\Locale\TranslatorInterface;
 /**
  * Credentials Composer uses to reach protected and paid repositories.
  *
- * 🚨 WRITE-ONLY, and that is the whole design. A stored token is never returned
+ * WRITE-ONLY, and that is the whole design. A stored token is never returned
  * to the browser by any method on this class — `all()` reports which hosts have
  * a credential and nothing else. A settings screen that displays your GitHub
  * token back to you is worse than no screen: it turns every admin session, every
@@ -24,7 +24,7 @@ class AuthTokens
     /**
      * The kinds Composer understands, and what each expects.
      *
-     * 🚨 `http-basic` takes a username AND password; the rest take a single
+     * `http-basic` takes a username AND password; the rest take a single
      * token. Storing a bare string where Composer expects an object makes
      * authentication fail with a message about the repository rather than about
      * the credential, which is a long way to walk for a typo.

@@ -12,7 +12,7 @@ use Symfony\Component\Console\Input\InputOption;
 /**
  * `php flarum millwright:check` — is anything newer available?
  *
- * 🚨 One cheap HTTP call per installed package, and no Composer. That is what
+ * One cheap HTTP call per installed package, and no Composer. That is what
  * makes it safe to run nightly on somebody else's shared hosting: a resolve
  * would be 16 seconds and 165 MB, which is not something to do on a schedule on
  * a host that may only have 256 MB to begin with.
@@ -47,7 +47,7 @@ class CheckCommand extends AbstractCommand
         }
 
         /*
-         * 🚨 Extensions, Flarum, and what composer.json requires itself, asked
+         * Extensions, Flarum, and what composer.json requires itself, asked
          * of Packagist first and then the site's own protected repositories — see
          * UpdateCheck::interesting() and refreshWith(). A premium extension is
          * not on Packagist, so it used to come back "uncheckable" and its owner
@@ -80,7 +80,7 @@ class CheckCommand extends AbstractCommand
         }
 
         /*
-         * 🚨 Reported separately, because it is not a failure. A branch install
+         * Reported separately, because it is not a failure. A branch install
          * has no version to be newer than; whether the branch has moved is a
          * question for the update itself.
          */

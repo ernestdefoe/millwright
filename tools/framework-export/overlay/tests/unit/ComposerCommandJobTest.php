@@ -17,7 +17,7 @@ use Psr\Log\AbstractLogger;
 class ComposerCommandJobTest extends TestCase
 {
     /**
-     * As the earlier Extension Manager serialized it: the command is an instance
+     * As an earlier version serialized it: the command is an instance
      * of a class that no longer exists, carrying a task model that no longer
      * exists either.
      */

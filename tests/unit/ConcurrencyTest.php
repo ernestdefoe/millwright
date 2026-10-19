@@ -8,7 +8,7 @@ use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use PHPUnit\Framework\TestCase;
 
 /**
- * 🚨 On a forum with a queue, two drivers WILL run at once — the admin page
+ * On a forum with a queue, two drivers WILL run at once — the admin page
  * polling and a worker picking up the job — and without a lock both read the
  * same index, both do the same item, and a package is applied twice.
  *

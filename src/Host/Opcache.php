@@ -7,14 +7,14 @@ use Flarum\Locale\TranslatorInterface;
 /**
  * Whether the code this update writes will actually be the code that runs.
  *
- * 🚨 An update can succeed completely and change nothing anybody can see. PHP
+ * An update can succeed completely and change nothing anybody can see. PHP
  * caches compiled scripts, and on a host tuned with
  * `opcache.validate_timestamps=0` it never looks at the files again — so new
  * files land, every phase reports success, and the site serves the old version
  * until somebody restarts PHP. Silent, total, and indistinguishable from the
  * update not having run.
  *
- * 🚨 It is also the reason this extension replaces directories in place rather
+ * It is also the reason this extension replaces directories in place rather
  * than flipping a symlink between prepared slots, which was the original plan.
  * A symlink flip is atomic on disk and invisible to PHP: with
  * `opcache.revalidate_path=0` — the default, measured as false on the machine
@@ -40,7 +40,7 @@ class Opcache
     /**
      * Compiled code is cached, so an update is not live until it is cleared.
      *
-     * 🚨 This covers BOTH configurations, and the second one caught me out on a
+     * This covers BOTH configurations, and the second one caught me out on a
      * real site. `validate_timestamps=0` never re-reads files — obvious. But
      * `validate_timestamps=1` with `revalidate_freq=60` — the default in
      * Flarum's own Docker image — does not re-read them for up to a MINUTE
@@ -83,7 +83,7 @@ class Opcache
     public function situationFrom(array $directives): array
     {
         /*
-         * 🚨 `opcache.enable` is per-SAPI, and this must be answered for the SAPI
+         * `opcache.enable` is per-SAPI, and this must be answered for the SAPI
          * that will SERVE the pages — not for whichever process happens to ask.
          * A CLI worker reports opcache disabled (enable_cli is off by default)
          * while the web pool has it very much enabled, so a check that trusts
@@ -95,7 +95,7 @@ class Opcache
 
         return [
             /*
-             * 🚨 Any enabled opcache needs clearing, not just one with
+             * Any enabled opcache needs clearing, not just one with
              * validate_timestamps off. See the constant above: a 60-second
              * revalidate window is a 60-second window of serving code that no
              * longer matches the files, and the cost of clearing is a recompile
@@ -112,7 +112,7 @@ class Opcache
     /**
      * Throw away the compiled code so the new files are read.
      *
-     * 🚨 Only meaningful in the process pool that serves pages. Calling this
+     * Only meaningful in the process pool that serves pages. Calling this
      * from a CLI queue worker resets that worker's own cache, which nobody is
      * using, and leaves the web pool exactly as stale as before — so this
      * reports whether it did anything real rather than returning success for
@@ -145,7 +145,7 @@ class Opcache
 
         if (! $situation['canReset'] || ! @opcache_reset()) {
             /*
-             * 🚨 false does not always mean "could not". opcache_reset()
+             * false does not always mean "could not". opcache_reset()
              * answers false while an earlier reset is still PENDING — it waits
              * for every worker to go idle — and a pending reset has already
              * switched the cache off, so every request compiles from disk.

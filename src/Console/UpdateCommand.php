@@ -21,7 +21,7 @@ use Symfony\Component\Console\Input\InputOption;
  * `php flarum millwright:update vendor/name` — the update the admin screen
  * does, driven from a terminal.
  *
- * 🚨 It is the SAME run. Not a second implementation that happens to call
+ * It is the SAME run. Not a second implementation that happens to call
  * Composer: it writes the same work directory, advances the same phases through
  * the same StepRunner, journals the same way and rolls back the same way. A
  * console command that reimplemented any of that would be a second set of bugs
@@ -33,7 +33,7 @@ use Symfony\Component\Console\Input\InputOption;
  * cut us off, so this loops until the run finishes and prints the log as it
  * goes.
  *
- * 🚨 It deliberately does NOT nudge a queue worker. On a forum with Horizon,
+ * It deliberately does NOT nudge a queue worker. On a forum with Horizon,
  * handing the run to a worker as well would mean two drivers on one run — the
  * lock in StepRunner makes that safe rather than corrupting, but it also means
  * this process would sit watching someone else work and could not report a
@@ -50,7 +50,7 @@ class UpdateCommand extends AbstractCommand
     /**
      * Log lines already printed, by index.
      *
-     * 🚨 By index and by value, not by counting. A waiting step REPLACES the
+     * By index and by value, not by counting. A waiting step REPLACES the
      * last line rather than appending (Run::waiting), so a counter would either
      * miss it or repeat everything after it.
      *
@@ -142,7 +142,7 @@ class UpdateCommand extends AbstractCommand
 
         if (($refusal = $this->notInstalled($named)) !== null) {
             /*
-             * 🚨 Refused rather than attempted, because `composer update` on a
+             * Refused rather than attempted, because `composer update` on a
              * package that is not installed does nothing at all and reports
              * success. A typo would otherwise print a clean run and leave the
              * site exactly as it was.
@@ -176,7 +176,7 @@ class UpdateCommand extends AbstractCommand
 
         if (array_diff_key($repinner->pinned($named), $pins) !== []) {
             /*
-             * 🚨 A pin with no newer version in the stored check. Straight
+             * A pin with no newer version in the stored check. Straight
              * after a release the check still predates it, so --repin had
              * nothing to raise to: the run went through every step, said
              * "Done." and moved nothing (live box, 2026-10-13, v1.21.2). Ask
@@ -203,7 +203,7 @@ class UpdateCommand extends AbstractCommand
         if ($pins !== []) {
             if (! $this->input->getOption('repin')) {
                 /*
-                 * 🚨 The failure this command exists to end. Without the flag
+                 * The failure this command exists to end. Without the flag
                  * we could still start a run, and Composer would answer
                  * "Nothing to modify in lock file", exit 0, and the run would
                  * go green having moved nothing. Refusing, by name, with the
@@ -238,7 +238,7 @@ class UpdateCommand extends AbstractCommand
     /**
      * Take over a run somebody else started.
      *
-     * 🚨 Worth having on its own: a run left behind by a browser tab that was
+     * Worth having on its own: a run left behind by a browser tab that was
      * closed, or by a worker that died, is exactly the state that used to need
      * someone to know what a work directory was.
      */
@@ -279,7 +279,7 @@ class UpdateCommand extends AbstractCommand
 
             if (time() > $deadline) {
                 /*
-                 * 🚨 The run is NOT abandoned or rolled back here. It is on
+                 * The run is NOT abandoned or rolled back here. It is on
                  * disk, mid-phase, and resumable — deciding to undo somebody's
                  * half-finished update because a timeout elapsed is not this
                  * command's call to make.
@@ -308,7 +308,7 @@ class UpdateCommand extends AbstractCommand
 
         if ($run->state === Run::DONE && $this->movedNothing($run)) {
             /*
-             * 🚨 Green, and nothing changed. Whatever the reason — a dependency
+             * Green, and nothing changed. Whatever the reason — a dependency
              * holding it back, a constraint — the exit code must not say this
              * update happened. The plan's own sentence is in the log above.
              */

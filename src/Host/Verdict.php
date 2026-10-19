@@ -5,7 +5,7 @@ namespace ErnestDefoe\Millwright\Host;
 /**
  * Is this update to blame for the site being down?
  *
- * 🚨 A pure rule, on its own, because it is the dangerous part.
+ * A pure rule, on its own, because it is the dangerous part.
  *
  * Everything else here is plumbing — a curl call, a log tail — and if the
  * plumbing misbehaves the worst case is a check that does not run. This rule
@@ -38,7 +38,7 @@ class Verdict
     {
         if ($before === 'unchecked') {
             /*
-             * 🚨 Never BROKEN_BY_THIS. Without a before, a site that is down
+             * Never BROKEN_BY_THIS. Without a before, a site that is down
              * now might have been down for a week — and this branch is reached
              * precisely on the hosts where the checker itself does not work, so
              * it would fire on every update on that host and undo all of them.

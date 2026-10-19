@@ -7,7 +7,7 @@ use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use PHPUnit\Framework\TestCase;
 
 /**
- * 🚨 The rule these protect: an update that cannot be seen has not happened.
+ * The rule these protect: an update that cannot be seen has not happened.
  *
  * Everything else in this extension is about whether an update can RUN. This is
  * about whether anybody can tell that it did. On a host tuned with
@@ -25,7 +25,7 @@ class OpcacheTest extends TestCase
     public function test_a_revalidate_window_is_treated_as_stale_risk_not_as_fine(): void
     {
         /*
-         * 🚨 The bug this test exists for, found by installing this extension on
+         * The bug this test exists for, found by installing this extension on
          * a production forum. It has validate_timestamps ON — which looks fine —
          * and revalidate_freq 60, the default in Flarum's own Docker image. PHP
          * therefore does not re-read a changed file for up to a MINUTE, and
@@ -70,7 +70,7 @@ class OpcacheTest extends TestCase
     public function test_a_worker_says_plainly_that_it_cannot_fix_this(): void
     {
         /*
-         * 🚨 The queue-worker case, and the reason it is called out rather than
+         * The queue-worker case, and the reason it is called out rather than
          * quietly returning success: opcache_reset() in a CLI worker resets that
          * worker's own cache, which nobody is using, and leaves the web pool
          * exactly as stale as before. Reporting success for having called a
@@ -106,7 +106,7 @@ class OpcacheTest extends TestCase
 
     public function test_clearing_never_throws(): void
     {
-        // 🚨 It runs as the last step of a finished update. By then the files,
+        // It runs as the last step of a finished update. By then the files,
         // the lock and Composer's record all agree; a cache that could not be
         // cleared is something to say, never a reason to fail work that was
         // correct and offer to undo it.

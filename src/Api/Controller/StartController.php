@@ -29,10 +29,10 @@ use Psr\Http\Server\RequestHandlerInterface;
 /**
  * Start an update.
  *
- * 🚨 Every refusal here says why, in words aimed at the person reading them.
- * The behaviour being replaced refuses silently when anything looks busy, which
- * is how one dead task blocks every later update forever and the admin is left
- * looking at a spinner with no explanation anywhere.
+ * Every refusal here says why, in words aimed at the person reading them.
+ * Refusing silently when anything looks busy is how one dead task blocks every
+ * later update forever, with the admin left looking at a spinner and no
+ * explanation anywhere.
  */
 class StartController implements RequestHandlerInterface
 {
@@ -48,9 +48,9 @@ class StartController implements RequestHandlerInterface
     }
 
     /**
-     * 🚨 A replaced package is never installed under its old name, whatever
-     * the screen showed. Installing v17development/flarum-seo gave Extension
-     * Manager users FoF SEO under the wrong id, which then refused to enable
+     * A replaced package is never installed under its old name, whatever
+     * the screen showed. Installing v17development/flarum-seo gave forums
+     * FoF SEO under the wrong id, which then refused to enable
      * (discuss.flarum.org d/40012). Asked here, on the server, so a stale tab
      * or a hand-made request cannot get round it; the verdict is the cached one
      * the Find tab already fetched, so this costs nothing in the usual case.
@@ -85,8 +85,7 @@ class StartController implements RequestHandlerInterface
 
         foreach ($packages as $package) {
             /*
-             * 🚨 The same guard Extension Manager has, because it is the right
-             * one: `composer remove` on something this site never asked for
+             * Only what this site asked for itself: `composer remove` on something this site never asked for
              * fails with a message about a package not being required, which
              * reads like a bug. An extension that arrived as somebody else's
              * dependency goes when that dependency goes, and not before.
@@ -96,8 +95,7 @@ class StartController implements RequestHandlerInterface
             }
 
             /*
-             * 🚨 A guard Extension Manager does NOT have, and the reason is
-             * ordering: taking the files away from an extension that is still
+             * Disabled first, and the reason is ordering: taking the files away from an extension that is still
              * switched on leaves Flarum with an enabled extension it cannot
              * load. Disabling first is one click, and it is the click that makes
              * the removal safe.
@@ -207,7 +205,7 @@ class StartController implements RequestHandlerInterface
     /**
      * Which requirements this run may raise, and to what.
      *
-     * 🚨 The browser asks WHETHER to raise a pin. It never says to WHAT.
+     * The browser asks WHETHER to raise a pin. It never says to WHAT.
      *
      * The target comes from this site's own update check, so the only version a
      * requirement can be moved to is the one the admin was actually shown on the
@@ -215,7 +213,7 @@ class StartController implements RequestHandlerInterface
      * from a client written straight into composer.json — a short walk to a
      * downgrade, or to a package nobody chose.
      *
-     * 🚨 And only where the constraint is an exact pin. Raising a range would be
+     * And only where the constraint is an exact pin. Raising a range would be
      * rewriting a decision nobody asked to change.
      *
      * @param list<string> $packages
@@ -229,7 +227,7 @@ class StartController implements RequestHandlerInterface
         }
 
         /*
-         * 🚨 The rules themselves live in Plan\Repin, because the console can
+         * The rules themselves live in Plan\Repin, because the console can
          * raise a pin too and the two must never be allowed to disagree about
          * what is allowed. What stays here is the question of PERMISSION: the
          * browser asks WHETHER, and never to what.

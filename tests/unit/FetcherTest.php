@@ -145,7 +145,7 @@ class FetcherTest extends TestCase
 
     public function test_the_generated_wrapper_directory_is_stripped(): void
     {
-        // 🚨 GitHub wraps everything in "owner-repo-abc1234/". What lands in
+        // GitHub wraps everything in "owner-repo-abc1234/". What lands in
         // staging has to be the package itself, or apply would move a directory
         // containing the package rather than the package.
         $archive = $this->zip('a.zip', [
@@ -172,7 +172,7 @@ class FetcherTest extends TestCase
 
     public function test_a_wrong_checksum_stops_it_before_anything_is_unpacked(): void
     {
-        // 🚨 The last point a substituted archive can be caught. After this,
+        // The last point a substituted archive can be caught. After this,
         // apply moves it into place without asking further questions.
         $archive = $this->zip('c.zip', ['pkg/composer.json' => '{}']);
 

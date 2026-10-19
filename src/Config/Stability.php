@@ -8,7 +8,7 @@ use Flarum\Locale\TranslatorInterface;
 /**
  * How finished a release has to be before Composer will install it.
  *
- * 🚨 Flarum 2 itself is stable since 2.0.0, but many of its extensions are still
+ * Flarum 2 itself is stable since 2.0.0, but many of its extensions are still
  * betas or release candidates, and a site on the default `stable` cannot install
  * those — the error says the package "could not be found in any version", which
  * sounds like the package is missing rather than like a setting is wrong.

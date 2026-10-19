@@ -8,11 +8,11 @@ use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use PHPUnit\Framework\TestCase;
 
 /**
- * 🚨 The rule these protect: an empty query means BROWSE, never "return
+ * The rule these protect: an empty query means BROWSE, never "return
  * nothing".
  *
- * Extension Manager shows everything installable the moment you open it, and
- * that is the right behaviour — somebody opening a tab called "Find extensions"
+ * Showing everything installable the moment the tab opens is the right
+ * behaviour: somebody opening a tab called "Find extensions"
  * is asking what exists, not to guess a search term first. The first version of
  * this refused an empty query and left the tab blank, which made a catalogue
  * behave like a command line and read, reasonably, as broken.
@@ -129,7 +129,7 @@ class DiscoverBrowseTest extends TestCase
     public function test_an_unreachable_packagist_is_reported_not_silently_empty(): void
     {
         /*
-         * 🚨 "Nothing found" and "could not reach Packagist" look identical on
+         * "Nothing found" and "could not reach Packagist" look identical on
          * screen and mean opposite things: the first ends a search, the second
          * means try again in a minute.
          */

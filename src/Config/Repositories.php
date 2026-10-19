@@ -8,7 +8,7 @@ use Flarum\Locale\TranslatorInterface;
 /**
  * Where Composer is allowed to look for packages.
  *
- * 🚨 This is the setting that makes a forum's own extensions installable at all.
+ * This is the setting that makes a forum's own extensions installable at all.
  * On the site this was built for, eleven of the twelve entries are protected
  * GitHub repositories and the twelfth is a paid marketplace — remove them and
  * nothing that forum runs can be resolved. It is not an advanced nicety, it is
@@ -67,7 +67,7 @@ class Repositories
         }
 
         /*
-         * 🚨 A `path` repository points at a directory, and everything else must
+         * A `path` repository points at a directory, and everything else must
          * be a URL Composer can actually fetch. Checking them the same way would
          * either reject valid local paths or accept nonsense as a URL — and a
          * bad entry here breaks every later resolve, not just this one.

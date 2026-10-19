@@ -18,7 +18,7 @@ class StorageDir
     public const NAME = 'extension-manager';
 
     /**
-     * 🚨 Before it shipped with Flarum this extension was Millwright, and a site
+     * Before it shipped with Flarum this extension was Millwright, and a site
      * that ran it keeps its history, rollback copies and any run in progress
      * here. That directory is used where it is, never moved: the update that
      * swaps Millwright for this package is itself a run, and its journal names

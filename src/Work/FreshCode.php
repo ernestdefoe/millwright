@@ -10,7 +10,7 @@ use Flarum\Locale\TranslatorInterface;
 /**
  * Is the code loaded in THIS process the code now on disk?
  *
- * 🚨 Only asked when a step is about to run Composer or Flarum inside this
+ * Only asked when a step is about to run Composer or Flarum inside this
  * process, after the swap. With a subprocess the question never comes up: a
  * fresh process loads whatever is on disk. In-process, two things can be stale:
  *
@@ -72,7 +72,7 @@ class FreshCode
         $cleared = is_file($marker) ? (float) @file_get_contents($marker) : 0.0;
 
         /*
-         * 🚨 Cleared AFTER the last change, by an EARLIER request. A second
+         * Cleared AFTER the last change, by an EARLIER request. A second
          * of margin on the change because filemtime has whole seconds and the
          * marker does not.
          */

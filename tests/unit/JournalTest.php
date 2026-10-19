@@ -65,7 +65,7 @@ class JournalTest extends TestCase
 
     public function test_a_half_written_final_line_is_discarded_not_fatal(): void
     {
-        // 🚨 Exactly what a SIGKILL mid-write leaves. The entries before it are
+        // Exactly what a SIGKILL mid-write leaves. The entries before it are
         // still authoritative and must survive; the fragment describes an action
         // that had not been recorded, so it had not started either.
         $journal = new Journal(EnglishTranslator::make(), $this->path);

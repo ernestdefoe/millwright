@@ -5,7 +5,7 @@ namespace ErnestDefoe\Millwright\Plan;
 /**
  * Moving Flarum to its nightly build: which requirements change, and to what.
  *
- * 🚨 The update check never offers a branch to a forum on a tagged release —
+ * The update check never offers a branch to a forum on a tagged release —
  * rightly, as a badge — so a nightly cannot come from it. And the forum's own
  * composer.json cannot reach one either: `flarum/core: ^2.0.0-rc.8` with the
  * bundled extensions at `*` under `minimum-stability: beta` and

@@ -44,7 +44,16 @@ perl -pi -e "s#'\.\./src/#'../../../src/#g" "$DEST"/js/tests/unit/admin/*.test.t
 # Jest provides describe/it/expect as globals.
 perl -ni -e "print unless /^import \{[^}]*\} from 'vitest';\n/" "$DEST"/js/tests/unit/admin/*.test.ts
 
-# 🚨 Order matters: the specific names first, the bare word last.
+# Outwardly this is the Extension Manager, and Millwright never calls itself
+# that, so any "Extension Manager" in its source compares it with the one it
+# replaces, which would read wrongly here. Listed, to be reworded in Millwright.
+if leftovers=$(grep -rn --include='*.php' --include='*.ts' --include='*.tsx' --include='*.less' --include='*.yml' \
+        -e 'Extension Manager' "$DEST" --exclude-dir=node_modules); then
+    echo "warning: comparisons with the earlier Extension Manager remain:" >&2
+    echo "$leftovers" | sed "s#^$DEST/##" >&2
+fi
+
+# Order matters: the specific names first, the bare word last.
 find "$DEST" -path "$DEST/js/node_modules" -prune -o -type f \
     \( -name '*.php' -o -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.less' -o -name '*.yml' -o -name '*.md' -o -name '*.json' \) -print0 \
   | xargs -0 perl -pi -e '
@@ -59,9 +68,6 @@ find "$DEST" -path "$DEST/js/node_modules" -prune -o -type f \
       s/\@?ernestdefoe\/millwright/flarum\/extension-manager/g;
       s/Millwright-(?=[a-zA-Z])/ExtensionManager-/g;
 
-      # Prose about the Extension Manager this one replaces. Not the core
-      # class Flarum\Extension\ExtensionManager, which has no space.
-      s/\b(?:[Tt]he |Flarum\x27s )?Extension Manager\b/\x{1}OLD\x{1}/g;
       s/\b[Tt]he Millwright\b/\x{1}EM\x{1}/g;
       s/\bA Millwright\b/An Extension Manager/g;
       s/\ba Millwright\b/an Extension Manager/g;
@@ -69,10 +75,13 @@ find "$DEST" -path "$DEST/js/node_modules" -prune -o -type f \
       s/\bmillwright\b/extension-manager/g;
 
       # Capital at the start of a sentence, a comment line or a YAML value.
-      s/((?:^\s*(?:[*#]|\/\/|\/\*\*?)?\s*|[.!?]\s+|^\s*[\w-]+:\s+["\x27]?|^#+\s+|["\x27`(]))\x{1}(OLD|EM)\x{1}/$1 . ($2 eq "OLD" ? "The previous Extension Manager" : "The Extension Manager")/ge;
-      s/\x{1}OLD\x{1}/the previous Extension Manager/g;
+      s/((?:^\s*(?:[*#]|\/\/|\/\*\*?)?\s*|[.!?]\s+|^\s*[\w-]+:\s+["\x27]?|^#+\s+|["\x27`(]))\x{1}EM\x{1}/$1The Extension Manager/g;
       s/\x{1}EM\x{1}/the Extension Manager/g;
+
+      # The warning-sign markers Millwright puts in its comments.
+      s/\xF0\x9F\x9A\xA8 ?//g;
     '
+
 
 # Files named after Millwright.
 find "$DEST" -path "$DEST/js/node_modules" -prune -o -type f -name '*Millwright*' -print | while read -r f; do
@@ -98,10 +107,10 @@ find "$DEST" -path "$DEST/js/node_modules" -prune -o -path "$DEST/vendor" -prune
     | xargs -0 php "$HERE/sort-imports.php"
 
 # Flarum's own Prettier rules, so the framework's format check passes on the
-# renamed code. 🚨 Prettier 2.8.8, the version the extensions' `prettier ^2.5.1`
+# renamed code. Prettier 2.8.8, the version the extensions' `prettier ^2.5.1`
 # resolves to in the monorepo's yarn.lock and the one CI runs; Prettier 3
 # formats differently and failed CI on code it had just passed locally.
-# 🚨 Never `npx prettier@2.8.8` here: inside the monorepo npx quietly runs the
+# Never `npx prettier@2.8.8` here: inside the monorepo npx quietly runs the
 # root's Prettier 3 instead. A copy of its own, outside the monorepo.
 PRETTIER_HOME="${XDG_CACHE_HOME:-$HOME/.cache}/framework-export/prettier-2.8.8"
 if [ ! -f "$PRETTIER_HOME/node_modules/prettier/bin-prettier.js" ]; then

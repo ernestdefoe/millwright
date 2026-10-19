@@ -50,7 +50,7 @@ class MillwrightServiceProvider extends AbstractServiceProvider
         });
 
         /*
-         * 🚨 Bound as a FACTORY, never as the work for "the current run".
+         * Bound as a FACTORY, never as the work for "the current run".
          *
          * The obvious binding — ask the store for the latest run and build the
          * work around it — is correct under PHP-FPM and wrong in a queue worker,
@@ -63,7 +63,7 @@ class MillwrightServiceProvider extends AbstractServiceProvider
          */
         $this->container->singleton(StepsFactory::class, function ($container) {
             /*
-             * 🚨 Config is REQUIRED here, and this line is why.
+             * Config is REQUIRED here, and this line is why.
              *
              * It used to be optional with a null default and this binding did
              * not pass it — so `siteUrl()` returned '' on every install, and
@@ -81,7 +81,7 @@ class MillwrightServiceProvider extends AbstractServiceProvider
         });
 
         /*
-         * 🚨 The lock directory is what stops two drivers doing the same item.
+         * The lock directory is what stops two drivers doing the same item.
          * On a forum with a queue, the admin page polling and a worker WILL run
          * at once — without this they both read the same index and a package is
          * applied twice.

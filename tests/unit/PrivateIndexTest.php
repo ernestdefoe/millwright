@@ -68,7 +68,7 @@ class PrivateIndexTest extends TestCase
     }
 
     /**
-     * 🚨 A vcs repository would have to be cloned to answer, which is not
+     * A vcs repository would have to be cloned to answer, which is not
      * something to do on a nightly schedule on somebody's shared host.
      */
     public function test_a_repository_with_no_url_or_a_local_path_is_ignored(): void
@@ -117,7 +117,7 @@ class PrivateIndexTest extends TestCase
     }
 
     /**
-     * 🚨 Unknown must stay null, never an empty list.
+     * Unknown must stay null, never an empty list.
      *
      * `UpdateCheck` treats null as "could not check" and reports it honestly.
      * An empty array would read as "checked, nothing newer" — a guess presented
@@ -131,7 +131,7 @@ class PrivateIndexTest extends TestCase
     }
 
     /**
-     * 🚨 The credential never leaves as a credential.
+     * The credential never leaves as a credential.
      *
      * `all()` is what the admin API calls, and it must keep reporting hosts and
      * kinds and nothing else however this file grows. `authorizationFor()`
@@ -226,7 +226,7 @@ class PrivateIndexTest extends TestCase
     }
 
     /**
-     * 🚨 The repository name is NOT the package name.
+     * The repository name is NOT the package name.
      *
      * github.com/ernestdefoe/fantasy-flarum publishes `ernestdefoe/fantasy`,
      * and gameday-flarum publishes `ernestdefoe/gameday`. Guessing the package

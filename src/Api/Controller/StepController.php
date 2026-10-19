@@ -14,7 +14,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 /**
  * Advance the current run by exactly one unit of work.
  *
- * 🚨 This is what the admin page calls every couple of seconds, and it is why an
+ * This is what the admin page calls every couple of seconds, and it is why an
  * update finishes on a host that cuts every request at thirty seconds. It never
  * loops: one item, then it returns whatever it now knows.
  *

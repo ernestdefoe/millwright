@@ -5,9 +5,9 @@ namespace ErnestDefoe\Millwright\Run;
 /**
  * The state of one update, as a value.
  *
- * 🚨 Everything the admin screen shows comes from here, and the single rule it
- * has to obey is: **this is never ambiguous**. Extension Manager's worst
- * behaviour is a task row that says `running` when nothing is running, because
+ * Everything the admin screen shows comes from here, and the single rule it
+ * has to obey is: **this is never ambiguous**. The worst behaviour an updater
+ * can have is a record that says `running` when nothing is running, because
  * the only thing that could have changed it died. So a run carries not just what
  * it is doing but *when it last actually moved*, which is what lets a caller
  * tell a working run from a dead one without guessing.
@@ -68,10 +68,9 @@ class Run
     /**
      * A run nobody has advanced for a while.
      *
-     * 🚨 Reported, never acted on automatically, and never used to silently skip
-     * work. This is the exact thing Extension Manager gets wrong: it refuses to
-     * dispatch while a task looks busy and says nothing, so one dead run blocks
-     * every later one forever. Here a stale run is surfaced to the admin with its
+     * Reported, never acted on automatically, and never used to silently skip
+     * work. Refusing to dispatch while a task looks busy, and saying nothing,
+     * lets one dead run block every later one forever. Here a stale run is surfaced to the admin with its
      * age and a button, and the decision is theirs.
      */
     public function isStale(int $now, int $after = 120): bool
@@ -106,7 +105,7 @@ class Run
     /**
      * Still on the same item, with something to say about why.
      *
-     * 🚨 The note replaces the last line rather than appending, and only when
+     * The note replaces the last line rather than appending, and only when
      * it is new. A waiting step is polled every couple of seconds by three
      * different drivers, so appending would bury the run's actual history under
      * a hundred copies of "waiting" — and the log is what the admin screen
@@ -135,7 +134,7 @@ class Run
     }
 
     /**
-     * 🚨 A failure records WHICH STEP failed, not just that something did.
+     * A failure records WHICH STEP failed, not just that something did.
      * "Has been attempted too many times" is the anti-example: true, useless,
      * and three layers away from the cause.
      */
@@ -172,7 +171,7 @@ class Run
     /**
      * Failed, and already put back.
      *
-     * 🚨 One transition, not `failed()` then `rolledBack()`. Two would be two
+     * One transition, not `failed()` then `rolledBack()`. Two would be two
      * saves, and a reader that loaded the run between them would see a failed
      * update sitting there with its changes apparently still in place — which
      * is the exact ambiguity this class exists to prevent.

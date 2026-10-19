@@ -12,7 +12,7 @@ use ReflectionClass;
 /**
  * Raising a pinned requirement so an update can actually happen.
  *
- * 🚨 The whole feature exists because pressing Update on a pinned package did
+ * The whole feature exists because pressing Update on a pinned package did
  * nothing and said Finished. It edits composer.json, so every rule here is
  * about making that edit small, expected, and reversible.
  */
@@ -40,7 +40,7 @@ class RepinTest extends TestCase
     // ── what the SERVER will allow ───────────────────────────────────────────
 
     /**
-     * 🚨 The browser asks WHETHER. It never says to WHAT.
+     * The browser asks WHETHER. It never says to WHAT.
      *
      * The target comes from this site's own check, so a requirement can only be
      * moved to the version printed on the card the admin just read. A version
@@ -122,7 +122,7 @@ class RepinTest extends TestCase
     }
 
     /**
-     * 🚨 Even with permission, only a package this run was asked about. A repin
+     * Even with permission, only a package this run was asked about. A repin
      * map that named something else would otherwise edit a requirement the
      * admin never saw.
      */
@@ -135,7 +135,7 @@ class RepinTest extends TestCase
     }
 
     /**
-     * 🚨 It raises to an EXACT version, never to a range. A site that pinned
+     * It raises to an EXACT version, never to a range. A site that pinned
      * 3.5.1 deliberately stays pinned at 3.6.0 — quietly converting it to ^3.6
      * would hand back the drift the pin existed to stop.
      */
@@ -157,7 +157,7 @@ class RepinTest extends TestCase
     // ── and that the permission actually travels ─────────────────────────────
 
     /**
-     * 🚨 A run outlives the request that started it, so the permission has to be
+     * A run outlives the request that started it, so the permission has to be
      * on disk with the package list. A worker picking this up an hour later must
      * raise the requirement the admin was SHOWN, not recompute it from a check
      * that may have been refreshed since.
@@ -181,7 +181,7 @@ class RepinTest extends TestCase
     }
 
     /**
-     * 🚨 And the factory hands it to the steps.
+     * And the factory hands it to the steps.
      *
      * Twice today a correct piece of code sat unreached because nothing passed
      * it in — the health check for its whole life, and the pin explanation for

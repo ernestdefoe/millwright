@@ -7,7 +7,7 @@ use ErnestDefoe\Millwright\Discover\Compatibility;
 /**
  * What updating Flarum itself would do to the extensions already installed.
  *
- * 🚨 This is the whole reason updating core is treated differently from
+ * This is the whole reason updating core is treated differently from
  * updating anything else. An extension update that fails is one extension; a
  * core update that fails is the forum. And the failure is not hypothetical —
  * Composer will simply refuse to resolve, at the end of a long wait, with a
@@ -17,7 +17,7 @@ use ErnestDefoe\Millwright\Discover\Compatibility;
  * So the question is asked BEFORE anything is pressed, and answered per
  * extension, by name.
  *
- * 🚨 The cheap answer first, and usually it is the only one needed. Whether the
+ * The cheap answer first, and usually it is the only one needed. Whether the
  * version you ALREADY have supports the target core is written in composer.lock
  * — no network, no Composer, exact. Only extensions that fail that test cost an
  * HTTP call to ask whether a newer release would fix it. On a forum where most
@@ -69,7 +69,7 @@ class CoreUpgrade
             }
 
             /*
-             * 🚨 Handed back to be asked about later, not asked about now. One
+             * Handed back to be asked about later, not asked about now. One
              * HTTP call per extension inside this loop is what made the first
              * version take 28 seconds on a real forum.
              */
@@ -120,7 +120,7 @@ class CoreUpgrade
             }
 
             /*
-             * 🚨 A null verdict leaves the row UNKNOWN. "Not on Packagist" is not
+             * A null verdict leaves the row UNKNOWN. "Not on Packagist" is not
              * "incompatible", and promoting it to blocked would tell somebody
              * their upgrade is impossible when it may be perfectly fine — which
              * is worse than saying nothing, because they would believe it.
@@ -137,7 +137,7 @@ class CoreUpgrade
     }
 
     /**
-     * 🚨 Blocked first, then needs-update, then the rest — and re-applied after
+     * Blocked first, then needs-update, then the rest — and re-applied after
      * a merge, not only when the rows are built.
      *
      * The list exists to answer "what stops me", and burying two blockers among

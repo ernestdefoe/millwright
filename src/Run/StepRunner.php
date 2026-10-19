@@ -8,7 +8,7 @@ use Throwable;
 /**
  * Advances a run by exactly one unit of work.
  *
- * 🚨 This is the answer to the constraint that actually matters. Memory was
+ * This is the answer to the constraint that actually matters. Memory was
  * never the thing stopping updates on shared hosting — `max_execution_time` was,
  * and every other limit that punishes one long operation. So nothing here loops:
  * a call does one item and returns. Progress becomes a function of how many
@@ -25,8 +25,8 @@ use Throwable;
  *     a stuck update indistinguishable from a working one.
  *   - **It never skips work because something looks busy.** A stale run is
  *     reported to the caller with its age; it is not a reason to refuse. That
- *     refusal, done silently, is why one dead Extension Manager task blocks every
- *     later update forever.
+ *     refusal, done silently, would let one dead task block every later update
+ *     forever.
  */
 class StepRunner
 {
@@ -51,7 +51,7 @@ class StepRunner
     protected bool $needsWeb = false;
 
     /**
-     * 🚨 A factory is preferred over a fixed Steps, so the run id is an argument
+     * A factory is preferred over a fixed Steps, so the run id is an argument
      * rather than something the container decided once and remembered. Inside a
      * queue worker — a long-lived process — a remembered one carries the
      * previous run's staging directory and journal into the next run. A bare
@@ -119,7 +119,7 @@ class StepRunner
         }
 
         /*
-         * 🚨 One driver at a time.
+         * One driver at a time.
          *
          * The whole point of the design is that anything can turn the handle —
          * the admin page polling, a cron tick, a queue worker — and on a forum
@@ -243,7 +243,7 @@ class StepRunner
                 return $run;
             } catch (NotYet $waiting) {
                 /*
-                 * 🚨 Not done, not failed — and the index does NOT move.
+                 * Not done, not failed — and the index does NOT move.
                  *
                  * A step that has done everything it can but whose effect is
                  * not live yet used to have no way to say so, so it said "done"
@@ -261,7 +261,7 @@ class StepRunner
             }
 
             /*
-             * 🚨 Saved AFTER the work, which means a process killed in between
+             * Saved AFTER the work, which means a process killed in between
              * repeats this item on resume. That is deliberate and it is why
              * doItem must be idempotent: repeating work is recoverable, skipping
              * it silently is not.

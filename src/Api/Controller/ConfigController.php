@@ -20,11 +20,11 @@ use Psr\Http\Server\RequestHandlerInterface;
 /**
  * Where Composer looks, what it will accept, and how it authenticates.
  *
- * 🚨 One controller for the three settings that decide whether Composer can find
+ * One controller for the three settings that decide whether Composer can find
  * anything at all. Without them Millwright can update what is already installed
- * and nothing else — which is why the extension it replaces could not be removed.
+ * and nothing else.
  *
- * 🚨 No stored credential is ever in a response. The auth section reports which
+ * No stored credential is ever in a response. The auth section reports which
  * hosts have one; the values are write-only by construction. See AuthTokens.
  */
 class ConfigController implements RequestHandlerInterface
@@ -115,7 +115,7 @@ class ConfigController implements RequestHandlerInterface
             ],
             'types' => Repositories::TYPES,
             /*
-             * 🚨 A change here does not re-resolve anything. Composer reads these
+             * A change here does not re-resolve anything. Composer reads these
              * on the NEXT install or update, so saying so is the difference
              * between somebody understanding why nothing happened and somebody
              * concluding the screen is broken.

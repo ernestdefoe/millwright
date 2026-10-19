@@ -37,7 +37,7 @@ use RuntimeException;
  * small, repeatable and honest, and that work is in LockDiff, Fetcher and
  * Applier. This class only says what the units are and in what order.
  *
- * 🚨 Every doItem() has to be safe to run twice. The driver saves progress AFTER
+ * Every doItem() has to be safe to run twice. The driver saves progress AFTER
  * the work, so a process killed in between asks for the same item again on
  * resume. Fetch checks whether the package is already staged; apply's stash is a
  * no-op when the source is already gone; the finalise commands are all
@@ -58,7 +58,7 @@ class ComposerSteps implements Steps
         /** 'update', 'install' for something new, or 'remove' to take one out */
         protected string $mode = 'update',
         /*
-         * 🚨 Optional, and every one of them degrades to "cannot check" rather
+         * Optional, and every one of them degrades to "cannot check" rather
          * than to "fine". A host that cannot be asked whether its site is up
          * must not have that read as a yes — see verify().
          */
@@ -66,7 +66,7 @@ class ComposerSteps implements Steps
         protected string $storagePath = '',
         protected string $siteUrl = '',
         /**
-         * 🚨 Requirements this run is authorised to RAISE, package => version.
+         * Requirements this run is authorised to RAISE, package => version.
          *
          * A forum that pins `page-builder` to `3.5.1` cannot be moved to 3.6.0
          * by a resolve, however many times somebody presses Update — the
@@ -87,13 +87,13 @@ class ComposerSteps implements Steps
             'fetch' => array_map(fn (Change $c) => $c->package, $this->downloadable()),
             'apply' => array_map(fn (Change $c) => $c->package, $this->applyOrder()),
             /*
-             * 🚨 'tidy the trash' is LAST, after the site has been checked: an
+             * 'tidy the trash' is LAST, after the site has been checked: an
              * update that is about to be undone automatically must not have its
              * housekeeping run first. Its copies would be kept anyway — this
              * run is the newest — but there is no reason to find out.
              */
             /*
-             * 🚨 Nothing, when the plan moved nothing. Migrating, publishing
+             * Nothing, when the plan moved nothing. Migrating, publishing
              * assets and clearing every cache on a site that did not change is
              * all cost and no update, and it is what let a run that moved
              * nothing look exactly like one that did (live box, 2026-10-13).
@@ -123,7 +123,7 @@ class ComposerSteps implements Steps
     /**
      * Ask Composer what would change, and write it down.
      *
-     * 🚨 `--no-install`: this updates composer.lock and NOTHING else. Composer's
+     * `--no-install`: this updates composer.lock and NOTHING else. Composer's
      * own install would rebuild a tree; all that is wanted here is the answer to
      * "what moves", which is 16 seconds and 165 MB rather than minutes and a
      * mutated vendor directory. The install is ours to do, one package at a
@@ -134,13 +134,13 @@ class ComposerSteps implements Steps
         $lockPath = $this->installPath.'/composer.lock';
 
         /*
-         * 🚨 Saved BEFORE Composer is allowed to rewrite them, and used by the
+         * Saved BEFORE Composer is allowed to rewrite them, and used by the
          * rollback. `--no-install` updates the lock the moment it succeeds, so
          * without a copy taken here there is no way back to the site's own
          * record of itself — and a rollback that restores the files but not the
          * lock leaves a site whose manifest describes work that was undone.
          *
-         * 🚨 Taken ONCE, and a retry starts from it. A resolve killed part-way
+         * Taken ONCE, and a retry starts from it. A resolve killed part-way
          * — a host's time limit, a proxy timeout — can leave composer.json
          * edited by `require` and the lock half-way to new. Copying again on
          * the retry would save THAT as "before", and the rollback would put
@@ -161,7 +161,7 @@ class ComposerSteps implements Steps
         }
 
         /*
-         * 🚨 `require` for an install, `update` for an update, and they are not
+         * `require` for an install, `update` for an update, and they are not
          * interchangeable: running `update` on a package that is not installed
          * does nothing whatsoever and exits 0. The run would sail through every
          * phase, change nothing, and report success — the exact silent failure
@@ -174,14 +174,14 @@ class ComposerSteps implements Steps
         $args = match ($this->mode) {
             'install' => array_merge(['require'], $this->requested, ['--no-install', '--no-scripts']),
             /*
-             * 🚨 `remove` takes the package out of composer.json AND re-resolves
+             * `remove` takes the package out of composer.json AND re-resolves
              * the lock, which is what makes the dependencies it dragged in go
              * too. `--no-install` stops Composer touching vendor: the removal
              * happens through the same journalled apply as everything else, so
              * the files go to the trash rather than being deleted and an
              * uninstall is as reversible as an update.
              *
-             * 🚨 `--no-update-with-dependencies`: a removal only takes things
+             * `--no-update-with-dependencies`: a removal only takes things
              * away. Composer's default lets the removed package's dependencies
              * update too, so taking one extension out could move a library it
              * shared with another, which is a download and a change nobody
@@ -189,7 +189,7 @@ class ComposerSteps implements Steps
              */
             'remove' => array_merge(['remove'], $this->requested, ['--no-install', '--no-scripts', '--no-update-with-dependencies']),
             /*
-             * 🚨 `-w`, NOT `-W`.
+             * `-w`, NOT `-W`.
              *
              * `--with-all-dependencies` also updates packages that are ROOT
              * requirements — so asking to update one extension moved twenty-five
@@ -222,7 +222,7 @@ class ComposerSteps implements Steps
         }
 
         /*
-         * 🚨 The new lock is put back immediately. Composer has already written
+         * The new lock is put back immediately. Composer has already written
          * it, and leaving it in place while the packages on disk are still the
          * old ones would mean a lock that disagrees with vendor/ — which the
          * next resolve would silently build on. The plan we just computed is the
@@ -256,7 +256,7 @@ class ComposerSteps implements Steps
     /**
      * How many times a resolve killed by the host is tried before giving up.
      *
-     * 🚨 Six, from a measurement rather than a feeling: on dev's real
+     * Six, from a measurement rather than a feeling: on dev's real
      * composer.json (346 packages, 22 protected GitHub repositories) a cold
      * in-process resolve took 144s and a warm one 27s. Each killed attempt
      * keeps what it downloaded, so a host that cuts requests at 30 seconds gets
@@ -288,7 +288,7 @@ class ComposerSteps implements Steps
      * The resolve, inside this request — and what happens when the host kills
      * the request before Composer finishes.
      *
-     * 🚨 On shared hosting the request has a time limit Millwright may not be
+     * On shared hosting the request has a time limit Millwright may not be
      * allowed to lift, and a proxy in front of it may cut it off regardless. A
      * kill there is not a failure of the update, so it must not look like one:
      *
@@ -414,12 +414,12 @@ class ComposerSteps implements Steps
     /**
      * Raise the requirements this run was authorised to raise.
      *
-     * 🚨 composer.json is edited BEFORE the resolve, and only for packages the
+     * composer.json is edited BEFORE the resolve, and only for packages the
      * admin was shown. `composer.json.before` is already saved a few lines
      * above, and Rollback restores it — so an update that raises a pin and then
      * fails puts the requirement back with everything else.
      *
-     * 🚨 It raises to an EXACT version, never to a range. A site that pinned
+     * It raises to an EXACT version, never to a range. A site that pinned
      * `3.5.1` deliberately stays pinned at `3.6.0`; quietly converting it to
      * `^3.6` would hand back the drift the pin was there to stop, as a side
      * effect of an unrelated click.
@@ -465,7 +465,7 @@ class ComposerSteps implements Steps
     /**
      * Why an update changed nothing.
      *
-     * 🚨 "Everything is already at the newest version it can be" is true and
+     * "Everything is already at the newest version it can be" is true and
      * useless, and on a pinned forum it is actively misleading.
      *
      * A site that pins `ernestdefoe/page-builder` to `3.5.1` will be told by the
@@ -509,7 +509,7 @@ class ComposerSteps implements Steps
     /**
      * Did the command achieve what it was asked to, whatever it says?
      *
-     * 🚨 Only consulted when the exit code is non-zero, and only for a removal.
+     * Only consulted when the exit code is non-zero, and only for a removal.
      * `composer remove --no-install` updates composer.json and the lock exactly
      * as wanted, and THEN checks whether the package has gone from vendor —
      * which it has not, because --no-install is us telling Composer not to touch
@@ -563,7 +563,7 @@ class ComposerSteps implements Steps
     /**
      * The plan in the order it is applied: Flarum core LAST.
      *
-     * 🚨 A host without processes applies one package per request, and the
+     * A host without processes applies one package per request, and the
      * moment core's files land every later request gets "Update Flarum".
      * Alphabetically core was 4th of 27 on rc.8 → nightly, so the other 23
      * swaps — and the database update after them — could never run. Last, it
@@ -588,7 +588,7 @@ class ComposerSteps implements Steps
                 $done = $this->applier->applyOne($change);
 
                 /*
-                 * 🚨 In this request, before anything else can fail. A package
+                 * In this request, before anything else can fail. A package
                  * with `autoload.files` that this swap took away (a removal, or
                  * a new version without that file) would otherwise kill every
                  * request in Composer's autoloader, this updater's next step and
@@ -627,7 +627,7 @@ class ComposerSteps implements Steps
     /**
      * Bring the database up to date in the SAME request that swapped core.
      *
-     * 🚨 Once Flarum's files are newer than its database, every request gets
+     * Once Flarum's files are newer than its database, every request gets
      * the "Update Flarum" page — Millwright's own step endpoint included — so
      * the finalise phase could never be reached from the web, and neither
      * could the undo button. Where a process can be started, `php flarum
@@ -643,7 +643,7 @@ class ComposerSteps implements Steps
         $was = $db->table('settings')->where('key', 'version')->value('value');
 
         /*
-         * 🚨 Only a new VERSION puts the forum behind "Update Flarum". A core
+         * Only a new VERSION puts the forum behind "Update Flarum". A core
          * that moves without one — the nightly build (2.x-dev) to the release
          * it becomes, both of which say 2.0.0 — leaves the site answering, so
          * the migrations step later in this run is still reachable and does
@@ -695,7 +695,7 @@ class ComposerSteps implements Steps
     /**
      * Remove rollback copies no rollback can reach any more.
      *
-     * 🚨 Never fails the run, and never takes long. The update is finished and
+     * Never fails the run, and never takes long. The update is finished and
      * verified by now; housekeeping that throws must not turn it red and offer
      * to undo correct work, so a failure is reported in the log and left for
      * the nightly prune. The time budget keeps a host that cuts requests at 30
@@ -735,7 +735,7 @@ class ComposerSteps implements Steps
             'check the site again' => $this->verify($run),
             'tidy the trash' => $this->tidyTrash(),
             /*
-             * 🚨 Last, and it is the step that decides whether any of the others
+             * Last, and it is the step that decides whether any of the others
              * were visible. On a host with opcache.validate_timestamps off, every
              * phase above can succeed and the site carries on serving the old
              * compiled code until PHP is restarted — an update that reports
@@ -747,7 +747,7 @@ class ComposerSteps implements Steps
     }
 
     /**
-     * 🚨 `install`, not `dump-autoload`, and the difference is whether the
+     * `install`, not `dump-autoload`, and the difference is whether the
      * update exists at all.
      *
      * Composer's record of what is installed is vendor/composer/installed.json,
@@ -761,7 +761,7 @@ class ComposerSteps implements Steps
      * tree already agrees — measured at 2.2s for a one-package change on a
      * 226-package forum, touching only what moved.
      *
-     * 🚨 It does re-extract the packages this run changed, because Composer
+     * It does re-extract the packages this run changed, because Composer
      * trusts its own record rather than the disk. That is a known cost and it
      * is worth it: the staged apply is what makes the RISKY window atomic and
      * reversible, and this runs afterwards, against a tree that is already
@@ -770,7 +770,7 @@ class ComposerSteps implements Steps
     /**
      * Clear Flarum's caches, and leave the formatter able to render.
      *
-     * 🚨 `cache:clear` on its own takes post rendering down, and this is not a
+     * `cache:clear` on its own takes post rendering down, and this is not a
      * race — it happens every time on any forum whose cache driver is not the
      * file store, which is every forum running fof/redis.
      *
@@ -782,7 +782,7 @@ class ComposerSteps implements Steps
      * names a class whose file is gone, and every post render dies with
      * `__PHP_Incomplete_Class`. `rememberForever` means nothing fixes it later.
      *
-     * 🚨 An earlier version of this method deleted storage/formatter/*.php
+     * An earlier version of this method deleted storage/formatter/*.php
      * itself, on the theory that clearing both halves left a consistent state.
      * That was precisely backwards: deleting the file while the entry survives
      * IS the break, so it manufactured the failure it was written to prevent —
@@ -814,7 +814,7 @@ class ComposerSteps implements Steps
     }
 
     /**
-     * 🚨 Never fails the run.
+     * Never fails the run.
      *
      * By this point the files are updated, the lock is updated, and Composer's
      * record agrees with both. A compiled-code cache that could not be cleared
@@ -824,7 +824,7 @@ class ComposerSteps implements Steps
     /**
      * What the site was doing BEFORE we touched anything.
      *
-     * 🚨 Without this, an automatic rollback is a liability rather than a
+     * Without this, an automatic rollback is a liability rather than a
      * safety net. A site that was already down for its own reasons — a bad
      * config, a full disk, a database that went away — would fail the check
      * afterwards too, and the update would be blamed and undone for a fault it
@@ -855,7 +855,7 @@ class ComposerSteps implements Steps
     /**
      * Did this update break the site? If so, put it back and say why.
      *
-     * 🚨 This is the last item on purpose. It runs after the code cache step
+     * This is the last item on purpose. It runs after the code cache step
      * has waited for the web tier to be serving the new files, so what it asks
      * is a real question: a check that ran before then would be asking whether
      * the OLD code still works, and would pass every time.
@@ -872,7 +872,7 @@ class ComposerSteps implements Steps
         $result = $health->check(3);
 
         /*
-         * 🚨 Flarum answers 503 with its "Update Flarum" page while php-fpm is
+         * Flarum answers 503 with its "Update Flarum" page while php-fpm is
          * still running the old code against a database the update already
          * migrated. That's the web server not having re-read the files yet,
          * not a broken update. Within the window it can take, wait and look
@@ -910,7 +910,7 @@ class ComposerSteps implements Steps
             : $result['why'].' '.$this->translator->trans('ernestdefoe-millwright.api.composer.the_error_was', ['error' => $why]);
 
         /*
-         * 🚨 When the error names one of Flarum's classes and an extension ships
+         * When the error names one of Flarum's classes and an extension ships
          * its own copy of that class, say so. "Call to undefined method
          * Flarum\...\LessCompiler::fontRevisionIn()" reads like Flarum or this
          * updater is broken; the real cause was irmmr/flarum-ext-rtl's frozen
@@ -981,7 +981,7 @@ class ComposerSteps implements Steps
     }
 
     /**
-     * 🚨 Straight after the files change, not at the end of the run.
+     * Straight after the files change, not at the end of the run.
      *
      * With revalidate_freq=60 the web server kept running a package's OLD
      * compiled extend.php against its NEW files for every step between the swap
@@ -1021,7 +1021,7 @@ class ComposerSteps implements Steps
     }
 
     /**
-     * 🚨 On disk, in the run's own scratch space, because the process that
+     * On disk, in the run's own scratch space, because the process that
      * takes the baseline is very often not the process that checks it again —
      * a queue worker starts the run and an admin page polling finishes it. In
      * memory it would simply be absent by then, which reads as "never checked"
@@ -1040,7 +1040,7 @@ class ComposerSteps implements Steps
     }
 
     /**
-     * 🚨 This step WAITS, and that is the whole point of it.
+     * This step WAITS, and that is the whole point of it.
      *
      * It used to clear what it could, return a sentence, and let the run finish.
      * On a queue worker it cannot reach the web server's compiled-code cache at
@@ -1105,7 +1105,7 @@ class ComposerSteps implements Steps
     /**
      * When the web tier is guaranteed to have re-read the autoloader.
      *
-     * 🚨 Measured from the AUTOLOADER, not from now. It is the file whose
+     * Measured from the AUTOLOADER, not from now. It is the file whose
      * staleness actually breaks a site — a class that exists on disk and is
      * unknown to the running process — and it stops changing at the register
      * step, so the phases in between count towards the wait instead of being
@@ -1118,7 +1118,7 @@ class ComposerSteps implements Steps
     protected function codeLiveAt(int $freq): int
     {
         /*
-         * 🚨 Timed from Composer's install record as well as the autoloader.
+         * Timed from Composer's install record as well as the autoloader.
          * The autoloader is only rewritten when the set of classes changes, and
          * 2.0.0-rc.8 → 2.0.0 changed none, so its timestamp was days old and the
          * wait was skipped. The site was checked while php-fpm still ran rc.8
@@ -1172,7 +1172,7 @@ class ComposerSteps implements Steps
      * Make Composer's record and autoloader match the tree, without letting it
      * re-extract anything. See InstalledRecord for the outage this prevents.
      *
-     * 🚨 The dry run is the guard, not a formality. If Composer would still
+     * The dry run is the guard, not a formality. If Composer would still
      * change files after the record is synced, something disagrees that this
      * step does not understand — and finding that out by letting Composer
      * delete its own dependencies is how a site goes down. Stopping here leaves
@@ -1223,7 +1223,7 @@ class ComposerSteps implements Steps
         }
 
         /*
-         * 🚨 In-process, the autoloader is written by THIS request, and a host
+         * In-process, the autoloader is written by THIS request, and a host
          * that kills it mid-write would leave vendor/composer half old, half
          * new: every page a fatal. The snapshot taken before the record was
          * synced goes back on the way down, so a kill leaves the autoloader
@@ -1311,14 +1311,14 @@ class ComposerSteps implements Steps
     protected function flarum(string $command, string $note): string
     {
         /*
-         * 🚨 After the swap, and in a process that has the new code: its own
+         * After the swap, and in a process that has the new code: its own
          * process where the host allows one; otherwise this request, which
          * needsFreshCode() has made sure started after the swap and after
          * opcache let go of the old files. Booting Flarum's commands inside the
          * request that replaced its files would load a half-old, half-new class
          * map.
          *
-         * 🚨 Through the same PhpBinary the Composer phases use. When these
+         * Through the same PhpBinary the Composer phases use. When these
          * disagreed, an update could get through planning, downloading and the
          * swap — every expensive, risky part — and then fail on the last phase
          * because this one alone was spawned with a binary that cannot run a

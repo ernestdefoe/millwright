@@ -11,11 +11,10 @@ use GuzzleHttp\Client;
 /**
  * Whether anything newer exists, asked cheaply.
  *
- * 🚨 This is deliberately NOT the same question as "can I have it".
+ * This is deliberately NOT the same question as "can I have it".
  *
- * Extension Manager conflates them, and that is why its answers are so often
- * useless: a newer version existing tells you nothing about whether it will
- * install alongside everything else you have. Only a resolve knows that, and a
+ * Conflating them makes the answer useless: a newer version existing tells you
+ * nothing about whether it will install alongside everything else you have. Only a resolve knows that, and a
  * resolve is 16 seconds and 165 MB — far too expensive to run on a page load, or
  * on a schedule, or once per extension.
  *
@@ -61,7 +60,7 @@ class UpdateCheck
     }
 
     /**
-     * 🚨 Only things the site actually chose.
+     * Only things the site actually chose.
      *
      * Running this against a real forum returned 59 "updates", of which nearly
      * all were transitive dependencies — illuminate/collections 13.30.0 →
@@ -74,7 +73,7 @@ class UpdateCheck
      * limited to Flarum extensions and Flarum itself — the things somebody
      * deliberately installed and might deliberately update.
      *
-     * 🚨 And to anything the forum's own composer.json requires. fof/redis is
+     * And to anything the forum's own composer.json requires. fof/redis is
      * a Composer library, not an extension, so it has no settings page and
      * was never reported: its stable release went unseen (Ernest,
      * 2026-10-10). Required directly means somebody chose it; pulled in by
@@ -124,7 +123,7 @@ class UpdateCheck
 
         foreach ($installed as $name => $version) {
             /*
-             * 🚨 A package tracking a branch is not "uncheckable" — it is not a
+             * A package tracking a branch is not "uncheckable" — it is not a
              * version question at all.
              *
              * `dev-main` has no version to be newer than. Whether the branch has
@@ -146,7 +145,7 @@ class UpdateCheck
 
             if ($versions === null) {
                 /*
-                 * 🚨 Named, not silently dropped. A protected or path-installed
+                 * Named, not silently dropped. A protected or path-installed
                  * package is not on Packagist, and "we could not check this one"
                  * is a true and useful thing to say — whereas leaving it out
                  * implies it is up to date, which is a guess presented as a fact.
@@ -180,7 +179,7 @@ class UpdateCheck
         ];
 
         /*
-         * 🚨 The directory is made here, not assumed. Nothing else creates
+         * The directory is made here, not assumed. Nothing else creates
          * storage/millwright until the first update run, so on a fresh install
          * every check — the nightly one, the console one and "Check now" — wrote
          * into a directory that did not exist, the @ swallowed it, and the
@@ -202,7 +201,7 @@ class UpdateCheck
      * Packagist first, then the site's own protected repositories: the check the
      * console command and "Check now" both run.
      *
-     * 🚨 One place, because they drifted. "Check now" asked Packagist alone,
+     * One place, because they drifted. "Check now" asked Packagist alone,
      * so pressing it dropped every protected extension's update that the nightly
      * check had found, until the next night put them back.
      *
@@ -223,7 +222,7 @@ class UpdateCheck
      * as {@see interesting()}, asked of Packagist and then its protected
      * repositories. Null when composer.lock cannot be read.
      *
-     * 🚨 One place for "Check now", millwright:check and the re-check
+     * One place for "Check now", millwright:check and the re-check
      * millwright:update makes before giving up on a pin.
      *
      * @return array<string,mixed>|null
@@ -257,7 +256,7 @@ class UpdateCheck
     /**
      * The cached check, minus what has been installed since.
      *
-     * 🚨 The check is saved when it runs and an update does not re-run it, so
+     * The check is saved when it runs and an update does not re-run it, so
      * straight after updating Mobile Tab to 2.0.1 its card still offered
      * "2.0.0 → 2.0.1" (ClaudiusH, 2026-10-07), and Millwright offered itself the
      * version it was already running. Each entry is measured against what
@@ -300,7 +299,7 @@ class UpdateCheck
     /**
      * The newest version worth comparing against what is installed.
      *
-     * 🚨 A site on a dev branch is not offered a tagged release, and a site on a
+     * A site on a dev branch is not offered a tagged release, and a site on a
      * stable tag is not offered a dev branch. Mixing them produces "update
      * available: dev-main" on a forum deliberately pinned to 2.0.0, which is
      * noise that trains people to ignore the badge.
@@ -386,7 +385,7 @@ class UpdateCheck
     /**
      * The versions in a Packagist p2 response, and each one's GitHub release.
      *
-     * 🚨 p2 is MINIFIED: each entry repeats only what changed since the one
+     * p2 is MINIFIED: each entry repeats only what changed since the one
      * before it, and `__unset` removes a key. `source` is usually given once, on
      * the first entry, so reading each entry on its own found a repository for
      * the newest version and nothing for the rest. Expanded here as Composer's

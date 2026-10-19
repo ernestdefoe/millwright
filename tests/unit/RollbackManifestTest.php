@@ -10,7 +10,7 @@ use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use PHPUnit\Framework\TestCase;
 
 /**
- * 🚨 The rule these protect: a rollback puts back the site's RECORD of itself,
+ * The rule these protect: a rollback puts back the site's RECORD of itself,
  * not only its files.
  *
  * The plan phase runs `composer update --no-install`, which rewrites
@@ -137,7 +137,7 @@ class RollbackManifestTest extends TestCase
     public function test_a_run_that_failed_before_moving_any_file_is_still_undone(): void
     {
         /*
-         * 🚨 The case that reported "nothing to undo" while leaving a site
+         * The case that reported "nothing to undo" while leaving a site
          * broken. Composer rewrites composer.json and composer.lock as soon as
          * the plan succeeds — before any file moves, so before the journal has
          * an entry. A failure right after that leaves the manifests describing a

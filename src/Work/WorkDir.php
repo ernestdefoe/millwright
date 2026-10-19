@@ -10,7 +10,7 @@ use RuntimeException;
  * The scratch space belonging to one run: its plan, its staged downloads, and
  * its journal.
  *
- * 🚨 Everything a run needs lives together and survives the process. That is
+ * Everything a run needs lives together and survives the process. That is
  * what makes a run resumable by a driver that knows nothing except its id — the
  * admin page, a cron tick, or a worker can each pick up a run none of them
  * started, because the whole of it is on disk in one place.
@@ -47,7 +47,7 @@ class WorkDir
     public function trash(): string
     {
         /*
-         * 🚨 Trash is per-INSTALL, not per-run. A rollback has to be possible
+         * Trash is per-INSTALL, not per-run. A rollback has to be possible
          * long after the run that made it is over and its scratch space is
          * gone — that is the whole difference between "reversible" and
          * "reversible for the next few minutes".
@@ -83,7 +83,7 @@ class WorkDir
             'mode' => in_array($mode, ['install', 'remove'], true) ? $mode : 'update',
             'packages' => array_values($packages),
             /*
-             * 🚨 Written down with everything else, for the same reason the
+             * Written down with everything else, for the same reason the
              * package list is: a run outlives the request that started it. A
              * worker picking this up later must raise the same requirement the
              * admin was shown, not recompute it from a check that may have been
@@ -96,7 +96,7 @@ class WorkDir
     /**
      * What the user actually asked to change.
      *
-     * 🚨 Recorded rather than passed in, because a run outlives the request that
+     * Recorded rather than passed in, because a run outlives the request that
      * started it. A worker picking this up an hour later has only the id, and
      * the difference between "you asked for this" and "this came along with it"
      * has to survive that.
@@ -111,7 +111,7 @@ class WorkDir
     /**
      * 'install' or 'update'.
      *
-     * 🚨 Read from disk rather than passed along, for the same reason as the
+     * Read from disk rather than passed along, for the same reason as the
      * package list: a run outlives the request that started it, and a worker
      * picking it up an hour later has only the id. Running `update` on a package
      * that is not installed does nothing at all and reports success, so getting

@@ -17,7 +17,7 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
 /**
- * 🚨 Flarum's nightly build already says 2.0.0, and so does the 2.0.0 release
+ * Flarum's nightly build already says 2.0.0, and so does the 2.0.0 release
  * it becomes. Moving a forum from one to the other moves flarum/core without
  * moving the version, so nothing puts the forum behind "Update Flarum" and
  * there is nothing to bridge. The bridge used to demand that migrate change

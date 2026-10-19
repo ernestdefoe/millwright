@@ -5,7 +5,7 @@ namespace ErnestDefoe\Millwright\Work;
 /**
  * Keep Composer's autoloader from requiring files the swap has just taken away.
  *
- * 🚨 Composer requires every `autoload.files` entry on EVERY request, with no
+ * Composer requires every `autoload.files` entry on EVERY request, with no
  * check that the file exists. So the moment a swap moves away a package that
  * has one (a removal, or an update whose new version dropped that file), every
  * request dies in the autoloader before Flarum, or this updater, can run.

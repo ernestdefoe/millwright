@@ -5,7 +5,7 @@ namespace ErnestDefoe\Millwright\Plan;
 /**
  * What changed between two composer.lock files.
  *
- * 🚨 This is why an update here is cheap. Composer's own install path rebuilds a
+ * This is why an update here is cheap. Composer's own install path rebuilds a
  * whole tree; comparing locks says that exactly three packages moved, so exactly
  * three get downloaded and exactly three get replaced. Everything the design
  * claims — a rollback proportional to the change, an apply measured in renames
@@ -90,7 +90,7 @@ class LockDiff
     /**
      * A one-line reason each package is in the plan.
      *
-     * 🚨 "Because you asked for it" and "because something you asked for needs
+     * "Because you asked for it" and "because something you asked for needs
      * it" are different, and the difference is the whole reason somebody reads
      * this screen. Anything that cannot be attributed says so rather than
      * inventing a plausible cause.

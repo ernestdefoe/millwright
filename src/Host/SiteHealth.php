@@ -9,7 +9,7 @@ use GuzzleHttp\Exception\GuzzleException;
 /**
  * Does the site still answer?
  *
- * 🚨 Over HTTP, as a visitor, not by booting Flarum in this process.
+ * Over HTTP, as a visitor, not by booting Flarum in this process.
  *
  * The failure this exists to catch is a site that will not BOOT — an extension
  * whose extend.php throws, a class the autoloader cannot find, a migration that
@@ -42,7 +42,7 @@ class SiteHealth
 
         for ($i = 0; $i < max(1, $attempts); $i++) {
             /*
-             * 🚨 A fresh query string every attempt. Between this extension, a
+             * A fresh query string every attempt. Between this extension, a
              * CDN and Flarum's own response cache there are several places a
              * 200 from before the update could be served from, and a cached
              * success is the one answer that would make this check worse than
@@ -82,7 +82,7 @@ class SiteHealth
         }
 
         /*
-         * 🚨 Unreachable at its own address: ask the web server on this
+         * Unreachable at its own address: ask the web server on this
          * machine directly, naming the site in the Host header.
          *
          * Inside a container the forum's address is the HOST's — localhost:8080

@@ -11,7 +11,7 @@ use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use PHPUnit\Framework\TestCase;
 
 /**
- * 🚨 The rule this protects: the work belongs to the run, not to the process.
+ * The rule this protects: the work belongs to the run, not to the process.
  *
  * Under PHP-FPM nothing survives a request, so a container that resolves "the
  * current run" once is right by accident. A queue worker is a long-lived

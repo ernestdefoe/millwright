@@ -16,7 +16,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 /**
  * Check now, rather than waiting for tonight's scheduled run.
  *
- * 🚨 Cheap enough to be a button: one HTTP call per Flarum extension, no
+ * Cheap enough to be a button: one HTTP call per Flarum extension, no
  * Composer, no resolve. On this forum that is about ten calls, not the 130 it
  * would be without the filter in UpdateCheck::interesting().
  */
@@ -34,7 +34,7 @@ class CheckController implements RequestHandlerInterface
 
         $check = new UpdateCheck(StorageDir::of($this->paths->storage).'/updates.json');
 
-        // 🚨 The same check as the console command, protected repositories
+        // The same check as the console command, protected repositories
         // included: see UpdateCheck::refreshSite().
         $result = $check->refreshSite($this->translator, $this->paths->base);
 

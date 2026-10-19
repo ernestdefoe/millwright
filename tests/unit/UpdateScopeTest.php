@@ -10,7 +10,7 @@ use ReflectionClass;
 /**
  * What an update is allowed to move, and what it says when it moves nothing.
  *
- * 🚨 Both of these were found by running a real update on a real forum and
+ * Both of these were found by running a real update on a real forum and
  * reading what happened, not from the code.
  */
 class UpdateScopeTest extends TestCase
@@ -32,7 +32,7 @@ class UpdateScopeTest extends TestCase
     }
 
     /**
-     * 🚨 `--with-all-dependencies` also updates ROOT requirements.
+     * `--with-all-dependencies` also updates ROOT requirements.
      *
      * Asking Millwright to update two extensions on ernestdefoe.online moved
      * TWENTY-FIVE packages — the whole illuminate stack, commonmark, monolog —
@@ -54,7 +54,7 @@ class UpdateScopeTest extends TestCase
     }
 
     /**
-     * 🚨 "Everything is already at the newest version it can be" is true and
+     * "Everything is already at the newest version it can be" is true and
      * useless when a pin is the reason.
      *
      * edonline pinned page-builder to 3.5.1. The check correctly said 3.6.0
@@ -74,7 +74,7 @@ class UpdateScopeTest extends TestCase
     }
 
     /**
-     * 🚨 And the update path actually CALLS it.
+     * And the update path actually CALLS it.
      *
      * The first version of this test exercised whyNothingMoved() directly and
      * passed while the update branch still returned the old useless sentence —

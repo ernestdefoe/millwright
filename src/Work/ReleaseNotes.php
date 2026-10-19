@@ -13,11 +13,11 @@ use ErnestDefoe\Millwright\Config\AuthTokens;
  * What an update gives you: every GitHub release between the installed version
  * and the one on offer.
  *
- * 🚨 Every release in the range, not just the newest. Somebody going from
+ * Every release in the range, not just the newest. Somebody going from
  * 1.2.0 to 1.5.0 gets three releases' worth of changes, and the one that
  * matters (a breaking change in 1.3.0) is rarely in the newest release's notes.
  *
- * 🚨 The repository comes from the saved update check, never from the browser.
+ * The repository comes from the saved update check, never from the browser.
  * The request names a package and nothing else, so this can only ever ask
  * GitHub about a repository Packagist or the site's own configuration named.
  *

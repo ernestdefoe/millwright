@@ -11,12 +11,11 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
 /**
- * 🚨 The rules these protect:
+ * The rules these protect:
  *
  *   - a stored credential is never readable back out of this extension;
  *   - a malformed composer.json is never written, and never overwritten;
- *   - the settings that decide whether Composer can find anything are the ones
- *     that made the tool it replaces impossible to remove.
+ *   - the settings that decide whether Composer can find anything at all.
  */
 class ConfigTest extends TestCase
 {
@@ -49,7 +48,7 @@ class ConfigTest extends TestCase
     public function test_a_stored_credential_is_never_returned(): void
     {
         /*
-         * 🚨 The single most important test here. A settings screen that shows
+         * The single most important test here. A settings screen that shows
          * your GitHub token back to you turns every screenshot and support
          * ticket into a credential leak, and the person it leaks from has no
          * reason to think anything happened.
@@ -193,7 +192,7 @@ class ConfigTest extends TestCase
             $this->assertNotEmpty($locale[$key] ?? null, "$level has no explanation");
         }
 
-        // 🚨 Flarum 2 is stable now; the old copy said it was still a release candidate.
+        // Flarum 2 is stable now; the old copy said it was still a release candidate.
         $this->assertStringContainsString('Flarum 2 itself is stable', $locale['level_stable_means']);
     }
 
@@ -202,7 +201,7 @@ class ConfigTest extends TestCase
     public function test_a_broken_composer_json_is_refused_rather_than_replaced(): void
     {
         /*
-         * 🚨 Treating unreadable JSON as an empty array would replace a file
+         * Treating unreadable JSON as an empty array would replace a file
          * somebody could still fix by hand with one built from nothing.
          */
         file_put_contents($this->dir.'/composer.json', '{"require": {,,,}');

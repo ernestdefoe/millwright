@@ -13,7 +13,7 @@ use RuntimeException;
  * at the start of a request that loaded the new code, which is the caller's to
  * guarantee (ComposerSteps asks FreshCode first).
  *
- * 🚨 One place for both, because there are two callers — the update's finish
+ * One place for both, because there are two callers — the update's finish
  * and Restore — and the copy of "how to run a flarum command" that drifted
  * would be the one somebody only meets on a host without proc_open.
  */
@@ -34,7 +34,7 @@ class FlarumCommand
     {
         if ($this->composer->processes()) {
             /*
-             * 🚨 No memory limit, as Composer gets (COMPOSER_MEMORY_LIMIT) and as
+             * No memory limit, as Composer gets (COMPOSER_MEMORY_LIMIT) and as
              * the in-process path already takes. Flarum 2's cache:clear compiles
              * every frontend in one process, and less.php's cache stores each
              * parsed node with its own copy of the file path (a 12 KB stylesheet
@@ -57,7 +57,7 @@ class FlarumCommand
     /**
      * What to show of a failed command's output: its head AND its tail.
      *
-     * 🚨 PHP, Xdebug and Symfony all print the error FIRST and the stack after
+     * PHP, Xdebug and Symfony all print the error FIRST and the stack after
      * it. Keeping only the last twelve lines kept the frames and dropped the one
      * line that named the failure: a customer's `cache:clear` (2026-10-18) came
      * back as twelve Xdebug frames, each kilobytes of dumped arguments, and no

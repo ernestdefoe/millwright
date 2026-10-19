@@ -8,7 +8,7 @@ use RuntimeException;
 /**
  * Deleting things that live directly inside ONE directory, and nothing else.
  *
- * 🚨 This is the only code in Millwright that deletes a rollback copy, so it is
+ * This is the only code in Millwright that deletes a rollback copy, so it is
  * written to be incapable of three things, each of which has happened somewhere:
  *
  *   1. **Walking through a symlink.** A link is one thing to remove, never a
@@ -59,7 +59,7 @@ class Contained
     /**
      * Remove an entry given as a full path.
      *
-     * 🚨 The path must be a DIRECT child of the base. Its parent is resolved
+     * The path must be a DIRECT child of the base. Its parent is resolved
      * (so `trash/../vendor/x` is seen for what it is) but the entry itself is
      * not — resolving a link to decide whether to delete it would be asking the
      * link where it points, which is the one question that must not matter.
@@ -84,7 +84,7 @@ class Contained
     /**
      * When an entry last changed, as far as the filesystem will say.
      *
-     * 🚨 The LATER of mtime and ctime. A rename keeps a directory's mtime — a
+     * The LATER of mtime and ctime. A rename keeps a directory's mtime — a
      * package moved to the trash today still says when Composer extracted it,
      * months ago — but it does update ctime, which is the moment it arrived.
      * Taking the later of the two means a copy is never judged older than it is.
@@ -157,7 +157,7 @@ class Contained
                 continue;
             }
 
-            // 🚨 is_link FIRST: is_dir() is true for a link to a directory.
+            // is_link FIRST: is_dir() is true for a link to a directory.
             if (is_link($path) || ! is_dir($path)) {
                 $bytes += $this->bytes($stat);
                 @unlink($path);
@@ -202,7 +202,7 @@ class Contained
     }
 
     /**
-     * 🚨 Checked on every directory before anything inside it is touched. The
+     * Checked on every directory before anything inside it is touched. The
      * walk never goes through a link, so this cannot fail in practice — which
      * is exactly why it is here: if it ever does, something about the tree is
      * not what this class assumes, and stopping is the only safe response.

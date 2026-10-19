@@ -13,7 +13,7 @@ use Throwable;
 /**
  * Which database migrations an update ran, so undoing it can reverse them.
  *
- * 🚨 Undo used to put the old CODE back over the new SCHEMA. Moving files is
+ * Undo used to put the old CODE back over the new SCHEMA. Moving files is
  * all a rename can do, and a migration the update ran stays run: the older
  * version then boots against columns and tables it has never heard of, or
  * misses ones it needs. ClaudiusH asked the obvious question on 2026-10-07 —
@@ -25,7 +25,7 @@ use Throwable;
  * down step, undo refuses before touching anything: old code on a newer
  * database is the outcome this exists to prevent.
  *
- * 🚨 In TWO requests, and from COPIES. Found undoing Flarum rc.8 → nightly,
+ * In TWO requests, and from COPIES. Found undoing Flarum rc.8 → nightly,
  * 2026-10-07: nightly's API middleware reads the `asset_revisions` table its
  * own migration creates, on every response. Reversing that migration inside
  * the undo request — which still has nightly's code loaded — dropped the

@@ -10,16 +10,15 @@ use RuntimeException;
  * Runs Composer: in its own process where the host allows it, inside this one
  * where it does not.
  *
- * 🚨 A subprocess by preference. Extension Manager runs Composer inside the PHP
- * worker serving the request AND lets it rewrite vendor/, so a killed request
- * can take the vendor directory with it and a booted Flarum shares the
- * resolve's memory budget. Out of process, Composer gets its own limit, its own
+ * A subprocess by preference. Composer run inside the PHP worker serving the
+ * request shares a booted Flarum's memory budget, and if it may rewrite vendor/
+ * a killed request can take the vendor directory with it. Out of process, Composer gets its own limit, its own
  * lifetime, and its failures are exit codes rather than a dead worker.
  *
- * 🚨 In-process where a subprocess is impossible — proc_open disabled, or no
- * command-line PHP — and this used to refuse instead. What made Extension
- * Manager fragile was never the process Composer ran in: it was Composer
- * writing vendor/ from inside a request that could be killed. Millwright never
+ * In-process where a subprocess is impossible — proc_open disabled, or no
+ * command-line PHP — and this used to refuse instead. The danger was never the
+ * process Composer ran in: it was Composer writing vendor/ from inside a request
+ * that could be killed. Millwright never
  * lets Composer touch a package directory. Composer only RESOLVES (`--no-install`
  * writes composer.lock and nothing else), Fetcher downloads, and Applier swaps
  * directories with journalled renames. The one write Composer makes here is the
@@ -63,7 +62,7 @@ class ComposerRunner
     /**
      * Composer will run inside this PHP process rather than in its own.
      *
-     * 🚨 Asked of THIS process. A queue worker's PHP often has a different
+     * Asked of THIS process. A queue worker's PHP often has a different
      * php.ini from the website's, so the same run can spawn from the worker and
      * run in-process from the admin page — and both are fine.
      */
@@ -106,7 +105,7 @@ class ComposerRunner
         return Process::run($this->translator, $cmd, $this->installPath, [
             'PATH' => getenv('PATH') ?: '/usr/bin:/bin',
             /*
-             * 🚨 -1, set explicitly. Composer raises its own limit to 1.5G on
+             * -1, set explicitly. Composer raises its own limit to 1.5G on
              * startup unless this is set, which would make any measurement of
              * what a host can actually do meaningless — and the whole capability
              * panel depends on those measurements being real.
@@ -121,7 +120,7 @@ class ComposerRunner
      * The same command, through Composer's own console application, in this
      * process.
      *
-     * 🚨 An argv ARRAY, exactly as the subprocess gets, and never a string to
+     * An argv ARRAY, exactly as the subprocess gets, and never a string to
      * be parsed: the only user-supplied values are package names that
      * StartController has already matched against Composer's own pattern.
      *
@@ -131,7 +130,7 @@ class ComposerRunner
     public function runInProcess(array $args): array
     {
         /*
-         * 🚨 No plugins and no scripts, in-process always. Either would be
+         * No plugins and no scripts, in-process always. Either would be
          * somebody else's code running inside this request — and most of
          * them start a program anyway, which is the thing this host forbids.
          */
@@ -171,7 +170,7 @@ class ComposerRunner
     }
 
     /**
-     * 🚨 Every variable that changes what Composer does, set the way the
+     * Every variable that changes what Composer does, set the way the
      * subprocess sets them — plus the one that replaces a call to git.
      *
      * COMPOSER_ROOT_VERSION: without it Composer asks git what version the
@@ -211,7 +210,7 @@ class ComposerRunner
     }
 
     /**
-     * 🚨 Composer reaching for git on a host that cannot start programs throws
+     * Composer reaching for git on a host that cannot start programs throws
      * Symfony's "relies on proc_open" LogicException, from deep inside a VCS or
      * path repository. Turned into the sentence that says what to do.
      */
@@ -245,7 +244,7 @@ class ComposerRunner
     }
 
     /**
-     * 🚨 The BUNDLED Composer first, and a host's own only as a last resort.
+     * The BUNDLED Composer first, and a host's own only as a last resort.
      *
      * Millwright requires composer/composer, so the library is in the same
      * vendor tree as everything else and is simply always there. That is not

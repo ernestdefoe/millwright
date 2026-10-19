@@ -5,7 +5,7 @@ namespace ErnestDefoe\Millwright\Run;
 /**
  * Builds the work for one named run.
  *
- * 🚨 A factory rather than a bound instance, because the run id must be an
+ * A factory rather than a bound instance, because the run id must be an
  * ARGUMENT and never an ambient fact.
  *
  * The binding this replaced asked the store for "the latest run" once, when the

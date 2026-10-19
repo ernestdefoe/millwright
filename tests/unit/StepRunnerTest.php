@@ -52,7 +52,7 @@ class StepRunnerTest extends TestCase
 
     public function test_no_single_step_does_more_than_one_item(): void
     {
-        // 🚨 The whole reason this exists. If a step ever did two things, a host
+        // The whole reason this exists. If a step ever did two things, a host
         // with a 30 second ceiling would eventually be cut off mid-item again.
         [$runner, $steps] = $this->make(['plan' => [], 'fetch' => ['a', 'b', 'c'], 'apply' => [], 'finalise' => []]);
         $runner->begin('r1');
@@ -90,7 +90,7 @@ class StepRunnerTest extends TestCase
 
     public function test_a_failure_records_which_step_failed(): void
     {
-        // 🚨 The anti-example is "has been attempted too many times": true,
+        // The anti-example is "has been attempted too many times": true,
         // useless, and three layers from the cause.
         [$runner, $steps] = $this->make(['plan' => [], 'fetch' => ['a', 'boom', 'c'], 'apply' => [], 'finalise' => []]);
         $steps->explodeOn = 'boom';
@@ -147,9 +147,9 @@ class StepRunnerTest extends TestCase
 
     public function test_a_stale_run_is_reported_not_silently_skipped(): void
     {
-        // 🚨 Extension Manager refuses to queue while a task looks busy and says
-        // nothing, so one dead task blocks everything forever. Here staleness is
-        // a fact the caller can act on, never a reason to do nothing.
+        // Refusing to queue while a task looks busy, and saying nothing, lets one
+        // dead task block everything forever. Here staleness is a fact the
+        // caller can act on, never a reason to do nothing.
         [$runner, $steps] = $this->make(['plan' => [], 'fetch' => ['a', 'b'], 'apply' => [], 'finalise' => []]);
         $runner->begin('r1');
         $runner->step('r1');
@@ -226,7 +226,7 @@ class StepRunnerTest extends TestCase
     }
 
     /**
-     * 🚨 The log is what the admin screen shows, and a waiting step is polled
+     * The log is what the admin screen shows, and a waiting step is polled
      * every couple of seconds by three drivers at once. Appending each time
      * would bury the run's real history under a wall of the same sentence.
      */

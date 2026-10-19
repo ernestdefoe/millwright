@@ -35,7 +35,7 @@ class AutoRollbackTest extends TestCase
     }
 
     /**
-     * 🚨 The case that makes an automatic rollback safe to have at all. A forum
+     * The case that makes an automatic rollback safe to have at all. A forum
      * that was already down — bad config, full disk, database gone — fails the
      * check afterwards too, and undoing a good update for it would be the
      * feature causing the outage it exists to prevent.
@@ -46,7 +46,7 @@ class AutoRollbackTest extends TestCase
     }
 
     /**
-     * 🚨 And the case that makes it safe on hosts it cannot run on. This branch
+     * And the case that makes it safe on hosts it cannot run on. This branch
      * is reached exactly where the checker does not work, so treating "no
      * answer" as a failure would undo every update ever made on that host.
      */
@@ -84,7 +84,7 @@ class AutoRollbackTest extends TestCase
     }
 
     /**
-     * 🚨 A failure from last Tuesday must never be offered as the explanation
+     * A failure from last Tuesday must never be offered as the explanation
      * for today's, or the rollback message names an innocent extension.
      */
     public function test_an_error_from_before_the_update_is_not_offered_as_the_reason(): void

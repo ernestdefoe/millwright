@@ -7,7 +7,7 @@ use Flarum\Locale\TranslatorInterface;
 /**
  * A cache somebody else owns, moved out of the way instead of refused.
  *
- * 🚨 Found on a Flarum-in-a-box container, 2026-10-07: its entrypoint runs
+ * Found on a Flarum-in-a-box container, 2026-10-07: its entrypoint runs
  * `php flarum` as root, so storage/cache and storage/formatter fill with
  * root-owned entries. Permissions refused every update over them, and "Put
  * everything back" failed at `cache:clear` for the same reason, on a host
@@ -56,7 +56,7 @@ class StaleCache
             }
 
             /*
-             * 🚨 Otherwise each offending entry, renamed hidden inside it.
+             * Otherwise each offending entry, renamed hidden inside it.
              *
              * ClaudiusH's container, 2026-10-07, on 1.13.0: storage/ itself was
              * not writable (or the cache is a mounted volume), so the rename

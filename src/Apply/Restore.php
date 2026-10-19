@@ -17,7 +17,7 @@ use Throwable;
 /**
  * Put everything back the way it was, once, in one place.
  *
- * 🚨 Extracted because there are now TWO callers — the admin pressing the
+ * Extracted because there are now TWO callers — the admin pressing the
  * button, and the run undoing itself when the site stops answering — and two
  * copies of "put it back" is the last thing this extension should have. The
  * subtle half is not moving the files: it is reconciling Composer's record
@@ -76,7 +76,7 @@ class Restore
 
         if ($undone !== []) {
             /*
-             * 🚨 `install`, not `dump-autoload`. Moving the files back leaves
+             * `install`, not `dump-autoload`. Moving the files back leaves
              * vendor/composer/installed.json still claiming a package whose
              * directory is gone, and dump-autoload regenerates the autoloader
              * FROM that record — it faithfully rebuilds the wrong thing.
@@ -87,7 +87,7 @@ class Restore
              * they come from the restored files.
              */
             try {
-                // 🚨 Record first, or `install` re-extracts the packages just
+                // Record first, or `install` re-extracts the packages just
                 // put back — with a Composer that lives in this same vendor/,
                 // which is how an update took wowcraft.online down. Synced
                 // from the restored lock, install only rebuilds the autoloader.
@@ -115,7 +115,7 @@ class Restore
     /**
      * Make the forum SERVE what was just put back.
      *
-     * 🚨 Putting the files back is not the same as undoing the update. The
+     * Putting the files back is not the same as undoing the update. The
      * update's last phase published the new version's assets and rebuilt the
      * caches from it, and none of that lives in vendor/. Proved on the demo
      * forum: after rolling fof/polls back from rc.4 to rc.3, vendor and the
@@ -134,7 +134,7 @@ class Restore
         }
 
         /*
-         * 🚨 In-process, the formatter is FORGOTTEN, not rebuilt. This request
+         * In-process, the formatter is FORGOTTEN, not rebuilt. This request
          * booted the version being rolled back, so building the formatter
          * here would bake that version's extenders into the cache the older
          * code then renders with. Forgotten, the next request — running the
@@ -173,7 +173,7 @@ class Restore
         $undone[] = $this->translator->trans('ernestdefoe-millwright.api.restore.assets_rebuilt');
 
         /*
-         * 🚨 And the web server's compiled-code cache, as an update's finish
+         * And the web server's compiled-code cache, as an update's finish
          * does. Without it, Flarum-in-a-box (2026-10-07) kept serving the
          * newer version's extend.php after the files were put back: every page
          * 500'd on a class the restored version never had, until PHP-FPM was

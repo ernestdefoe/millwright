@@ -8,7 +8,7 @@ use RuntimeException;
 /**
  * Brings Composer's record of what is installed into line with the lock.
  *
- * 🚨 This exists so that the register step never makes Composer touch a file.
+ * This exists so that the register step never makes Composer touch a file.
  *
  * Composer decides what to install by comparing composer.lock with
  * vendor/composer/installed.json — its own record — not with the disk. After

@@ -10,7 +10,7 @@ use Illuminate\Queue\SyncQueue;
 /**
  * Decides what, if anything, should be turning the handle in the background.
  *
- * 🚨 The queue is used when there is one and ignored when there is not, and
+ * The queue is used when there is one and ignored when there is not, and
  * neither case is special. Flarum ships with the sync queue, which runs a
  * "queued" job inline in the request that dispatched it — so dispatching there
  * would produce exactly the long request this design exists to avoid, on the
@@ -43,7 +43,7 @@ class Drivers
     }
 
     /**
-     * 🚨 Flarum wraps the real queue in RoutingQueue, so an `instanceof
+     * Flarum wraps the real queue in RoutingQueue, so an `instanceof
      * SyncQueue` check on what the container hands back is ALWAYS false — even
      * on a stock install where the thing inside is the sync queue.
      *
@@ -81,12 +81,12 @@ class Drivers
             return true;
         } catch (\Throwable) {
             /*
-             * 🚨 Swallowed on purpose, and this is the one place that is right.
+             * Swallowed on purpose, and this is the one place that is right.
              * A queue that cannot be dispatched to is a reason to fall back to
              * polling, not a reason to fail the update — and the update is
              * already running, so the user is not left wondering. The alternative
-             * is what the current tooling does: refuse the work entirely because
-             * a background system nobody asked about is unhappy.
+             * is refusing the work entirely because a background system nobody
+             * asked about is unhappy.
              */
             return false;
         }

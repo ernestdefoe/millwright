@@ -9,7 +9,7 @@ use RuntimeException;
 /**
  * Reading and writing the two files Composer will not let you get wrong twice.
  *
- * 🚨 composer.json and auth.json are the files that decide whether Composer can
+ * composer.json and auth.json are the files that decide whether Composer can
  * run at all. A malformed composer.json does not degrade a site, it stops every
  * future install and update dead — including the one that would put it back. So
  * every write here is: validate, back up, write to a temporary file, fsync, and
@@ -49,7 +49,7 @@ class JsonFile
 
         if (! is_array($data)) {
             /*
-             * 🚨 Refuse rather than treat it as empty. Returning [] here would
+             * Refuse rather than treat it as empty. Returning [] here would
              * mean the next write replaces a file we could not understand with
              * one built from nothing — turning a file somebody could still fix
              * by hand into one whose contents are gone.
@@ -77,7 +77,7 @@ class JsonFile
             throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.json_encode_failed', ['file' => basename($this->path), 'error' => json_last_error_msg()]));
         }
 
-        // 🚨 Prove it parses before it goes anywhere near the real path.
+        // Prove it parses before it goes anywhere near the real path.
         if (json_decode($json, true) === null) {
             throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.json_refuse_write', ['file' => basename($this->path)]));
         }

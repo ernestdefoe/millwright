@@ -5,7 +5,7 @@ namespace ErnestDefoe\Millwright\Tests\Unit;
 use PHPUnit\Framework\TestCase;
 
 /**
- * 🚨 A static `key` on a static child has broken this extension's admin screen
+ * A static `key` on a static child has broken this extension's admin screen
  * three separate times, each one presenting as an endless loading spinner.
  *
  * Mithril requires that within one list of children, either every vnode has a

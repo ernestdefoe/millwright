@@ -5,7 +5,7 @@ namespace ErnestDefoe\Millwright\Discover;
 /**
  * A small on-disk cache with an expiry.
  *
- * 🚨 A miss is never an error and a corrupt entry is never fatal. This holds
+ * A miss is never an error and a corrupt entry is never fatal. This holds
  * nothing that cannot be fetched again, so every failure path here returns
  * "not cached" and lets the caller do the work. A cache that can break the
  * feature it speeds up is worse than no cache.

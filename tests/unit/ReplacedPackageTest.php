@@ -9,7 +9,7 @@ use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use PHPUnit\Framework\TestCase;
 
 /**
- * 🚨 discuss.flarum.org d/40012: Extension Manager featured and installed
+ * discuss.flarum.org d/40012: an extension list featured and installed
  * v17development/flarum-seo, an old name whose repository moved to fof/seo and
  * now declares it REPLACES the old name. The result was FoF SEO under the wrong
  * id, refusing to enable. The shapes below are Packagist's real ones, minified.

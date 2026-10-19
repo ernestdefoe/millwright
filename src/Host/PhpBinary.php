@@ -7,24 +7,24 @@ use Flarum\Locale\TranslatorInterface;
 /**
  * Where the command-line PHP is — and, when it cannot be found, WHY.
  *
- * 🚨 PHP_BINARY is the wrong answer under FPM, and FPM is most hosts. Under
+ * PHP_BINARY is the wrong answer under FPM, and FPM is most hosts. Under
  * php-fpm it is the FPM binary — handing it a script does not run the script,
  * and the failure is the confusing kind: proc_open succeeds, a process starts,
  * and it exits having done nothing recognisable.
  *
- * 🚨 Every candidate is PROVED rather than trusted, by running it and asking
+ * Every candidate is PROVED rather than trusted, by running it and asking
  * which SAPI it is. Guessing from the filename is not good enough: the first
  * version of this trusted PHP_BINDIR, and on the machine it was written on
  * PHP_BINDIR is `/bin` — which contains no PHP at all. It failed safely and
  * with a clear message, which is the only reason it was cheap to find.
  *
- * 🚨 The most reliable candidate is the FPM binary's OWN DIRECTORY with `-fpm`
+ * The most reliable candidate is the FPM binary's OWN DIRECTORY with `-fpm`
  * stripped: `php85-fpm` sits beside `php85`, same build, same version, same
  * extensions. That layout is shared by Herd, cPanel, Plesk and most distro
  * packages, and it is checked before anything on a fixed path so a forum gets
  * the PHP it is actually running rather than whatever the host defaults to.
  *
- * 🚨 open_basedir. Plesk sets it on every site by default
+ * open_basedir. Plesk sets it on every site by default
  * (`{WEBSPACEROOT}{/}{:}{TMP}{/}`), and under it `is_file('/opt/plesk/php/8.5/bin/php')`
  * is simply FALSE from the website, while the same check over SSH — a different
  * PHP with a different php.ini — is true. A real customer on Plesk was stuck

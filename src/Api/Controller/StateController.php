@@ -20,7 +20,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 /**
  * Everything the admin screen draws, in one read.
  *
- * 🚨 Polled while a run is going, so it stays a read — it never advances
+ * Polled while a run is going, so it stays a read — it never advances
  * anything, never repairs anything, and never has a side effect. Mixing "tell me
  * the state" with "make something happen" is how a page refresh ends up
  * starting a second update.
@@ -53,7 +53,7 @@ class StateController implements RequestHandlerInterface
             'history' => $this->runs->history(),
             'runIsStale' => $run !== null && $run->isStale(time()),
             /*
-             * 🚨 Sent with its age and its blind spots, never as a bare count.
+             * Sent with its age and its blind spots, never as a bare count.
              * "3 updates" is a claim; "3 updates, checked 2 hours ago, and 4
              * packages could not be checked at all" is the truth, and the second
              * is what lets somebody decide whether to trust it.
@@ -89,14 +89,14 @@ class StateController implements RequestHandlerInterface
                 'icon' => $extension->getIcon(),
                 'enabled' => $this->extensions->isEnabled($extension->getId()),
                 /*
-                 * 🚨 A HINT from the cheap Packagist check, not a promise. It
+                 * A HINT from the cheap Packagist check, not a promise. It
                  * means "a newer version exists", not "you can have it" — only
                  * the plan answers that, and the screen has to keep the two
                  * apart or the badge becomes something people learn to ignore.
                  */
                 'update' => $updates[$extension->name] ?? null,
                 /*
-                 * 🚨 The screen has to know a requirement is an exact pin,
+                 * The screen has to know a requirement is an exact pin,
                  * because that changes what pressing Update means: not "fetch
                  * the newer version" but "change what this forum requires, then
                  * fetch it". Two different acts, and the second one edits
@@ -104,7 +104,7 @@ class StateController implements RequestHandlerInterface
                  */
                 'constraint' => $require[$extension->name] ?? null,
                 /*
-                 * 🚨 Reported so the SCREEN can explain, rather than the apply
+                 * Reported so the SCREEN can explain, rather than the apply
                  * refusing later. Composer installs a path repository as a
                  * symlink into a checkout on this machine — the way every
                  * extension developer runs their own work. Millwright will not
@@ -117,7 +117,7 @@ class StateController implements RequestHandlerInterface
         }
 
         /*
-         * 🚨 Libraries the forum requires itself, beside its extensions. They
+         * Libraries the forum requires itself, beside its extensions. They
          * have no settings page, so they never had a card, and an update to
          * one (fof/redis 2.0.0) went unseen. Dependencies pulled in by other
          * packages are left out: nobody chose those.

@@ -6,7 +6,7 @@ namespace ErnestDefoe\Millwright\Work;
  * Runs a piece of somebody else's console code inside this PHP process, and
  * puts back everything it changed.
  *
- * 🚨 This process is not ours. Under PHP-FPM it is the request serving an admin
+ * This process is not ours. Under PHP-FPM it is the request serving an admin
  * page, and in a queue worker it lives on to run every other job the forum has.
  * Composer and Symfony Console both treat the process they run in as their own:
  * Composer's ErrorHandler replaces the error handler and turns error_reporting
@@ -95,7 +95,7 @@ class InProcess
             }
 
             /*
-             * 🚨 Put back the request's own limit. This restarts its clock, so
+             * Put back the request's own limit. This restarts its clock, so
              * the rest of a request that has just spent a minute in Composer
              * gets its normal allowance rather than being killed at once.
              */
@@ -168,7 +168,7 @@ class InProcess
     }
 
     /**
-     * 🚨 Pop rather than set. Composer PUSHES its handler (once in the
+     * Pop rather than set. Composer PUSHES its handler (once in the
      * constructor path, again in doRun), and setting the old one on top would
      * leave Composer's underneath it, to resurface the next time anybody calls
      * restore_error_handler(). Bounded, and falls back to setting it outright.

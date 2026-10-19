@@ -2,7 +2,7 @@
 /*
  * Runs one apply and SIGKILLs itself at a named step.
  *
- * 🚨 A real SIGKILL, not a thrown exception. An exception unwinds the stack and
+ * A real SIGKILL, not a thrown exception. An exception unwinds the stack and
  * runs destructors and finally blocks; a host killing a request does not. The
  * whole claim being tested is "an interrupted apply is recoverable", and it is
  * only worth anything if the interruption is the real thing.

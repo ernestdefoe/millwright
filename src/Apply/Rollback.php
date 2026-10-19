@@ -9,7 +9,7 @@ use RuntimeException;
 /**
  * Undoes an apply by reading its journal backwards.
  *
- * 🚨 It must work on a journal whose last entry is `begun` and not `done` —
+ * It must work on a journal whose last entry is `begun` and not `done` —
  * that is the whole reason the journal is written before the act. That entry
  * describes a change that may have happened fully, partly, or not at all, and
  * the on-disk state is the only authority. So every step here is written to be
@@ -47,7 +47,7 @@ class Rollback
     public function run(): array
     {
         /*
-         * 🚨 No early return on an empty journal.
+         * No early return on an empty journal.
          *
          * An empty journal means no FILES were moved. It does not mean nothing
          * changed: the plan phase runs Composer with --no-install, and Composer
@@ -89,7 +89,7 @@ class Rollback
     /**
      * Put composer.lock — and composer.json, if installing changed it — back.
      *
-     * 🚨 Without this a rollback is only half a rollback, and the half it leaves
+     * Without this a rollback is only half a rollback, and the half it leaves
      * out is the half that misleads. The plan phase runs `composer update
      * --no-install`, which rewrites the lock immediately; moving the files back
      * afterwards while leaving the lock claiming the new versions gives a site
@@ -187,7 +187,7 @@ class Rollback
     /**
      * Remove the vendor namespace directory if this was the last package in it.
      *
-     * 🚨 Only when empty, and never above the vendor directory itself. rmdir
+     * Only when empty, and never above the vendor directory itself. rmdir
      * refuses a non-empty directory, so the check and the act cannot disagree
      * even if something is written between them.
      *

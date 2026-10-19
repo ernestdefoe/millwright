@@ -23,7 +23,7 @@ use Flarum\Locale\TranslatorInterface;
 class ComposerStepsFactory implements StepsFactory
 {
     /**
-     * 🚨 `$config` is not optional, and must not be made optional again.
+     * `$config` is not optional, and must not be made optional again.
      *
      * It was `?Config $config = null`, and the one place that constructs this
      * did not pass it. The result was silent: no error, no warning, just an
@@ -39,7 +39,7 @@ class ComposerStepsFactory implements StepsFactory
     }
 
     /**
-     * 🚨 The site's OWN configured address, and an empty string when there
+     * The site's OWN configured address, and an empty string when there
      * isn't one.
      *
      * Not a guess from the request, because the process that runs a step is

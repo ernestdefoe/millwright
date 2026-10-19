@@ -661,7 +661,6 @@ ernestdefoe-millwright:
       asked_directly: "(asked this server directly; its own address is not reachable from here)"
       never_reached: "The site was never reached."
       no_answer: "The site did not answer at all ({error})."
-      no_http: "This host has no way to make an HTTP request."
       no_response: "no response"
     capability:
       disk_free: "Disk: {gb} GB free"
@@ -786,5 +785,4 @@ ernestdefoe-millwright:
       still_enabled: "{package} is still enabled. Turn it off on the Extensions page first, check the forum is happy without it, and then remove it."
     updater:
       answered: "Flarum's updater did not update the database (it answered {status}: {body})."
-      no_http: "This host cannot make an HTTP request, so Flarum's updater could not be asked to update the database."
       unreachable: "Flarum's updater did not update the database (it could not be reached: {error})."

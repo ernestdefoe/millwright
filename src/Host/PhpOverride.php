@@ -9,11 +9,11 @@ use Flarum\Locale\TranslatorInterface;
  * The command-line PHP an admin has pointed Millwright at, for the hosts where
  * looking for one cannot work.
  *
- * 🚨 In storage, not in Flarum's settings table, like everything else
+ * In storage, not in Flarum's settings table, like everything else
  * Millwright keeps: the processes that read it run while vendor/ is being
  * replaced, and crash recovery reads it with nothing booted at all.
  *
- * 🚨 Validated when it is saved, by RUNNING it — not by is_file, which
+ * Validated when it is saved, by RUNNING it — not by is_file, which
  * open_basedir makes lie, and not by name, which says nothing about whether
  * the binary is the FPM one.
  */

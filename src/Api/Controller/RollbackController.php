@@ -20,7 +20,7 @@ use RuntimeException;
 /**
  * Put everything back the way it was.
  *
- * 🚨 Works on a finished run AND on one that died halfway. That is the whole
+ * Works on a finished run AND on one that died halfway. That is the whole
  * claim: the journal records what was about to happen before it happened, so an
  * interrupted update is as recoverable as a completed one. There is no state
  * this refuses to unwind.
@@ -58,7 +58,7 @@ class RollbackController implements RequestHandlerInterface
         $journal = new Journal($this->translator, $workDir->journalPath());
 
         /*
-         * 🚨 An empty journal does NOT mean nothing changed.
+         * An empty journal does NOT mean nothing changed.
          *
          * The plan phase runs Composer with --no-install, and Composer rewrites
          * composer.json and composer.lock the moment it succeeds — before a
@@ -79,7 +79,7 @@ class RollbackController implements RequestHandlerInterface
         }
 
         /*
-         * 🚨 The same Restore the run uses when it undoes itself. Two copies of
+         * The same Restore the run uses when it undoes itself. Two copies of
          * "put it back" — one for the button, one for the automatic path — is
          * exactly the pair that drifts, and the half that drifts is Composer's
          * record, which fails silently and months later.

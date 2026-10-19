@@ -9,7 +9,7 @@ use ReflectionNamedType;
 /**
  * No service may accept an object collaborator it can do without.
  *
- * 🚨 This rule exists because breaking it silently removed a safety feature
+ * This rule exists because breaking it silently removed a safety feature
  * from every install for the whole life of that feature.
  *
  * `ComposerStepsFactory::__construct` took `?Config $config = null`. The one

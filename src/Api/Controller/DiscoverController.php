@@ -18,7 +18,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 /**
  * Search Packagist for extensions.
  *
- * 🚨 One HTTP call, and no compatibility work. Whether each result fits this
+ * One HTTP call, and no compatibility work. Whether each result fits this
  * Flarum is a separate question costing a request per package, and doing it here
  * would make somebody wait a dozen round trips before seeing anything — on a
  * screen they are typing into, on a host that may cut the request at thirty
@@ -42,7 +42,7 @@ class DiscoverController implements RequestHandlerInterface
         $page = max(1, min(20, (int) ($params['page'] ?? 1)));
 
         /*
-         * 🚨 No query means BROWSE, not "return nothing". The first version
+         * No query means BROWSE, not "return nothing". The first version
          * refused an empty query and left the tab blank until somebody guessed a
          * search term — a catalogue behaving like a command line. Packagist
          * answers this by popularity, which is the right default ordering for
@@ -54,7 +54,7 @@ class DiscoverController implements RequestHandlerInterface
         $found = (new Packagist($this->translator, $this->cache()))->search($query, 12, $page, (string) ($params['category'] ?? ''));
 
         /*
-         * 🚨 Marked rather than filtered out. Somebody searching for an
+         * Marked rather than filtered out. Somebody searching for an
          * extension they already have should be told they have it — hiding it
          * looks like the search is broken, and they try again with different
          * words.

@@ -13,7 +13,7 @@ use Throwable;
 /**
  * Everything the update will have to change, checked before it changes any of it.
  *
- * 🚨 Both of these were found mid-run on real forums, 2026-10-02, and each was
+ * Both of these were found mid-run on real forums, 2026-10-02, and each was
  * worse for being found late:
  *
  * - A package directory owned by root. Moving a directory to another parent

@@ -8,7 +8,7 @@ use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use PHPUnit\Framework\TestCase;
 
 /**
- * 🚨 The claim this whole design exists to support: an update finishes on a host
+ * The claim this whole design exists to support: an update finishes on a host
  * that keeps killing it.
  *
  * Every other test here kills a process at a point chosen to be interesting.
@@ -145,7 +145,7 @@ class ResumabilityTest extends TestCase
     public function test_a_kill_inside_the_work_then_record_gap_repeats_that_item_and_still_completes(): void
     {
         /*
-         * 🚨 The gap idempotency exists for, and the one the other tests here do
+         * The gap idempotency exists for, and the one the other tests here do
          * NOT reach: killing after a step returns lands after the save, so the
          * item is never repeated. This kills between doing the work and
          * recording it, which is the only moment where a resumed run redoes

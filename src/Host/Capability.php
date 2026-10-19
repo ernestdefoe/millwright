@@ -8,11 +8,10 @@ use Flarum\Locale\TranslatorInterface;
  * What this host will and will not let Millwright do, established by looking
  * rather than by hoping.
  *
- * 🚨 This is shown to the admin BEFORE they press anything, and that is the
- * point of it. The single most infuriating thing about the current tooling is
- * that it behaves mysteriously on constrained hosting and never says why — you
- * discover the limit by hitting it, halfway through an update, with the site
- * down. A tool that knows it cannot do zero-downtime updates should say so on a
+ * This is shown to the admin BEFORE they press anything, and that is the point
+ * of it. A tool that behaves mysteriously on constrained hosting and never says
+ * why makes you discover the limit by hitting it, halfway through an update,
+ * with the site down. A tool that knows it cannot do zero-downtime updates should say so on a
  * settings page, in advance.
  *
  * The thresholds are measured, not guessed. On a 253-package install a full
@@ -29,7 +28,7 @@ class Capability
     public const NONE = 'none';
 
     /**
-     * 🚨 MEASURED, in-process, on dev.ernestdefoe.online's own composer.json
+     * MEASURED, in-process, on dev.ernestdefoe.online's own composer.json
      * with proc_open disabled — a cold Composer cache, then a warm one. Shown
      * on the panel so a short time limit can be judged against a real number.
      */
@@ -117,7 +116,7 @@ class Capability
     /**
      * How updates are applied here.
      *
-     * 🚨 One strategy, on every host, and that is a decision rather than a
+     * One strategy, on every host, and that is a decision rather than a
      * missing feature. This used to advertise a second "slots" tier where a
      * symlink is flipped between prepared directories so nothing is ever
      * missing — the panel said so, and no such code existed.
@@ -172,7 +171,7 @@ class Capability
         $limit = (int) ini_get('max_execution_time');
 
         /*
-         * 🚨 In-process, the resolve is ONE long step inside one request, so
+         * In-process, the resolve is ONE long step inside one request, so
          * the per-request limit is suddenly the thing that matters — and on
          * IONOS/Plesk shared hosting it is both short and locked. Said here,
          * before anybody presses Update, with the number.
@@ -209,7 +208,7 @@ class Capability
     protected function subprocessCheck(): array
     {
         /*
-         * 🚨 It names the php.ini, and says that it is the WEBSITE's. The
+         * It names the php.ini, and says that it is the WEBSITE's. The
          * usual way somebody "proves" this is wrong is to test proc_open over
          * SSH, where it works — because that is a different PHP with its own
          * configuration.
@@ -364,7 +363,7 @@ class Capability
     }
 
     /**
-     * 🚨 The check that decides whether an update is VISIBLE.
+     * The check that decides whether an update is VISIBLE.
      *
      * Everything else here is about whether an update can run. This is about
      * whether anybody will be able to tell that it did — on a host tuned with
@@ -384,7 +383,7 @@ class Capability
         }
 
         /*
-         * 🚨 Not a warning when Millwright can handle it, and it usually can:
+         * Not a warning when Millwright can handle it, and it usually can:
          * the finalise step clears the cache from the web request that runs it.
          * The row exists so somebody debugging "the update did not take" has
          * somewhere to look, not to alarm them about a normal setup.

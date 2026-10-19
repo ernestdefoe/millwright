@@ -10,10 +10,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
- * 🚨 The safety case. If these fail, Millwright has no reason to exist.
+ * The safety case. If these fail, Millwright has no reason to exist.
  *
- * The claim being tested is the one Extension Manager cannot make: kill an
- * update at ANY point and the site is still intact, and can still be put back
+ * The claim being tested: kill an update at ANY point and the site is still intact, and can still be put back
  * exactly as it was. Not "usually recoverable with ssh" — recoverable by
  * replaying a file.
  *
