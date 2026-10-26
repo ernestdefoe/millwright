@@ -3,6 +3,8 @@
 namespace ErnestDefoe\Millwright\Api\Controller;
 
 use Composer\Semver\VersionParser;
+use ErnestDefoe\Millwright\Config\JsonFile;
+use ErnestDefoe\Millwright\Config\Stability;
 use ErnestDefoe\Millwright\Discover\Cache;
 use ErnestDefoe\Millwright\Discover\Compatibility;
 use ErnestDefoe\Millwright\Discover\Packagist;
@@ -71,6 +73,9 @@ class CompatController implements RequestHandlerInterface
         return new JsonResponse([
             'verdicts' => $packagist->verdicts($names, new Compatibility($core)),
             'core' => $core,
+            // Not part of a verdict: the verdicts are cached for every admin,
+            // and this is a setting that can change between two searches.
+            'minimumStability' => (new Stability($this->translator, new JsonFile($this->translator, $this->paths->base.'/composer.json')))->current()['minimumStability'],
         ]);
     }
 

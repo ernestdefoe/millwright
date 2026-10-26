@@ -59,6 +59,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
   private loadingMore = false;
   private results: Found[] = [];
   private verdicts: Record<string, Verdict> = {};
+  private minimumStability = 'stable';
   private installedNames: string[] = [];
   private checking = false;
   private error: string | null = null;
@@ -322,9 +323,24 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
       );
     }
 
-    // A pre-release is labelled as one. Most forums are on stable minimum
-    // stability and cannot install it at all, and somebody who can should still
-    // be told that is what they are getting.
+    // Composer refuses a release less finished than the forum allows, with an
+    // error that says the package "could not be found". Say which setting it needs.
+    if (!this.allowed(v)) {
+      return (
+        <span className="Millwright-tag Millwright-tag--muted">
+          {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.compat.needs_stability', {
+            level: app.translator.trans(
+              'ernestdefoe-millwright.admin.composer.minimum_stability.options.' + (v.stability || 'stable').toLowerCase(),
+              {},
+              true
+            ),
+          })}
+        </span>
+      );
+    }
+
+    // A pre-release is labelled as one, so whoever installs it knows that is
+    // what they are getting.
     return v.stability && v.stability !== 'stable' ? (
       <span className="Millwright-tag Millwright-tag--warn">
         {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.compat.prerelease', { version: v.version })}
@@ -378,7 +394,8 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
         );
       }
 
-      return this.verdicts[instead]?.compatible !== true ? null : (
+      const iv = this.verdicts[instead];
+      return iv?.compatible !== true || !this.allowed(iv) ? null : (
         <Button className="Button Button--primary Button--sm" disabled={this.attrs.starting} onclick={() => this.attrs.oninstall(instead)}>
           {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.extension.install_replacement', { replacement: instead })}
         </Button>
@@ -388,13 +405,20 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
     if (v?.replaced) return null;
 
     // Not offered when it cannot work. The badge beside it says why.
-    if (!v || v.compatible !== true) return null;
+    if (!v || v.compatible !== true || !this.allowed(v)) return null;
 
     return (
       <Button className="Button Button--primary Button--sm" disabled={this.attrs.starting} onclick={() => this.attrs.oninstall(r.name)}>
         {app.translator.trans('ernestdefoe-millwright.admin.extensions.install')}
       </Button>
     );
+  }
+
+  /** Whether the forum's minimum stability lets Composer install this release. */
+  allowed(v: Verdict): boolean {
+    const order = ['stable', 'rc', 'beta', 'alpha', 'dev'];
+
+    return order.indexOf((v.stability || 'stable').toLowerCase()) <= order.indexOf(this.minimumStability.toLowerCase());
   }
 
   short(n: number): string {
@@ -519,6 +543,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
         this.checking = false;
         this.verdicts = { ...this.verdicts, ...(data.verdicts || {}) };
         this.core = data.core || this.core;
+        this.minimumStability = data.minimumStability || this.minimumStability;
 
         // A replacement is offered in place of the package it replaced, so it
         // is held to the same rule: no button until we know it works here.
