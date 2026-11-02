@@ -433,8 +433,12 @@ class ComposerSteps implements Steps
             return [];
         }
 
-        $path = $this->installPath.'/composer.json';
-        $json = $this->readJson($path);
+        // Read and written through JsonFile, like every other composer.json
+        // edit: a file it cannot parse is refused rather than rebuilt, and the
+        // write goes beside the file and is renamed into place, so a run killed
+        // mid-write cannot leave half a composer.json behind.
+        $file = new JsonFile($this->translator, $this->installPath.'/composer.json');
+        $json = $file->read();
         $raised = [];
 
         foreach ($this->repin as $package => $version) {
@@ -458,9 +462,7 @@ class ComposerSteps implements Steps
             return [];
         }
 
-        // Validated, written beside and renamed into place: a crash mid-write
-        // must never leave a half composer.json, which no later run could read.
-        (new JsonFile($this->translator, $path))->write($json);
+        $file->write($json);
 
         return $raised;
     }
