@@ -147,6 +147,26 @@ class RepinTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/[\^~*]/', $after['require']['a/pinned']);
     }
 
+    /**
+     * Written the way every other composer.json edit is (JsonFile): to a file
+     * beside it and renamed into place, so a crash mid-write can never leave
+     * a half composer.json. Nothing temporary is left behind, and the file
+     * keeps its own permissions.
+     */
+    public function test_the_raise_is_written_atomically_and_keeps_the_files_mode(): void
+    {
+        file_put_contents($this->dir.'/composer.json', '{}');
+        chmod($this->dir.'/composer.json', 0640);
+
+        $after = $this->raise(['require' => ['a/pinned' => '1.0.0'], 'description' => 'Café'], ['a/pinned' => '1.1.0'], ['a/pinned']);
+
+        $this->assertSame('1.1.0', $after['require']['a/pinned']);
+        $this->assertSame([], array_values(array_filter(glob($this->dir.'/composer.json.millwright-*') ?: [], fn ($f) => ! str_ends_with($f, '.millwright-backup'))));
+        clearstatcache();
+        $this->assertSame(0640, fileperms($this->dir.'/composer.json') & 0777);
+        $this->assertStringContainsString('Café', (string) file_get_contents($this->dir.'/composer.json'));
+    }
+
     public function test_a_package_the_site_does_not_require_is_not_added(): void
     {
         $after = $this->raise(['require' => []], ['a/pinned' => '1.1.0'], ['a/pinned']);

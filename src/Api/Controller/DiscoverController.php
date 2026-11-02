@@ -3,7 +3,6 @@
 namespace ErnestDefoe\Millwright\Api\Controller;
 
 use ErnestDefoe\Millwright\Discover\Cache;
-use ErnestDefoe\Millwright\Discover\Compatibility;
 use ErnestDefoe\Millwright\Discover\Packagist;
 use ErnestDefoe\Millwright\Host\StorageDir;
 use Flarum\Extension\ExtensionManager;

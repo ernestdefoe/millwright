@@ -5,6 +5,7 @@ namespace ErnestDefoe\Millwright\Work;
 use ErnestDefoe\Millwright\Apply\Applier;
 use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Apply\Restore;
+use ErnestDefoe\Millwright\Config\JsonFile;
 use ErnestDefoe\Millwright\Host\CoreVersion;
 use ErnestDefoe\Millwright\Host\ErrorLog;
 use ErnestDefoe\Millwright\Host\FlarumUpdater;
@@ -457,7 +458,9 @@ class ComposerSteps implements Steps
             return [];
         }
 
-        file_put_contents($path, json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n");
+        // Validated, written beside and renamed into place: a crash mid-write
+        // must never leave a half composer.json, which no later run could read.
+        (new JsonFile($this->translator, $path))->write($json);
 
         return $raised;
     }
@@ -1285,8 +1288,6 @@ class ComposerSteps implements Steps
 
     protected function composerCommand(array $args, string $note): string
     {
-        $raised = $this->raisePins();
-
         $result = $this->composer->run($args);
 
         if ($result['code'] !== 0) {
