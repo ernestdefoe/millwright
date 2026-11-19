@@ -108,6 +108,31 @@ class UpdateCheck
     }
 
     /**
+     * A package tracking a branch is not "uncheckable" — it is not a
+     * version question at all.
+     *
+     * `dev-main` has no version to be newer than. Whether the branch has
+     * moved is something only a resolve can answer, and this command
+     * deliberately does not resolve. Lumping these in with packages we
+     * genuinely could not reach told an admin that four extensions
+     * "could not be checked", which is two wrong things at once: they
+     * were reachable, and nothing was wrong.
+     *
+     * It also saves the request, which is the point of a nightly check
+     * staying cheap.
+     *
+     * Named, not silently dropped. A protected or path-installed
+     * package is not on Packagist, and "we could not check this one"
+     * is a true and useful thing to say — whereas leaving it out
+     * implies it is up to date, which is a guess presented as a fact.
+     *
+     * The directory is made here, not assumed. Nothing else creates
+     * storage/millwright until the first update run, so on a fresh install
+     * every check — the nightly one, the console one and "Check now" — wrote
+     * into a directory that did not exist, the @ swallowed it, and the
+     * screen said "Not checked yet" with no Update button anywhere, over a
+     * check that had just reported eleven newer versions.
+     *
      * @param array<string,string> $installed package => installed version
      * @param callable(string):?array $fetch  a package's published versions,
      *                                        null when it could not be asked
@@ -122,20 +147,6 @@ class UpdateCheck
         $tracking = [];
 
         foreach ($installed as $name => $version) {
-            /*
-             * A package tracking a branch is not "uncheckable" — it is not a
-             * version question at all.
-             *
-             * `dev-main` has no version to be newer than. Whether the branch has
-             * moved is something only a resolve can answer, and this command
-             * deliberately does not resolve. Lumping these in with packages we
-             * genuinely could not reach told an admin that four extensions
-             * "could not be checked", which is two wrong things at once: they
-             * were reachable, and nothing was wrong.
-             *
-             * It also saves the request, which is the point of a nightly check
-             * staying cheap.
-             */
             if (self::tracksABranch($version)) {
                 $tracking[] = $name;
                 continue;
@@ -144,12 +155,6 @@ class UpdateCheck
             $versions = $fetch($name);
 
             if ($versions === null) {
-                /*
-                 * Named, not silently dropped. A protected or path-installed
-                 * package is not on Packagist, and "we could not check this one"
-                 * is a true and useful thing to say — whereas leaving it out
-                 * implies it is up to date, which is a guess presented as a fact.
-                 */
                 $unknown[] = $name;
                 continue;
             }
@@ -178,14 +183,6 @@ class UpdateCheck
             'tracking' => $tracking,
         ];
 
-        /*
-         * The directory is made here, not assumed. Nothing else creates
-         * storage/millwright until the first update run, so on a fresh install
-         * every check — the nightly one, the console one and "Check now" — wrote
-         * into a directory that did not exist, the @ swallowed it, and the
-         * screen said "Not checked yet" with no Update button anywhere, over a
-         * check that had just reported eleven newer versions.
-         */
         if (! StateFile::write($this->cachePath, $result)) {
             $result['unsaved'] = true;
         }

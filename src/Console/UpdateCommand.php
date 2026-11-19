@@ -232,6 +232,18 @@ class UpdateCommand extends AbstractCommand
      * The requirements this run may raise, package => version, or the exit
      * code when a pinned package cannot or may not be moved.
      *
+     * A pin with no newer version in the stored check. Straight
+     * after a release the check still predates it, so --repin had
+     * nothing to raise to: the run went through every step, said
+     * "Done." and moved nothing (live box, 2026-10-13, v1.21.2). Ask
+     * again before deciding; refuse if there is still nothing newer.
+     *
+     * The failure this command exists to end. Without the flag
+     * we could still start a run, and Composer would answer
+     * "Nothing to modify in lock file", exit 0, and the run would
+     * go green having moved nothing. Refusing, by name, with the
+     * flag that fixes it, is the only honest answer.
+     *
      * @param list<string> $named
      * @return array<string,string>|int
      */
@@ -241,13 +253,6 @@ class UpdateCommand extends AbstractCommand
         $pins = $repinner->pins($named);
 
         if (array_diff_key($repinner->pinned($named), $pins) !== []) {
-            /*
-             * A pin with no newer version in the stored check. Straight
-             * after a release the check still predates it, so --repin had
-             * nothing to raise to: the run went through every step, said
-             * "Done." and moved nothing (live box, 2026-10-13, v1.21.2). Ask
-             * again before deciding; refuse if there is still nothing newer.
-             */
             $this->info('The last check knows of nothing newer for '
                 .implode(', ', array_keys(array_diff_key($repinner->pinned($named), $pins))).', so checking again first.');
             $this->recheck();
@@ -268,13 +273,6 @@ class UpdateCommand extends AbstractCommand
 
         if ($pins !== []) {
             if (! $this->input->getOption('repin')) {
-                /*
-                 * The failure this command exists to end. Without the flag
-                 * we could still start a run, and Composer would answer
-                 * "Nothing to modify in lock file", exit 0, and the run would
-                 * go green having moved nothing. Refusing, by name, with the
-                 * flag that fixes it, is the only honest answer.
-                 */
                 $this->error(count($pins).' package(s) are pinned to an exact version, so an update cannot move them:');
 
                 foreach ($pins as $package => $pin) {

@@ -31,6 +31,21 @@ class RollbackController implements RequestHandlerInterface
     ) {
     }
 
+    /**
+     * An empty journal does NOT mean nothing changed.
+     *
+     * The plan phase runs Composer with --no-install, and Composer rewrites
+     * composer.json and composer.lock the moment it succeeds, before a
+     * single file has been moved, so before the journal has anything in it.
+     * A run that then fails leaves the manifests describing a site that does
+     * not exist, and the version of this that refused on an empty journal
+     * said "that update never got as far as changing anything", which was
+     * simply false. Found by a `composer remove` that updated both files and
+     * then exited non-zero.
+     *
+     * So the question is not "is there a journal" but "is there anything
+     * saved to put back", which is what possible() asks.
+     */
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         RequestUtil::getActor($request)->assertAdmin();
@@ -43,21 +58,6 @@ class RollbackController implements RequestHandlerInterface
 
         $restore = $this->factory->restoreFor($run->id);
 
-        /*
-         * An empty journal does NOT mean nothing changed.
-         *
-         * The plan phase runs Composer with --no-install, and Composer rewrites
-         * composer.json and composer.lock the moment it succeeds, before a
-         * single file has been moved, so before the journal has anything in it.
-         * A run that then fails leaves the manifests describing a site that does
-         * not exist, and the version of this that refused on an empty journal
-         * said "that update never got as far as changing anything", which was
-         * simply false. Found by a `composer remove` that updated both files and
-         * then exited non-zero.
-         *
-         * So the question is not "is there a journal" but "is there anything
-         * saved to put back", which is what possible() asks.
-         */
         if (! $restore->possible()) {
             throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.rollback.nothing_changed'), 'nothing_to_roll_back');
         }

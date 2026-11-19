@@ -56,6 +56,20 @@ class RepairFormatterCommand extends AbstractCommand
             ->addOption('flush-only', null, \Symfony\Component\Console\Input\InputOption::VALUE_NONE, 'Only forget the cached formatter.');
     }
 
+    /**
+     * Then CHECK, because flush() cannot fail loudly.
+     *
+     * A cache entry written by a process running as root cannot be deleted
+     * or overwritten by www-data. flush() unlinks nothing, warm() writes a
+     * fresh generated class beside a stale entry that still names the old
+     * one, and this command prints "Formatter rebuilt." while every post on
+     * the site still 500s. That is exactly the shape of failure this whole
+     * extension exists to stop: a repair that reports success and changed
+     * nothing.
+     *
+     * One root-owned file did this to a live forum, and the only clue was
+     * that running the repair twice made no difference.
+     */
     protected function fire(): int
     {
         // A root-owned cache is moved aside first where it can be (see
@@ -74,20 +88,6 @@ class RepairFormatterCommand extends AbstractCommand
 
         $formatter->warm();
 
-        /*
-         * Then CHECK, because flush() cannot fail loudly.
-         *
-         * A cache entry written by a process running as root cannot be deleted
-         * or overwritten by www-data. flush() unlinks nothing, warm() writes a
-         * fresh generated class beside a stale entry that still names the old
-         * one, and this command prints "Formatter rebuilt." while every post on
-         * the site still 500s. That is exactly the shape of failure this whole
-         * extension exists to stop: a repair that reports success and changed
-         * nothing.
-         *
-         * One root-owned file did this to a live forum, and the only clue was
-         * that running the repair twice made no difference.
-         */
         $stranded = $this->strandedCacheFiles();
 
         if ($stranded !== []) {

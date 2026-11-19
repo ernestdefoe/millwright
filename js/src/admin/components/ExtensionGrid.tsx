@@ -37,6 +37,13 @@ export default class ExtensionGrid extends Component<ExtensionGridAttrs> {
     ];
   }
 
+  /**
+   * Always two groups: what is TRUE about this extension on the
+   * left, what you can DO with it on the right. The foot is
+   * space-between, so loose chips get pushed to opposite ends of
+   * the card and read as unrelated — which is what "enabled" and
+   * "local checkout" did.
+   */
   view() {
     return (
       <div className="Millwright-grid">
@@ -72,13 +79,6 @@ export default class ExtensionGrid extends Component<ExtensionGridAttrs> {
             </div>
 
             <div className="Millwright-foot">
-              {/*
-               * Always two groups: what is TRUE about this extension on the
-               * left, what you can DO with it on the right. The foot is
-               * space-between, so loose chips get pushed to opposite ends of
-               * the card and read as unrelated — which is what "enabled" and
-               * "local checkout" did.
-               */}
               {this.cardTags(e)}
 
               {this.cardActions(e)}

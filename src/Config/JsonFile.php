@@ -63,6 +63,9 @@ class JsonFile
     }
 
     /**
+     * The file must be on disk before the rename, or a crash between the
+     * two leaves an empty file where a valid one used to be.
+     *
      * @param array<string,mixed> $data
      * @param int $mode the most open the file may be; 0600 for secrets. An
      *                  existing file keeps its own mode where that is tighter.
@@ -102,8 +105,6 @@ class JsonFile
             // A full disk writes part of the file and says so only here.
             $complete = fwrite($handle, $json."\n") === strlen($json) + 1;
             fflush($handle);
-            // The file must be on disk before the rename, or a crash between the
-            // two leaves an empty file where a valid one used to be.
             @fsync($handle);
         } finally {
             fclose($handle);

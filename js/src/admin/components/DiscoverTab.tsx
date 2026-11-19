@@ -221,6 +221,15 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
     this.stopTyping();
   }
 
+  /**
+   * Abandoned and "does it work" are separate facts and both are
+   * shown. Putting abandoned in the single badge slot hid the
+   * compatibility answer while still offering Install, so the tag
+   * beside the button read like a verdict on the wrong question.
+   *
+   * "Installed as X" already says it was replaced, and by what, so
+   * "replaced by X" beside it only said it twice (ClaudiusH, 2026-10-13).
+   */
   card(r: Found) {
     const v = this.verdicts[r.name];
     const instead = this.replacement(r, v);
@@ -261,16 +270,6 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
 
         <div className="Millwright-foot">
           <span className="Millwright-tags">
-            {/*
-             * Abandoned and "does it work" are separate facts and both are
-             * shown. Putting abandoned in the single badge slot hid the
-             * compatibility answer while still offering Install, so the tag
-             * beside the button read like a verdict on the wrong question.
-             */}
-            {/*
-             * "Installed as X" already says it was replaced, and by what, so
-             * "replaced by X" beside it only said it twice (ClaudiusH, 2026-10-13).
-             */}
             {this.warning(r, v, instead)}
             {this.badge(v)}
           </span>
@@ -424,23 +423,22 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
     return String(n);
   }
 
+  /**
+   * Every search carries a number, and a reply is dropped unless it is the
+   * newest. Typing fast means several searches in flight, and without this the
+   * slowest one wins — the results end up belonging to a query the person
+   * already moved on from.
+   *
+   * Recorded when the search STARTS, not when it returns: it is what the
+   * typing rule compares against, and between here and the reply every
+   * keystroke that types the same string back would otherwise queue another
+   * identical request.
+   */
   search() {
     const q = this.query.trim();
 
-    /*
-     * Every search carries a number, and a reply is dropped unless it is the
-     * newest. Typing fast means several searches in flight, and without this the
-     * slowest one wins — the results end up belonging to a query the person
-     * already moved on from.
-     */
     const mine = ++this.seq;
 
-    /*
-     * Recorded when the search STARTS, not when it returns: it is what the
-     * typing rule compares against, and between here and the reply every
-     * keystroke that types the same string back would otherwise queue another
-     * identical request.
-     */
     this.lastSearched = q;
 
     this.page = 1;

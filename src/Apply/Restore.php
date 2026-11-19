@@ -45,6 +45,16 @@ class Restore
     }
 
     /**
+     * `install`, not `dump-autoload`. Moving the files back leaves
+     * vendor/composer/installed.json still claiming a package whose
+     * directory is gone, and dump-autoload regenerates the autoloader
+     * FROM that record — it faithfully rebuilds the wrong thing.
+     *
+     * A subprocess where the host allows, so no Flarum boots inside the
+     * process that has just moved its files out from under it. In-process
+     * otherwise: Composer's classes are not loaded by Flarum's boot, so
+     * they come from the restored files.
+     *
      * @return array{undone: list<string>, note: ?string}
      */
     public function run(): array
@@ -70,17 +80,6 @@ class Restore
         $note = null;
 
         if ($undone !== []) {
-            /*
-             * `install`, not `dump-autoload`. Moving the files back leaves
-             * vendor/composer/installed.json still claiming a package whose
-             * directory is gone, and dump-autoload regenerates the autoloader
-             * FROM that record — it faithfully rebuilds the wrong thing.
-             *
-             * A subprocess where the host allows, so no Flarum boots inside the
-             * process that has just moved its files out from under it. In-process
-             * otherwise: Composer's classes are not loaded by Flarum's boot, so
-             * they come from the restored files.
-             */
             try {
                 // Record first, or `install` re-extracts the packages just
                 // put back — with a Composer that lives in this same vendor/,
@@ -120,6 +119,13 @@ class Restore
      *
      * Same commands, same order, same runner as the update's finish.
      *
+     * In-process, the formatter is FORGOTTEN, not rebuilt. This request
+     * booted the version being rolled back, so building the formatter
+     * here would bake that version's extenders into the cache the older
+     * code then renders with. Forgotten, the next request — running the
+     * restored code — builds it from the right ones. Publishing assets and
+     * clearing caches only copy and delete files, so they are safe here.
+     *
      * @param list<string> $undone appended to as each one succeeds
      */
     protected function refresh(array &$undone): ?string
@@ -128,14 +134,6 @@ class Restore
             return null;   // not a forum (the tests' trees)
         }
 
-        /*
-         * In-process, the formatter is FORGOTTEN, not rebuilt. This request
-         * booted the version being rolled back, so building the formatter
-         * here would bake that version's extenders into the cache the older
-         * code then renders with. Forgotten, the next request — running the
-         * restored code — builds it from the right ones. Publishing assets and
-         * clearing caches only copy and delete files, so they are safe here.
-         */
         // A root-owned cache would fail cache:clear below; see StaleCache.
         $setAside = StaleCache::describe(StaleCache::setAside($this->storagePath), $this->translator);
         if ($setAside !== '') {

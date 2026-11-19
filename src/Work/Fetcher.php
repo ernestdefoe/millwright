@@ -73,6 +73,12 @@ class Fetcher
         }
     }
 
+    /**
+     * A 404 from a protected repository means "not authenticated", not
+     * "does not exist": GitHub hides protected resources behind 404
+     * rather than 403. Saying so saves the hour it otherwise costs to
+     * work out that the commit is fine and the token is not.
+     */
     protected function download(string $url): string
     {
         /*
@@ -109,12 +115,6 @@ class Fetcher
         if ($code === 0 || $code >= 400) {
             @unlink($tmp);
 
-            /*
-             * A 404 from a protected repository means "not authenticated", not
-             * "does not exist": GitHub hides protected resources behind 404
-             * rather than 403. Saying so saves the hour it otherwise costs to
-             * work out that the commit is fine and the token is not.
-             */
             $hint = $code === 404 && $headers === []
                 ? ' '.$this->translator->trans('ernestdefoe-millwright.api.fetch.private_hint')
                 : '';

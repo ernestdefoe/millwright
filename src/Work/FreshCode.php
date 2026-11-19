@@ -42,6 +42,10 @@ class FreshCode
 
     /**
      * Return when this process may run post-swap code; throw NotYet when not.
+     *
+     * Cleared AFTER the last change, by an EARLIER request. A second
+     * of margin on the change because filemtime has whole seconds and the
+     * marker does not.
      */
     public function ensure(): void
     {
@@ -69,11 +73,6 @@ class FreshCode
         $marker = $this->workDir.'/opcache.cleared';
         $cleared = is_file($marker) ? (float) @file_get_contents($marker) : 0.0;
 
-        /*
-         * Cleared AFTER the last change, by an EARLIER request. A second
-         * of margin on the change because filemtime has whole seconds and the
-         * marker does not.
-         */
         if ($cleared > $changed + 1 && $cleared < $start) {
             return;
         }

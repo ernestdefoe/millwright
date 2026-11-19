@@ -38,6 +38,10 @@ class CoreUpgrade
     public const UNKNOWN = 'unknown';
 
     /**
+     * Handed back to be asked about later, not asked about now. One
+     * HTTP call per extension inside this loop is what made the first
+     * version take 28 seconds on a real forum.
+     *
      * @param list<array<string,mixed>> $lockPackages composer.lock's packages
      * @param string $target the core version being considered, e.g. 2.1.0
      * @return array{target:string, verdicts:list<array<string,mixed>>, pending:list<string>, blocked:int, updating:int}
@@ -68,11 +72,6 @@ class CoreUpgrade
                 continue;
             }
 
-            /*
-             * Handed back to be asked about later, not asked about now. One
-             * HTTP call per extension inside this loop is what made the first
-             * version take 28 seconds on a real forum.
-             */
             $ask[] = $name;
             $verdicts[$name] = [
                 'package' => $name,

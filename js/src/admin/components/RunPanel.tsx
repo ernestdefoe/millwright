@@ -401,6 +401,22 @@ export default class RunPanel extends Component<RunPanelAttrs> {
     this.tick();
   }
 
+  /**
+   * Driving the run and WATCHING it are two different jobs, and only
+   * one of them is this panel's reason to exist.
+   *
+   * /millwright/step is a POST: it takes the lock and does an item. When
+   * it fails — an expired session, a proxy that strips the write, a host
+   * that 502s under a Composer install — the panel used to show nothing
+   * at all, frozen on whatever it had when it mounted, while the queue
+   * worker carried the update to completion behind it. Ernest watched
+   * exactly that happen twice: "it stayed on the first step the whole
+   * time", on a run that had in fact finished.
+   *
+   * /millwright/state is a GET and is documented as never advancing
+   * anything. So when we cannot drive, we watch. The run still moves —
+   * the worker is doing it — and the screen finally says so.
+   */
   tick() {
     if (!this.polling) return;
 
@@ -437,22 +453,6 @@ export default class RunPanel extends Component<RunPanelAttrs> {
         this.lastStatus = e?.status ?? null;
         this.outcome = pollOutcome(this.lastStatus, this.misses);
 
-        /*
-         * Driving the run and WATCHING it are two different jobs, and only
-         * one of them is this panel's reason to exist.
-         *
-         * /millwright/step is a POST: it takes the lock and does an item. When
-         * it fails — an expired session, a proxy that strips the write, a host
-         * that 502s under a Composer install — the panel used to show nothing
-         * at all, frozen on whatever it had when it mounted, while the queue
-         * worker carried the update to completion behind it. Ernest watched
-         * exactly that happen twice: "it stayed on the first step the whole
-         * time", on a run that had in fact finished.
-         *
-         * /millwright/state is a GET and is documented as never advancing
-         * anything. So when we cannot drive, we watch. The run still moves —
-         * the worker is doing it — and the screen finally says so.
-         */
         this.watch();
       });
   }

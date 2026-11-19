@@ -38,6 +38,14 @@ class CheckCommand extends AbstractCommand
             ->addOption('force', null, InputOption::VALUE_NONE, 'Check even if the last result is still fresh.');
     }
 
+    /**
+     * Extensions, Flarum, and what composer.json requires itself, asked
+     * of Packagist first and then the site's own protected repositories — see
+     * UpdateCheck::interesting() and refreshWith(). A premium extension is
+     * not on Packagist, so it used to come back "uncheckable" and its owner
+     * was never told a new version existed. Packagist stays FIRST so a
+     * protected repository can never shadow a public package.
+     */
     protected function fire(): int
     {
         $check = $this->check;
@@ -48,14 +56,6 @@ class CheckCommand extends AbstractCommand
             return 0;
         }
 
-        /*
-         * Extensions, Flarum, and what composer.json requires itself, asked
-         * of Packagist first and then the site's own protected repositories — see
-         * UpdateCheck::interesting() and refreshWith(). A premium extension is
-         * not on Packagist, so it used to come back "uncheckable" and its owner
-         * was never told a new version existed. Packagist stays FIRST so a
-         * protected repository can never shadow a public package.
-         */
         $result = $check->refreshSite($this->translator, $this->paths->base, $this->web, 120.0);
 
         if ($result === null) {

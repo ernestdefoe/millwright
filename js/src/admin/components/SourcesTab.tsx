@@ -410,6 +410,11 @@ export default class SourcesTab extends Component {
 
   // ── stability ───────────────────────────────────────────────────────────
 
+  /**
+   * A ladder, most finished first, because that is what the setting
+   * is: everything at and above the chosen step is accepted. A select
+   * hid the other four choices and the order between them.
+   */
   stability(data: ConfigPayload) {
     const st = data.stability || { minimumStability: 'stable', preferStable: false };
     const current = st.minimumStability || 'stable';
@@ -427,11 +432,6 @@ export default class SourcesTab extends Component {
         </header>
 
         <div className="Millwright-src-body">
-          {/*
-           * A ladder, most finished first, because that is what the setting
-           * is: everything at and above the chosen step is accepted. A select
-           * hid the other four choices and the order between them.
-           */}
           {this.ladder(levels, current, !!st.preferStable)}
 
           <div className="Millwright-src-callout">

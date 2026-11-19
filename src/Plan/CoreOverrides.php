@@ -25,6 +25,11 @@ class CoreOverrides
     protected const HEAD = 16384;
 
     /**
+     * A namespace mapped over one Flarum already fills. Composer tries the
+     * longest prefix first, so it wins for every class it has a file for.
+     * Only an overlap counts: `Flarum\Classifieds\` sits under Flarum's
+     * name and replaces nothing, because Flarum has no such folder.
+     *
      * @param list<array<string,mixed>> $lockPackages composer.lock's packages
      * @return list<array{package:string, classes:list<string>}>
      */
@@ -45,12 +50,6 @@ class CoreOverrides
             $autoload = (array) ($package['autoload'] ?? []);
             $classes = [];
 
-            /*
-             * A namespace mapped over one Flarum already fills. Composer tries the
-             * longest prefix first, so it wins for every class it has a file for.
-             * Only an overlap counts: `Flarum\Classifieds\` sits under Flarum's
-             * name and replaces nothing, because Flarum has no such folder.
-             */
             foreach (array_keys((array) ($autoload['psr-4'] ?? [])) as $prefix) {
                 $namespace = rtrim((string) $prefix, '\\');
 

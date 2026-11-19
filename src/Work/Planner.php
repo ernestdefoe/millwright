@@ -41,6 +41,18 @@ class Planner
      * "what moves", which is 16 seconds and 165 MB rather than minutes and a
      * mutated vendor directory. The install is ours to do, one package at a
      * time, after the user has seen the list.
+     *
+     * composer.json and the lock are saved BEFORE Composer may rewrite them, for the
+     * rollback. `--no-install` updates the lock the moment it succeeds, so
+     * without a copy taken here there is no way back to the site's own
+     * record of itself, and a rollback that restores the files but not the
+     * lock leaves a site whose manifest describes work that was undone.
+     *
+     * Taken ONCE, and a retry starts from it. A resolve killed part-way
+     * (a host's time limit, a proxy timeout) can leave composer.json
+     * edited by `require` and the lock half-way to new. Copying again on
+     * the retry would save THAT as "before", and the rollback would put
+     * back the broken state; resolving on top of it would plan from it.
      */
     public function resolve(): string
     {
@@ -52,19 +64,6 @@ class Planner
             throw new RuntimeException($run->translator->trans('ernestdefoe-millwright.api.composer.nothing_requested'));
         }
 
-        /*
-         * Saved BEFORE Composer is allowed to rewrite them, and used by the
-         * rollback. `--no-install` updates the lock the moment it succeeds, so
-         * without a copy taken here there is no way back to the site's own
-         * record of itself, and a rollback that restores the files but not the
-         * lock leaves a site whose manifest describes work that was undone.
-         *
-         * Taken ONCE, and a retry starts from it. A resolve killed part-way
-         * (a host's time limit, a proxy timeout) can leave composer.json
-         * edited by `require` and the lock half-way to new. Copying again on
-         * the retry would save THAT as "before", and the rollback would put
-         * back the broken state; resolving on top of it would plan from it.
-         */
         $this->startFromSaved();
         $before = RunContext::readJson($run->workDir.'/composer.lock.before');
 

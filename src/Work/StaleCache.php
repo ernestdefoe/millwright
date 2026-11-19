@@ -31,7 +31,19 @@ class StaleCache
 
     protected const HIDDEN = '.root-owned-';
 
-    /** @return string[] the directories moved aside */
+    /**
+     * @return string[] the directories moved aside
+     *
+     * Otherwise each offending entry, renamed hidden inside it.
+     *
+     * ClaudiusH's container, 2026-10-07, on 1.13.0: storage/ itself was
+     * not writable (or the cache is a mounted volume), so the rename
+     * above failed and the refusal came back unchanged. The cache
+     * directory WAS writable, and renaming within one directory needs
+     * nothing more. A hidden name is never read again — entries live
+     * at hashed paths — and both cache:clear's flush (Symfony Finder)
+     * and its formatter glob skip dot-entries, so it no longer fails.
+     */
     public static function setAside(string $storagePath): array
     {
         if ($storagePath === '') {
@@ -55,17 +67,6 @@ class StaleCache
                 continue;
             }
 
-            /*
-             * Otherwise each offending entry, renamed hidden inside it.
-             *
-             * ClaudiusH's container, 2026-10-07, on 1.13.0: storage/ itself was
-             * not writable (or the cache is a mounted volume), so the rename
-             * above failed and the refusal came back unchanged. The cache
-             * directory WAS writable, and renaming within one directory needs
-             * nothing more. A hidden name is never read again — entries live
-             * at hashed paths — and both cache:clear's flush (Symfony Finder)
-             * and its formatter glob skip dot-entries, so it no longer fails.
-             */
             if (! is_writable($dir)) {
                 continue;
             }

@@ -262,7 +262,14 @@ class PrivateIndex
         return $this->web->authorized($url, $this->auth->authorizationFor($url), $accept, min($this->timeout, $left));
     }
 
-    /** @return array<string, list<string>>|null */
+    /**
+     * @return array<string, list<string>>|null
+     *
+     * A Composer index keys each entry by version and usually
+     * repeats it inside. Prefer the inner value, because that is
+     * what Composer resolves against, and fall back to the key so a
+     * sparser index still works.
+     */
     protected function fetchIndex(string $url): ?array
     {
         $body = $this->get($url.'/packages.json');
@@ -287,12 +294,6 @@ class PrivateIndex
             $list = [];
 
             foreach ($versions as $key => $meta) {
-                /*
-                 * A Composer index keys each entry by version and usually
-                 * repeats it inside. Prefer the inner value, because that is
-                 * what Composer resolves against, and fall back to the key so a
-                 * sparser index still works.
-                 */
                 $version = is_array($meta) && isset($meta['version'])
                     ? (string) $meta['version']
                     : (is_string($key) ? $key : null);

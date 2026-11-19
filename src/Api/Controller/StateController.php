@@ -84,6 +84,30 @@ class StateController implements RequestHandlerInterface
     }
 
     /**
+     * A HINT from the cheap Packagist check, not a promise. It
+     * means "a newer version exists", not "you can have it" — only
+     * the plan answers that, and the screen has to keep the two
+     * apart or the badge becomes something people learn to ignore.
+     *
+     * The screen has to know a requirement is an exact pin,
+     * because that changes what pressing Update means: not "fetch
+     * the newer version" but "change what this forum requires, then
+     * fetch it". Two different acts, and the second one edits
+     * composer.json.
+     *
+     * Reported so the SCREEN can explain, rather than the apply
+     * refusing later. Composer installs a path repository as a
+     * symlink into a checkout on this machine — the way every
+     * extension developer runs their own work. Millwright will not
+     * replace one, and finding that out after planning and
+     * downloading is a worse way to learn it than not being offered
+     * the button.
+     *
+     * Libraries the forum requires itself, beside its extensions. They
+     * have no settings page, so they never had a card, and an update to
+     * one (fof/redis 2.0.0) went unseen. Dependencies pulled in by other
+     * packages are left out: nobody chose those.
+     *
      * @param array<string,mixed> $lock
      * @param array<string,mixed> $composerJson
      * @return list<array<string,mixed>>
@@ -101,40 +125,12 @@ class StateController implements RequestHandlerInterface
                 'version' => $extension->getVersion(),
                 'icon' => $extension->getIcon(),
                 'enabled' => $this->extensions->isEnabled($extension->getId()),
-                /*
-                 * A HINT from the cheap Packagist check, not a promise. It
-                 * means "a newer version exists", not "you can have it" — only
-                 * the plan answers that, and the screen has to keep the two
-                 * apart or the badge becomes something people learn to ignore.
-                 */
                 'update' => $updates[$extension->name] ?? null,
-                /*
-                 * The screen has to know a requirement is an exact pin,
-                 * because that changes what pressing Update means: not "fetch
-                 * the newer version" but "change what this forum requires, then
-                 * fetch it". Two different acts, and the second one edits
-                 * composer.json.
-                 */
                 'constraint' => $require[$extension->name] ?? null,
-                /*
-                 * Reported so the SCREEN can explain, rather than the apply
-                 * refusing later. Composer installs a path repository as a
-                 * symlink into a checkout on this machine — the way every
-                 * extension developer runs their own work. Millwright will not
-                 * replace one, and finding that out after planning and
-                 * downloading is a worse way to learn it than not being offered
-                 * the button.
-                 */
                 'pathInstall' => is_link($this->paths->vendor.'/'.$extension->name),
             ];
         }
 
-        /*
-         * Libraries the forum requires itself, beside its extensions. They
-         * have no settings page, so they never had a card, and an update to
-         * one (fof/redis 2.0.0) went unseen. Dependencies pulled in by other
-         * packages are left out: nobody chose those.
-         */
         $extensions = array_flip(array_column($out, 'package'));
 
         foreach (array_merge((array) ($lock['packages'] ?? []), (array) ($lock['packages-dev'] ?? [])) as $package) {

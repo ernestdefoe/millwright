@@ -67,6 +67,21 @@ export default class CorePanel extends Component<CoreAttrs> {
     this.load();
   }
 
+  /**
+   * .filter(Boolean), because a `null` child counts as an unkeyed
+   * vnode and Mithril refuses a children list that mixes keyed and
+   * unkeyed. Both of these return null in ordinary situations —
+   * summary() before the pre-flight arrives, rows() when nothing is
+   * blocked — so the unfiltered array threw during view exactly when a
+   * newer Flarum existed, which is the only time anyone opens this
+   * panel. Nothing here is keyed now, which is the durable half of the
+   * fix.
+   *
+   * The nightly build: Flarum and its bundled extensions moved to the
+   * development branch together, for testing what the next release
+   * will be. The server works out which packages and which branch;
+   * undo returns the forum to the release it was on.
+   */
   view() {
     if (this.loading) return <div className="Millwright-core">{app.translator.trans('ernestdefoe-millwright.admin.updater.core.loading')}</div>;
 
@@ -99,25 +114,9 @@ export default class CorePanel extends Component<CoreAttrs> {
         {!this.newest ? (
           <div className="Millwright-coreNote">{app.translator.trans('ernestdefoe-millwright.admin.updater.core.current')}</div>
         ) : (
-          /*
-           * .filter(Boolean), because a `null` child counts as an unkeyed
-           * vnode and Mithril refuses a children list that mixes keyed and
-           * unkeyed. Both of these return null in ordinary situations —
-           * summary() before the pre-flight arrives, rows() when nothing is
-           * blocked — so the unfiltered array threw during view exactly when a
-           * newer Flarum existed, which is the only time anyone opens this
-           * panel. Nothing here is keyed now, which is the durable half of the
-           * fix.
-           */
           [this.summary(), this.rows()].filter(Boolean)
         )}
 
-        {/*
-         * The nightly build: Flarum and its bundled extensions moved to the
-         * development branch together, for testing what the next release
-         * will be. The server works out which packages and which branch;
-         * undo returns the forum to the release it was on.
-         */}
         <div className="Millwright-coreNightly">
           <div>
             <b>{app.translator.trans('ernestdefoe-millwright.admin.updater.core.nightly.title')}</b>{' '}
@@ -140,6 +139,12 @@ export default class CorePanel extends Component<CoreAttrs> {
     });
   }
 
+  /**
+   * The blocking case is stated as a consequence, not as a count. "3
+   * extensions" is a number; "these three have no release that works with
+   * Flarum 2.1, so the upgrade would be refused" is something somebody can
+   * act on — and it is why the button above is disabled.
+   */
   summary() {
     const p = this.preflight;
     if (!p) return null;
@@ -151,12 +156,6 @@ export default class CorePanel extends Component<CoreAttrs> {
 
     return (
       <div className="Millwright-coreSummary">
-        {/*
-         * The blocking case is stated as a consequence, not as a count. "3
-         * extensions" is a number; "these three have no release that works with
-         * Flarum 2.1, so the upgrade would be refused" is something somebody can
-         * act on — and it is why the button above is disabled.
-         */}
         {blocked > 0 ? (
           <div className="Millwright-coreBlocked">
             {app.translator.trans('ernestdefoe-millwright.admin.updater.core.blocked', { count: blocked, version: p.target })}
