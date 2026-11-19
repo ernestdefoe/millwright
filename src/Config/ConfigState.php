@@ -25,8 +25,7 @@ class ConfigState
     /** @return array<string,mixed> */
     public function toArray(): array
     {
-        $stability = $this->stability;
-        $current = $stability->current();
+        $current = $this->stability->current();
 
         return [
             'repositories' => $this->repositories->all(),

@@ -36,14 +36,12 @@ class PruneCommand extends AbstractCommand
 
     protected function fire(): int
     {
-        $pruner = $this->pruner;
-
         try {
             if ($this->input->getOption('dry-run')) {
-                return $this->dryRun($pruner);
+                return $this->dryRun($this->pruner);
             }
 
-            $summary = $pruner->prune('console');
+            $summary = $this->pruner->prune('console');
         } catch (Throwable $e) {
             $this->error($e->getMessage());
 

@@ -48,15 +48,13 @@ class CheckCommand extends AbstractCommand
      */
     protected function fire(): int
     {
-        $check = $this->check;
-
-        if (! $this->input->getOption('force') && ! $check->isStale()) {
+        if (! $this->input->getOption('force') && ! $this->check->isStale()) {
             $this->info('The last check is still fresh. Use --force to check anyway.');
 
             return 0;
         }
 
-        $result = $check->refreshSite($this->translator, $this->paths->base, $this->web, 120.0);
+        $result = $this->check->refreshSite($this->translator, $this->paths->base, $this->web, 120.0);
 
         if ($result === null) {
             $this->error('Could not read composer.lock, so there is nothing to check.');

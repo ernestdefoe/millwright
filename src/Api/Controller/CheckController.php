@@ -34,11 +34,9 @@ class CheckController implements RequestHandlerInterface
     {
         RequestUtil::getActor($request)->assertAdmin();
 
-        $check = $this->check;
-
         // The same check as the console command, protected repositories
         // included: see UpdateCheck::refreshSite().
-        $result = $check->refreshSite($this->translator, $this->paths->base, $this->web, 20.0);
+        $result = $this->check->refreshSite($this->translator, $this->paths->base, $this->web, 20.0);
 
         if ($result === null) {
             throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.check.no_lock'), 'missing_lock_file', 500);

@@ -79,7 +79,6 @@ class RebuildAssetsCommand extends AbstractCommand
 
     protected function fire(): int
     {
-        $settings = $this->settings;
         $locales = array_keys($this->locales->getLocales());
         $markDirty = (bool) $this->input->getOption('mark-dirty');
 
@@ -90,17 +89,17 @@ class RebuildAssetsCommand extends AbstractCommand
          * LESS with old PHP. Cleared here, it is set again by the compile below
          * only if the custom LESS genuinely fails, and then this says so.
          */
-        $hadError = (string) $settings->get('custom_less_error', '');
+        $hadError = (string) $this->settings->get('custom_less_error', '');
 
         if (! $markDirty && $hadError !== '') {
-            $settings->delete('custom_less_error');
+            $this->settings->delete('custom_less_error');
         }
 
         foreach ($this->assets->all() as $assets) {
             $dirty = 'assets_dirty.'.$assets->getName();
 
             if ($markDirty) {
-                $settings->set($dirty, 1);
+                $this->settings->set($dirty, 1);
                 continue;
             }
 
@@ -113,7 +112,7 @@ class RebuildAssetsCommand extends AbstractCommand
             return 0;
         }
 
-        $error = (string) $settings->get('custom_less_error', '');
+        $error = (string) $this->settings->get('custom_less_error', '');
 
         if ($error !== '') {
             $this->info('Warning: the custom LESS does not compile, so the forum is shown without it until it is fixed: '

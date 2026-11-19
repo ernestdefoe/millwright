@@ -46,10 +46,7 @@ class TrashController implements RequestHandlerInterface
      */
     protected function report(?array $pruned): ResponseInterface
     {
-        $retention = $this->retention;
-        $pruner = $this->pruner;
-
-        $plan = $pruner->plan(true);
+        $plan = $this->pruner->plan(true);
 
         $keptTrash = array_values(array_filter($plan['keep'], fn ($r) => $r['kind'] === 'trash'));
 
@@ -59,7 +56,7 @@ class TrashController implements RequestHandlerInterface
             'trashCount' => count($keptTrash) + count(array_filter($plan['remove'], fn ($r) => $r['kind'] === 'trash')),
             'removeCount' => count($plan['remove']),
             'removeBytes' => $plan['removeBytes'],
-            'lastPrune' => $retention->lastPrune(),
+            'lastPrune' => $this->retention->lastPrune(),
             'pruned' => $pruned,
         ]);
     }

@@ -115,19 +115,17 @@ class FlarumCommand
     /** The forum's own console command by name, built by its container. */
     protected function command(string $command): \Symfony\Component\Console\Command\Command
     {
-        $container = $this->container;
-
-        if (! $container->bound('flarum.console.commands')) {
+        if (! $this->container->bound('flarum.console.commands')) {
             throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.flarum_command.no_console', ['command' => $command]));
         }
 
         $found = null;
 
-        foreach ((array) $container->make('flarum.console.commands') as $class) {
-            $candidate = is_object($class) ? $class : $container->make($class);
+        foreach ((array) $this->container->make('flarum.console.commands') as $class) {
+            $candidate = is_object($class) ? $class : $this->container->make($class);
 
             if ($candidate instanceof \Illuminate\Console\Command) {
-                $candidate->setLaravel($container);
+                $candidate->setLaravel($this->container);
             }
 
             if ($candidate instanceof \Symfony\Component\Console\Command\Command && $candidate->getName() === $command) {

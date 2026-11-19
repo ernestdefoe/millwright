@@ -76,9 +76,7 @@ class RepairFormatterCommand extends AbstractCommand
         // StaleCache), so the flush below can actually clear it.
         StaleCache::setAside($this->paths->storage);
 
-        $formatter = $this->formatter;
-
-        $formatter->flush();
+        $this->formatter->flush();
 
         if ($this->input->getOption('flush-only')) {
             $this->info('Formatter forgotten; the next request rebuilds it.');
@@ -86,7 +84,7 @@ class RepairFormatterCommand extends AbstractCommand
             return 0;
         }
 
-        $formatter->warm();
+        $this->formatter->warm();
 
         $stranded = $this->strandedCacheFiles();
 

@@ -249,16 +249,15 @@ class UpdateCommand extends AbstractCommand
      */
     protected function repinFor(array $named): array|int
     {
-        $repinner = $this->repin;
-        $pins = $repinner->pins($named);
+        $pins = $this->repin->pins($named);
 
-        if (array_diff_key($repinner->pinned($named), $pins) !== []) {
+        if (array_diff_key($this->repin->pinned($named), $pins) !== []) {
             $this->info('The last check knows of nothing newer for '
-                .implode(', ', array_keys(array_diff_key($repinner->pinned($named), $pins))).', so checking again first.');
+                .implode(', ', array_keys(array_diff_key($this->repin->pinned($named), $pins))).', so checking again first.');
             $this->recheck();
-            $pins = $repinner->pins($named);
+            $pins = $this->repin->pins($named);
 
-            if (($stuck = array_diff_key($repinner->pinned($named), $pins)) !== []) {
+            if (($stuck = array_diff_key($this->repin->pinned($named), $pins)) !== []) {
                 foreach ($stuck as $package => $constraint) {
                     $this->error("$package is pinned at $constraint and no newer version was found, so an update cannot move it.");
                 }
