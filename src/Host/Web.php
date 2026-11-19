@@ -3,6 +3,7 @@
 namespace ErnestDefoe\Millwright\Host;
 
 use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Pool;
 use GuzzleHttp\Psr7\Request;
 use Psr\Http\Message\ResponseInterface;
@@ -27,10 +28,30 @@ class Web
     {
     }
 
-    /** The client itself, for callers that need headers or auth of their own. */
-    public function client(): ClientInterface
+
+    /**
+     * One GET with a credential for exactly that host, or none: the body,
+     * or null for anything else. Never throws: a host without a working
+     * credential is a normal state, and "could not check" is the honest
+     * answer, not a failed request.
+     *
+     * Redirects may not leave HTTPS, and Guzzle drops the Authorization header
+     * when one leaves the host, so a token is only ever sent where it belongs.
+     */
+    public function authorized(string $url, ?string $authorization, string $accept, int $timeout = 15): ?string
     {
-        return $this->http;
+        try {
+            return (string) $this->http->request('GET', $url, [
+                'timeout' => max(1, $timeout),
+                'connect_timeout' => min(10, max(1, $timeout)),
+                'http_errors' => false,
+                'allow_redirects' => ['max' => 5, 'protocols' => ['https'], 'referer' => false],
+                'headers' => ['User-Agent' => self::AGENT, 'Accept' => $accept]
+                    + ($authorization !== null ? ['Authorization' => $authorization] : []),
+            ])->getBody();
+        } catch (GuzzleException) {
+            return null;
+        }
     }
 
     /** The body of a 2xx answer, or null for anything else. */

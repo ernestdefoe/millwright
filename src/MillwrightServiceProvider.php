@@ -79,7 +79,7 @@ class MillwrightServiceProvider extends AbstractServiceProvider
         $this->container->bind(\ErnestDefoe\Millwright\Work\ReleaseNotes::class, fn ($container) => new \ErnestDefoe\Millwright\Work\ReleaseNotes(
             StorageDir::of($storage($container)).'/release-notes',
             $container->make(\ErnestDefoe\Millwright\Config\AuthTokens::class),
-            $container->make(\ErnestDefoe\Millwright\Host\Web::class)->client()
+            $container->make(\ErnestDefoe\Millwright\Host\Web::class)
         ));
 
         $this->container->bind(\ErnestDefoe\Millwright\Config\AuthTokens::class, fn ($container) => new \ErnestDefoe\Millwright\Config\AuthTokens(

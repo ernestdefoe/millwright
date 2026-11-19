@@ -2,8 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
-use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Exception\GuzzleException;
+use ErnestDefoe\Millwright\Host\Web;
 use DOMDocument;
 use DOMElement;
 use DOMNode;
@@ -36,7 +35,7 @@ class ReleaseNotes
     public function __construct(
         protected string $cacheDir,
         protected AuthTokens $auth,
-        protected ClientInterface $http,
+        protected Web $web,
         protected int $freshFor = 21600,
         protected int $timeout = 15,
     ) {
@@ -202,18 +201,6 @@ class ReleaseNotes
 
     protected function get(string $url): ?string
     {
-        $authorization = $this->auth->authorizationFor($url);
-
-        try {
-            return (string) $this->http->request('GET', $url, [
-                'timeout' => $this->timeout,
-                'http_errors' => false,
-                'allow_redirects' => ['max' => 5, 'protocols' => ['https'], 'referer' => false],
-                'headers' => ['User-Agent' => 'Millwright', 'Accept' => 'application/vnd.github.html+json']
-                    + ($authorization !== null ? ['Authorization' => $authorization] : []),
-            ])->getBody();
-        } catch (GuzzleException) {
-            return null;
-        }
+        return $this->web->authorized($url, $this->auth->authorizationFor($url), 'application/vnd.github.html+json', $this->timeout);
     }
 }

@@ -216,14 +216,14 @@ class UpdateCheck
             array_map(fn (string $name) => 'https://repo.packagist.org/p2/'.$name.'.json', array_keys($asked))
         ) ?: [], $seconds);
 
-        // Protected repositories one by one, only while time is left: a slow
-        // GitHub then costs those packages a "could not check", not the request.
-        $inTime = fn () => microtime(true) < $deadline;
+        // Protected repositories one by one, each request shortened to fit:
+        // a slow GitHub then costs those packages a "could not check", not the request.
+        $protected->until($deadline);
 
         return $this->refresh(
             $installed,
-            fn (string $name) => $this->readPackagist($name, $bodies[$name] ?? null) ?? ($inTime() ? $protected->versionsFor($name) : null),
-            fn (string $name) => $inTime() ? $protected->releaseNotesFor($name) : [],
+            fn (string $name) => $this->readPackagist($name, $bodies[$name] ?? null) ?? $protected->versionsFor($name),
+            fn (string $name) => $protected->releaseNotesFor($name),
         );
     }
 
@@ -251,7 +251,7 @@ class UpdateCheck
         $result = $this->refreshWith($this->interesting($packages, self::directRequires($base.'/composer.json')), new PrivateIndex(
             new Repositories($translator, new JsonFile($translator, $base.'/composer.json')),
             new AuthTokens($translator, new JsonFile($translator, $base.'/auth.json')),
-            $web->client(),
+            $web,
         ), $web, $seconds);
 
         // A check nobody can read back would leave the screen at "Not checked

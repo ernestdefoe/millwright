@@ -49,7 +49,7 @@ class PrivateIndexTest extends TestCase
         return new PrivateIndex(
             new Repositories(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/composer.json')),
             new AuthTokens(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/auth.json')),
-            new Client(['handler' => HandlerStack::create($this->responses)])
+            new \ErnestDefoe\Millwright\Host\Web(new Client(['handler' => HandlerStack::create($this->responses)]))
         );
     }
 
@@ -299,5 +299,16 @@ class PrivateIndexTest extends TestCase
         $reflection->getProperty('indexes')->setValue($index, []);
 
         return $reflection->getMethod('fetchIndex')->invoke($index, 'https://repo.example.test') ?? [];
+    }
+
+    /** "Check now" runs in a web request: past its deadline, nothing more is asked. */
+    public function test_nothing_is_asked_after_the_deadline(): void
+    {
+        $index = $this->index(['repositories' => [['type' => 'composer', 'url' => 'https://example.test/composer']]]);
+        $this->responses->append(new \GuzzleHttp\Psr7\Response(200, [], '{"packages":{"acme/widget":{"1.0.0":{}}}}'));
+        $before = count($this->responses);
+
+        $this->assertNull($index->until(microtime(true) - 1)->versionsFor('acme/widget'));
+        $this->assertCount($before, $this->responses, 'a request was sent after the deadline');
     }
 }

@@ -130,12 +130,17 @@ class Packagist
     /**
      * Compatibility verdicts for a handful of packages, from cache where possible.
      *
+     * Within $seconds in all: they are asked for inside a web request, and a
+     * package not reached in time is "could not check" (and not cached, so the
+     * next look asks again) rather than a request held open.
+     *
      * @param list<string> $names
      * @return array<string,array<string,mixed>>
      */
-    public function verdicts(array $names, Compatibility $compat): array
+    public function verdicts(array $names, Compatibility $compat, float $seconds = 20.0): array
     {
         $out = [];
+        $deadline = microtime(true) + $seconds;
 
         /*
          * The core version is part of the key. A verdict is not a fact about
@@ -149,7 +154,7 @@ class Packagist
         $scope = 'compat:v3:'.$compat->coreVersion().':';
 
         foreach ($names as $name) {
-            $out[$name] = $this->one($name, $compat, $scope);
+            $out[$name] = microtime(true) < $deadline ? $this->one($name, $compat, $scope) : self::unknown();
         }
 
         /*
@@ -161,7 +166,7 @@ class Packagist
         foreach ($out as $name => $verdict) {
             $seen = [$name => true];
 
-            for ($hop = 0; $hop < 3 && ! empty($verdict['replacedBy']) && ! isset($seen[$verdict['replacedBy']]); $hop++) {
+            for ($hop = 0; $hop < 3 && microtime(true) < $deadline && ! empty($verdict['replacedBy']) && ! isset($seen[$verdict['replacedBy']]); $hop++) {
                 $next = $this->one($verdict['replacedBy'], $compat, $scope);
                 $seen[$verdict['replacedBy']] = true;
 
@@ -174,6 +179,12 @@ class Packagist
         }
 
         return $out;
+    }
+
+    /** @return array<string,mixed> "could not check": compatible is null, which is not "no" */
+    protected static function unknown(): array
+    {
+        return ['compatible' => null, 'version' => null, 'requires' => null, 'stability' => null, 'replaced' => false, 'replacedBy' => null];
     }
 
     /** @return array<string,mixed> */
@@ -190,7 +201,7 @@ class Packagist
         if ($body === null) {
             // Not cached: a package that could not be reached today may be
             // reachable in a minute, and caching "unknown" would hide it.
-            return ['compatible' => null, 'version' => null, 'requires' => null, 'stability' => null, 'replaced' => false, 'replacedBy' => null];
+            return self::unknown();
         }
 
         $p2 = (array) json_decode($body, true);

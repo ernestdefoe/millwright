@@ -140,4 +140,21 @@ class DiscoverBrowseTest extends TestCase
         $this->assertNotNull($found['error']);
         $this->assertFalse($found['more']);
     }
+
+    /** Verdicts are asked for in a web request: out of time is "could not check", not a longer request. */
+    public function test_verdicts_stop_at_their_time_limit(): void
+    {
+        $asked = 0;
+        $p = new Packagist(EnglishTranslator::make(), new Cache($this->dir), function () use (&$asked) {
+            $asked++;
+
+            return null;
+        });
+
+        $verdicts = $p->verdicts(['acme/one', 'acme/two'], new \ErnestDefoe\Millwright\Discover\Compatibility('2.0.0'), 0.0);
+
+        $this->assertSame(0, $asked);
+        $this->assertNull($verdicts['acme/one']['compatible']);
+        $this->assertNull($verdicts['acme/two']['compatible']);
+    }
 }

@@ -25,7 +25,7 @@ class ReleaseNotesTest extends TestCase
 
     private function notes(): ReleaseNotes
     {
-        return new ReleaseNotes($this->dir, new AuthTokens(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/auth.json')), new \GuzzleHttp\Client());
+        return new ReleaseNotes($this->dir, new AuthTokens(EnglishTranslator::make(), new JsonFile(EnglishTranslator::make(), $this->dir.'/auth.json')), new \ErnestDefoe\Millwright\Host\Web(new \GuzzleHttp\Client()));
     }
 
     private function update(): array

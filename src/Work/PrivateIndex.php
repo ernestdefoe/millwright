@@ -2,8 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
-use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Exception\GuzzleException;
+use ErnestDefoe\Millwright\Host\Web;
 use ErnestDefoe\Millwright\Config\AuthTokens;
 use ErnestDefoe\Millwright\Config\Repositories;
 
@@ -45,9 +44,19 @@ class PrivateIndex
     public function __construct(
         protected Repositories $repositories,
         protected AuthTokens $auth,
-        protected ClientInterface $http,
+        protected Web $web,
         protected int $timeout = 15,
     ) {
+    }
+
+    /** When to stop asking: each request is shortened to fit, and none starts after. */
+    protected ?float $deadline = null;
+
+    public function until(float $deadline): static
+    {
+        $this->deadline = $deadline;
+
+        return $this;
     }
 
     /**
@@ -244,20 +253,13 @@ class PrivateIndex
      */
     protected function get(string $url, string $accept = 'application/json'): ?string
     {
-        $authorization = $this->auth->authorizationFor($url);
+        $left = $this->deadline === null ? $this->timeout : (int) floor($this->deadline - microtime(true));
 
-        try {
-            return (string) $this->http->request('GET', $url, [
-                'timeout' => $this->timeout,
-                'http_errors' => false,
-                // A redirect may not leave HTTPS, and Guzzle drops the credential when one leaves the host.
-                'allow_redirects' => ['max' => 5, 'protocols' => ['https'], 'referer' => false],
-                'headers' => ['User-Agent' => 'Millwright', 'Accept' => $accept]
-                    + ($authorization !== null ? ['Authorization' => $authorization] : []),
-            ])->getBody();
-        } catch (GuzzleException) {
-            return null;
+        if ($left < 1) {
+            return null;   // out of time: this package is "could not check"
         }
+
+        return $this->web->authorized($url, $this->auth->authorizationFor($url), $accept, min($this->timeout, $left));
     }
 
     /** @return array<string, list<string>>|null */
