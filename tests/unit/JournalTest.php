@@ -55,12 +55,13 @@ class JournalTest extends TestCase
         $seq = $journal->begin(['change' => ['package' => 'a/b']]);
 
         $this->assertCount(1, $journal->interrupted());
-        $this->assertFalse($journal->isComplete());
+        $this->assertNotSame([], $journal->interrupted());
 
         $journal->complete($seq);
 
         $this->assertSame([], $journal->interrupted());
-        $this->assertTrue($journal->isComplete());
+        $this->assertNotSame([], $journal->entries());
+        $this->assertSame([], $journal->interrupted());
     }
 
     public function test_a_half_written_final_line_is_discarded_not_fatal(): void
@@ -78,7 +79,8 @@ class JournalTest extends TestCase
 
         $this->assertCount(1, $entries);
         $this->assertSame('a/first', $entries[0]['change']['package']);
-        $this->assertTrue($journal->isComplete());
+        $this->assertNotSame([], $journal->entries());
+        $this->assertSame([], $journal->interrupted());
     }
 
     public function test_a_blank_or_junk_line_does_not_derail_the_record(): void
@@ -95,15 +97,13 @@ class JournalTest extends TestCase
         $this->assertSame(['a/first', 'a/second'], $packages);
     }
 
-    public function test_an_empty_or_absent_journal_is_not_complete(): void
+    public function test_an_absent_journal_has_nothing_in_it_and_nothing_interrupted(): void
     {
-        // Guards a subtle wrong answer: "no interrupted entries" must not be
-        // read as "a finished apply" when nothing ever ran.
         $journal = new Journal(EnglishTranslator::make(), $this->path);
 
         $this->assertFalse($journal->exists());
         $this->assertSame([], $journal->entries());
-        $this->assertFalse($journal->isComplete());
+        $this->assertSame([], $journal->interrupted());
     }
 
     public function test_entries_keep_the_order_they_were_written_in(): void

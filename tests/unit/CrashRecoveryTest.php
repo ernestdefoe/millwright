@@ -108,7 +108,8 @@ class CrashRecoveryTest extends TestCase
 
         $this->assertSame(0, $exit);
         $this->assertSame('NEW widget v2', $this->read('vendor/acme/widget/file.txt'));
-        $this->assertTrue($this->journal()->isComplete());
+        $this->assertNotSame([], $this->journal()->entries());
+        $this->assertSame([], $this->journal()->interrupted());
     }
 
     public function test_rollback_after_a_finished_apply_returns_the_old_version(): void

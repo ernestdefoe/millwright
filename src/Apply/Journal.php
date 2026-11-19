@@ -142,18 +142,6 @@ class Journal
         ));
     }
 
-    public function isComplete(): bool
-    {
-        return $this->entries() !== [] && $this->interrupted() === [];
-    }
-
-    public function discard(): void
-    {
-        if ($this->exists()) {
-            unlink($this->path);
-        }
-    }
-
     protected function nextSeq(): int
     {
         $entries = $this->entries();

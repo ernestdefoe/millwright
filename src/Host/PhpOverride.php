@@ -4,6 +4,7 @@ namespace ErnestDefoe\Millwright\Host;
 
 use ErnestDefoe\Millwright\Config\JsonFile;
 use Flarum\Locale\TranslatorInterface;
+use RuntimeException;
 
 /**
  * The command-line PHP an admin has pointed Millwright at, for the hosts where
@@ -29,7 +30,13 @@ class PhpOverride
     {
         try {
             $path = (new JsonFile($this->translator, $this->file()))->read()['path'] ?? null;
-        } catch (\Throwable) {
+        } catch (RuntimeException) {
+            /*
+             * An override file that cannot be read or parsed means no override:
+             * Millwright uses the PHP it finds itself, as it did before one was
+             * set. Saving a path on the Composer settings screen writes the file
+             * afresh, and clearing it there removes it.
+             */
             return null;
         }
 

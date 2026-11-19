@@ -58,40 +58,12 @@ class Applier
     }
 
     /**
-     * @param list<Change> $changes
-     * @return list<string> what was applied, in order, for the caller to report
-     */
-    public function apply(array $changes): array
-    {
-        if ($this->journal->exists() && ! $this->journal->isComplete()) {
-            /*
-             * Refuse rather than continue. A journal with an unfinished entry
-             * means a previous apply died, and the tree is in a state only that
-             * journal can explain. Starting a second apply on top of it would
-             * interleave two records and make both unreadable — which is how a
-             * recoverable situation becomes a manual one.
-             */
-            throw new RuntimeException(
-                $this->translator->trans('ernestdefoe-millwright.api.apply.previous_unfinished')
-            );
-        }
-
-        $done = [];
-
-        foreach ($changes as $change) {
-            $done[] = $this->applyOne($change);
-        }
-
-        return $done;
-    }
-
-    /**
      * One package, journalled.
      *
-     * No "did the last run finish" guard here, unlike apply(). When the step
-     * driver is doing the sequencing, an unfinished journal is the NORMAL state
-     * — it is the record of the run currently in progress. Refusing on it would
-     * make the second step of every update fail.
+     * No "did the last run finish" guard here. The step driver does the
+     * sequencing, and to it an unfinished journal is the NORMAL state: the
+     * record of the run currently in progress. Refusing on it would make the
+     * second step of every update fail.
      */
     public function applyOne(Change $change): string
     {
@@ -110,7 +82,7 @@ class Applier
             Change::REPLACE => $this->replace($change),
             Change::ADD => $this->add($change),
             Change::REMOVE => $this->remove($change),
-            default => throw new RuntimeException("Unknown change \"{$change->op}\" for {$change->package}"),
+            default => throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.apply.unknown_change', ['op' => $change->op, 'package' => $change->package])),
         };
 
         $this->journal->complete($seq);

@@ -56,6 +56,8 @@ class ComposerStepsFactory implements StepsFactory
         try {
             $url = (string) $this->config->url();
         } catch (\Throwable $e) {
+            $this->forum->log->warning('[millwright] config.php has no usable url, so updates will not be judged by whether the site answers: '.$e->getMessage());
+
             return '';
         }
 

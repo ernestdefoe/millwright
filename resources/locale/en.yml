@@ -547,11 +547,11 @@ ernestdefoe-millwright:
   api:
     unknown_action: "Unknown action."
     apply:
+      unknown_change: "The plan asks for \"{op}\" on {package}, which is not something Millwright knows how to do."
       nothing_staged: "Nothing is staged for {package} at {path}, so it was not swapped in. Downloading has to finish first."
       local_path: "{package} is installed from a local path — {path} is a symlink into a checkout on this machine. Millwright will not replace it, because the copy you are editing would stop being the copy the forum uses. Update it with git instead."
       move_aside_failed: "Could not move {from} aside to {to}"
       move_in_failed: "Could not move {from} into place at {to}"
-      previous_unfinished: "A previous apply did not finish. Roll it back or resume it before starting another."
     change:
       added: "{package} {version} (new)"
       removed: "{package} {version} (removed)"

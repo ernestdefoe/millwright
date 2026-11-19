@@ -37,6 +37,8 @@ $applier = new Applier(EnglishTranslator::make(), $vendor, $staging, $trash, $jo
     }
 });
 
-$applier->apply($changes);
+foreach ($changes as $change) {
+    $applier->applyOne($change);
+}
 
 echo "completed\n";

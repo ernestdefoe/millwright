@@ -95,48 +95,6 @@ class CoreUpgrade
     }
 
     /**
-     * Fold Packagist's answers into rows the cheap pass could not clear.
-     *
-     * @param list<array<string,mixed>> $rows
-     * @param array<string,array<string,mixed>> $verdicts
-     * @return array{verdicts:list<array<string,mixed>>, blocked:int, updating:int}
-     */
-    public function merge(array $rows, array $verdicts): array
-    {
-        foreach ($rows as $i => $row) {
-            $verdict = $verdicts[$row['package']] ?? null;
-
-            if ($verdict === null) {
-                continue;
-            }
-
-            if (($verdict['compatible'] ?? null) === true) {
-                $rows[$i]['state'] = self::NEEDS_UPDATE;
-                $rows[$i]['to'] = $verdict['version'] ?? null;
-                $rows[$i]['stability'] = $verdict['stability'] ?? null;
-            } elseif (($verdict['compatible'] ?? null) === false) {
-                $rows[$i]['state'] = self::BLOCKED;
-                $rows[$i]['requires'] = $verdict['requires'] ?? $rows[$i]['requires'];
-            }
-
-            /*
-             * A null verdict leaves the row UNKNOWN. "Not on Packagist" is not
-             * "incompatible", and promoting it to blocked would tell somebody
-             * their upgrade is impossible when it may be perfectly fine — which
-             * is worse than saying nothing, because they would believe it.
-             */
-        }
-
-        $rows = $this->worstFirst($rows);
-
-        return [
-            'verdicts' => $rows,
-            'blocked' => count(array_filter($rows, fn ($r) => $r['state'] === self::BLOCKED)),
-            'updating' => count(array_filter($rows, fn ($r) => $r['state'] === self::NEEDS_UPDATE)),
-        ];
-    }
-
-    /**
      * Blocked first, then needs-update, then the rest — and re-applied after
      * a merge, not only when the rows are built.
      *

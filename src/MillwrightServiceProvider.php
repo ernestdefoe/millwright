@@ -16,6 +16,7 @@ use Flarum\Foundation\Paths;
 use Flarum\Locale\TranslatorInterface;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
+use Psr\Log\LoggerInterface;
 
 class MillwrightServiceProvider extends AbstractServiceProvider
 {
@@ -60,7 +61,8 @@ class MillwrightServiceProvider extends AbstractServiceProvider
             return new Drivers(
                 $container->make(TranslatorInterface::class),
                 $container->make(QueueFactory::class),
-                $container->make(Dispatcher::class)
+                $container->make(Dispatcher::class),
+                $container->make(LoggerInterface::class)
             );
         });
 

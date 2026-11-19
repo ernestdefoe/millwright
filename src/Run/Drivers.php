@@ -6,6 +6,7 @@ use Flarum\Locale\TranslatorInterface;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Queue\SyncQueue;
+use Psr\Log\LoggerInterface;
 
 /**
  * Decides what, if anything, should be turning the handle in the background.
@@ -25,6 +26,7 @@ class Drivers
         protected TranslatorInterface $translator,
         protected QueueFactory $queue,
         protected Dispatcher $bus,
+        protected LoggerInterface $log,
     ) {
     }
 
@@ -35,9 +37,11 @@ class Drivers
     {
         try {
             return ! ($this->unwrap($this->queue->connection()) instanceof SyncQueue);
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
             // A misconfigured queue is not a reason to refuse to update. Fall
-            // back to the driver that always works.
+            // back to the driver that always works, and say why in the log.
+            $this->log->warning('[millwright] the queue could not be asked whether a worker is running, so updates are driven by the admin page: '.$e->getMessage());
+
             return false;
         }
     }
@@ -79,9 +83,11 @@ class Drivers
             $this->bus->dispatch(new StepJob($runId));
 
             return true;
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->log->warning("[millwright] could not hand run $runId to the queue, so the admin page drives it: ".$e->getMessage());
+
             /*
-             * Swallowed on purpose, and this is the one place that is right.
+             * Not fatal on purpose, and this is the one place that is right.
              * A queue that cannot be dispatched to is a reason to fall back to
              * polling, not a reason to fail the update — and the update is
              * already running, so the user is not left wondering. The alternative

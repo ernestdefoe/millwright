@@ -142,11 +142,6 @@ class RunStore
         ];
     }
 
-    public function forget(string $id): void
-    {
-        @unlink($this->path($id));
-    }
-
     protected function path(string $id): string
     {
         // Ids are generated, never taken from a request — but this is the

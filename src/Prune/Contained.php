@@ -41,11 +41,6 @@ class Contained
         $this->base = rtrim($real, DIRECTORY_SEPARATOR);
     }
 
-    public function base(): string
-    {
-        return $this->base;
-    }
-
     /**
      * Remove one top-level entry by name, returning the bytes it occupied.
      */
@@ -54,25 +49,6 @@ class Contained
         $path = $this->entry($name);
 
         return $this->removePath($path);
-    }
-
-    /**
-     * Remove an entry given as a full path.
-     *
-     * The path must be a DIRECT child of the base. Its parent is resolved
-     * (so `trash/../vendor/x` is seen for what it is) but the entry itself is
-     * not — resolving a link to decide whether to delete it would be asking the
-     * link where it points, which is the one question that must not matter.
-     */
-    public function removeAt(string $path): int
-    {
-        $parent = realpath(dirname($path));
-
-        if ($parent === false || rtrim($parent, DIRECTORY_SEPARATOR) !== $this->base) {
-            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.prune.not_inside', ['path' => $path, 'base' => $this->base]));
-        }
-
-        return $this->removePath($this->entry(basename($path)));
     }
 
     /** The bytes an entry occupies on disk, counted without following links. */
