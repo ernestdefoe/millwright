@@ -23,9 +23,6 @@ use RuntimeException;
  */
 class SiteCheck
 {
-    /** Longer than this and telling the truth beats parking the admin screen. */
-    public const WAIT_CAP = 180;
-
     public function __construct(
         protected RunContext $run,
         protected ClientInterface $http,
@@ -95,7 +92,7 @@ class SiteCheck
             $situation = (new Opcache($translator))->situation();
             $freq = (int) ($situation['freq'] ?? 0);
 
-            if ($situation['validates'] && $freq > 0 && $freq <= self::WAIT_CAP && time() < $this->codeLiveAt($freq) + $freq) {
+            if ($situation['validates'] && $freq > 0 && $freq <= Opcache::WAIT_CAP && time() < $this->codeLiveAt($freq) + $freq) {
                 throw new NotYet($translator->trans('ernestdefoe-millwright.api.composer.health_503_waiting'));
             }
         }
@@ -298,7 +295,7 @@ class SiteCheck
          * park the admin screen for as long as that window, which is worse
          * than telling the truth and letting them restart PHP.
          */
-        if ($left > self::WAIT_CAP) {
+        if ($left > Opcache::WAIT_CAP) {
             return $translator->trans('ernestdefoe-millwright.api.composer.wait_too_long', ['seconds' => $situation['freq']]);
         }
 

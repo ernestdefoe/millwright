@@ -26,6 +26,8 @@ use RuntimeException;
  */
 class Rollback
 {
+    use VendorPaths;
+
     /**
      * @param ?string $installPath the forum root, when the manifests should be
      *        put back too. Optional so the recovery tests can exercise the
@@ -182,39 +184,5 @@ class Rollback
         }
 
         $this->tidyVendorDir(dirname($live));
-    }
-
-    /**
-     * Remove the vendor namespace directory if this was the last package in it.
-     *
-     * Only when empty, and never above the vendor directory itself. rmdir
-     * refuses a non-empty directory, so the check and the act cannot disagree
-     * even if something is written between them.
-     *
-     * Cosmetic, and worth doing anyway: a rollback that promises to put
-     * everything back the way it was should not leave an empty vendor/acme/
-     * behind as evidence that it did not quite.
-     */
-    protected function tidyVendorDir(string $dir): void
-    {
-        $vendor = rtrim($this->vendorDir, DIRECTORY_SEPARATOR);
-
-        if ($dir === $vendor || ! str_starts_with($dir, $vendor.DIRECTORY_SEPARATOR)) {
-            return;
-        }
-
-        @rmdir($dir);
-    }
-
-    protected function path(string $base, string $relative): string
-    {
-        return rtrim($base, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.$relative;
-    }
-
-    protected function ensureDir(string $dir): void
-    {
-        if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
-            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fs.create_failed', ['path' => $dir]));
-        }
     }
 }

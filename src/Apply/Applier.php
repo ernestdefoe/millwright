@@ -30,6 +30,8 @@ use RuntimeException;
  */
 class Applier
 {
+    use VendorPaths;
+
     /**
      * @param ?callable $observer Called after each filesystem step with a label
      *        and the change. Serves two purposes, which is why it earns its
@@ -170,26 +172,6 @@ class Applier
         $this->tidyVendorDir(dirname($this->path($this->vendorDir, $change->relativePath())));
     }
 
-    /**
-     * Remove the vendor namespace directory if that was the last package in it.
-     *
-     * Only when empty, and never above the vendor directory itself. rmdir
-     * refuses a non-empty directory, so the check and the act cannot disagree.
-     * An uninstall that leaves vendor/acme/ behind is not wrong so much as
-     * unfinished, and it is the sort of litter that makes somebody wonder what
-     * else was left half done.
-     */
-    protected function tidyVendorDir(string $dir): void
-    {
-        $vendor = rtrim($this->vendorDir, DIRECTORY_SEPARATOR);
-
-        if ($dir === $vendor || ! str_starts_with($dir, $vendor.DIRECTORY_SEPARATOR)) {
-            return;
-        }
-
-        @rmdir($dir);
-    }
-
     /** Move the installed version aside. Kept, never deleted. */
     protected function stash(Change $change): void
     {
@@ -231,9 +213,7 @@ class Applier
         $staged = $this->path($this->stagingDir, $change->relativePath());
 
         if (! is_dir($staged)) {
-            throw new RuntimeException(
-                "Nothing staged for {$change->package} at $staged — fetch must run before apply"
-            );
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.apply.nothing_staged', ['package' => $change->package, 'path' => $staged]));
         }
 
         $live = $this->path($this->vendorDir, $change->relativePath());
@@ -254,23 +234,6 @@ class Applier
 
         if (! Tree::move($staged, $live)) {
             throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.apply.move_in_failed', ['from' => $staged, 'to' => $live]));
-        }
-    }
-
-    /**
-     * Join a trusted base with a relative path that has already been
-     * validated by Change::relativePath(). Kept in one place so there is one
-     * thing to audit rather than five string concatenations.
-     */
-    protected function path(string $base, string $relative): string
-    {
-        return rtrim($base, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.$relative;
-    }
-
-    protected function ensureDir(string $dir): void
-    {
-        if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
-            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fs.create_failed', ['path' => $dir]));
         }
     }
 }

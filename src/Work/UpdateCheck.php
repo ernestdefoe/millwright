@@ -5,8 +5,9 @@ namespace ErnestDefoe\Millwright\Work;
 use ErnestDefoe\Millwright\Config\AuthTokens;
 use ErnestDefoe\Millwright\Config\JsonFile;
 use ErnestDefoe\Millwright\Config\Repositories;
-use Flarum\Locale\TranslatorInterface;
+use ErnestDefoe\Millwright\Discover\Compatibility;
 use ErnestDefoe\Millwright\Host\Web;
+use Flarum\Locale\TranslatorInterface;
 
 /**
  * Whether anything newer exists, asked cheaply.
@@ -389,8 +390,8 @@ class UpdateCheck
      * p2 is MINIFIED: each entry repeats only what changed since the one
      * before it, and `__unset` removes a key. `source` is usually given once, on
      * the first entry, so reading each entry on its own found a repository for
-     * the newest version and nothing for the rest. Expanded here as Composer's
-     * MetadataMinifier does.
+     * the newest version and nothing for the rest. Expanded by
+     * Compatibility::expand(), as Composer's MetadataMinifier does.
      *
      * The tag is the version as written (`v1.2.0` or `1.2.0`), which is the
      * name Packagist read from the repository.
@@ -402,29 +403,16 @@ class UpdateCheck
     {
         $versions = [];
         $notes = [];
-        $current = [];
 
-        foreach ($entries as $entry) {
-            if (! is_array($entry)) {
+        foreach (Compatibility::expand(array_values(array_filter($entries, 'is_array')), 'composer/2.0') as $entry) {
+            if (! isset($entry['version'])) {
                 continue;
             }
 
-            foreach ($entry as $key => $value) {
-                if ($value === '__unset') {
-                    unset($current[$key]);
-                } else {
-                    $current[$key] = $value;
-                }
-            }
-
-            if (! isset($current['version'])) {
-                continue;
-            }
-
-            $version = (string) $current['version'];
+            $version = (string) $entry['version'];
             $versions[] = $version;
 
-            $url = self::releaseUrl((string) ($current['source']['url'] ?? ''), $version);
+            $url = self::releaseUrl((string) ($entry['source']['url'] ?? ''), $version);
 
             if ($url !== null) {
                 $notes[$version] = $url;

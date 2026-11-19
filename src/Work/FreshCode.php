@@ -29,8 +29,6 @@ use Flarum\Locale\TranslatorInterface;
  */
 class FreshCode
 {
-    /** Longer than this and waiting for revalidation is not worth it. */
-    protected const WAIT_CAP = 180;
 
     public function __construct(
         protected TranslatorInterface $translator,
@@ -92,7 +90,7 @@ class FreshCode
 
         $left = (int) ceil($changed + max(1, $situation['freq']) + 2 - $start);
 
-        if ($left > 0 && $left <= self::WAIT_CAP) {
+        if ($left > 0 && $left <= Opcache::WAIT_CAP) {
             throw new NotYet($this->translator->trans('ernestdefoe-millwright.api.composer.waiting_reread', ['seconds' => $left]));
         }
     }

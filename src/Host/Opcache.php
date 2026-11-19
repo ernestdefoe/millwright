@@ -30,6 +30,13 @@ use Flarum\Locale\TranslatorInterface;
  */
 class Opcache
 {
+    /**
+     * The longest a run waits for the web server to re-read changed files.
+     * Longer than this and telling the truth (restart PHP) beats parking the
+     * admin screen.
+     */
+    public const WAIT_CAP = 180;
+
     public function __construct(protected TranslatorInterface $translator)
     {
     }
