@@ -35,7 +35,7 @@ class MigrationLedgerTest extends TestCase
         $this->dir = sys_get_temp_dir().'/mw-ledger-'.bin2hex(random_bytes(4));
         mkdir($this->dir.'/work/migrations/acme-widget', 0775, true);
 
-        $this->db = Fakes::db(['migrations']);
+        $this->db = Fakes::db(['migrations', 'settings']);
         $this->db->getSchemaBuilder()->create('migrations', function ($table) {
             $table->string('migration');
             $table->string('extension')->nullable();
@@ -102,6 +102,31 @@ class MigrationLedgerTest extends TestCase
 
         flock($held, LOCK_UN);
         fclose($held);
+    }
+
+    /**
+     * The version goes back through Flarum's settings, so a settings cache
+     * (fof/redis caches every setting) does not keep answering with the newer
+     * one and show "Update Flarum" on the restored code.
+     */
+    public function test_the_version_is_put_back_through_the_settings(): void
+    {
+        $this->db->getSchemaBuilder()->dropIfExists('settings');
+        $this->db->getSchemaBuilder()->create('settings', function ($table) {
+            $table->string('key')->primary();
+            $table->text('value')->nullable();
+        });
+        $this->db->table('settings')->insert(['key' => 'version', 'value' => '2.0.0']);
+
+        $settings = $this->createMock(\Flarum\Settings\SettingsRepositoryInterface::class);
+        $settings->expects($this->once())->method('set')->with('version', '2.0.0');
+        $forum = new \ErnestDefoe\Millwright\Work\Forum($this->db, $this->migrator, $this->extensions(), new \Psr\Log\NullLogger(), new \Illuminate\Container\Container(), $settings);
+
+        $ledger = new MigrationLedger(EnglishTranslator::make(), $this->dir.'/work');
+        $ledger->before($forum);
+        $this->db->table('settings')->where('key', 'version')->update(['value' => '2.1.0']);
+
+        $this->assertFalse($ledger->prepare($forum, $this->dir.'/vendor'));
     }
 
     /** A migration file whose down step records itself, or throws. */

@@ -69,9 +69,8 @@ class Finaliser
     public function bridgeCore(): string
     {
         $run = $this->run;
-        $db = $run->forum->db;
-        (new MigrationLedger($run->translator, $run->workDir))->before($db);
-        $was = $db->table('settings')->where('key', 'version')->value('value');
+        (new MigrationLedger($run->translator, $run->workDir))->before($run->forum);
+        $was = $run->forum->recordedVersion();
 
         /*
          * Only a new VERSION puts the forum behind "Update Flarum". A core
@@ -111,7 +110,7 @@ class Finaliser
     }
 
     /** Migrate on the new core's code, and return the version Flarum now records. */
-    protected function migrateCore(): mixed
+    protected function migrateCore(): ?string
     {
         $run = $this->run;
         (new Opcache($run->translator))->clear();
@@ -123,7 +122,7 @@ class Finaliser
             (new FlarumUpdater($run->translator, $this->http, $run->siteUrl, $run->storagePath))->migrate();
         }
 
-        $now = $run->forum->db->table('settings')->where('key', 'version')->value('value');
+        $now = $run->forum->recordedVersion();
 
         // The database is now ahead of the web server's compiled code: close
         // that window at once rather than within opcache's own timer.
@@ -357,7 +356,7 @@ class Finaliser
         $run = $this->run;
         $ledger = new MigrationLedger($run->translator, $run->workDir);
 
-        $ledger->before($run->forum->db);
+        $ledger->before($run->forum);
         $this->flarum('migrate', 'migrations run');
         $added = $ledger->after($run->forum->db, $run->forum->extensions, $run->vendorPath, $run->forum->log);
 

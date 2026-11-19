@@ -78,7 +78,8 @@ class Fakes
             (new ReflectionClass(Migrator::class))->newInstanceWithoutConstructor(),
             (new ReflectionClass(ExtensionManager::class))->newInstanceWithoutConstructor(),
             new \Psr\Log\NullLogger(),
-            new \Illuminate\Container\Container()
+            new \Illuminate\Container\Container(),
+            new \Flarum\Settings\DatabaseSettingsRepository($db)
         );
     }
 

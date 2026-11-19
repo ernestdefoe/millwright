@@ -4,6 +4,7 @@ namespace ErnestDefoe\Millwright\Work;
 
 use Flarum\Database\Migrator;
 use Flarum\Extension\ExtensionManager;
+use Flarum\Settings\SettingsRepositoryInterface;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Database\ConnectionInterface;
 use Psr\Log\LoggerInterface;
@@ -26,6 +27,22 @@ class Forum
         public readonly ExtensionManager $extensions,
         public readonly LoggerInterface $log,
         public readonly Container $container,
+        public readonly SettingsRepositoryInterface $settings,
     ) {
+    }
+
+    /**
+     * The version Flarum records in its database, read from the table itself.
+     *
+     * Not through the settings repository: this is read just after `flarum
+     * migrate` ran in another process, and a settings cache (fof/redis caches
+     * every setting) would still answer with the version from before. Changing
+     * it goes through the repository, so that cache is updated too.
+     */
+    public function recordedVersion(): ?string
+    {
+        $value = $this->db->table('settings')->where('key', 'version')->value('value');
+
+        return $value === null ? null : (string) $value;
     }
 }

@@ -56,7 +56,7 @@ class Restore
          * the restored code. See MigrationLedger.
          */
         $ledger = new MigrationLedger($this->translator, $this->workDirRoot);
-        $pending = $ledger->prepare($this->forum->db, $this->forum->migrator, $this->forum->extensions, $this->vendorPath);
+        $pending = $ledger->prepare($this->forum, $this->vendorPath);
 
         $undone = array_merge($pending ? [$this->translator->trans('ernestdefoe-millwright.api.restore.migrations_queued')] : [], (new Rollback(
             $this->translator,

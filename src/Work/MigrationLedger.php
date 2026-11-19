@@ -49,7 +49,7 @@ class MigrationLedger
     }
 
     /** Before `flarum migrate`: what has already run, and the version Flarum records. Saved once. */
-    public function before(ConnectionInterface $db): void
+    public function before(Forum $forum): void
     {
         $path = $this->workDir.'/migrations.before.json';
 
@@ -57,8 +57,8 @@ class MigrationLedger
             // Without it, every migration the forum has ever run would look
             // new afterwards, and undo would try to reverse them all.
             StateFile::writeOrFail($path, [
-                'migrations' => $this->current($db),
-                'version' => $db->table('settings')->where('key', 'version')->value('value'),
+                'migrations' => $this->current($forum->db),
+                'version' => $forum->recordedVersion(),
             ], $this->translator);
         }
     }
@@ -133,16 +133,16 @@ class MigrationLedger
      *
      * @return bool whether a reversal is now pending
      */
-    public function prepare(ConnectionInterface $db, Migrator $migrator, ExtensionManager $extensions, string $vendorPath): bool
+    public function prepare(Forum $forum, string $vendorPath): bool
     {
         if ($this->ran() === []) {
-            $this->restoreVersion($db);
+            $this->restoreVersion($forum);
 
             return false;
         }
 
-        $this->downs($migrator, $extensions, $vendorPath);   // throws if any cannot be reversed
-        $this->restoreVersion($db);
+        $this->downs($forum->migrator, $forum->extensions, $vendorPath);   // throws if any cannot be reversed
+        $this->restoreVersion($forum);
         touch($this->workDir.'/migrations.pending');
 
         return true;
@@ -255,12 +255,12 @@ class MigrationLedger
         return $steps;
     }
 
-    protected function restoreVersion(ConnectionInterface $db): void
+    protected function restoreVersion(Forum $forum): void
     {
         $version = $this->beforeState()['version'];
 
         if (is_string($version) && $version !== '') {
-            $db->table('settings')->where('key', 'version')->update(['value' => $version]);
+            $forum->settings->set('version', $version);
         }
     }
 
