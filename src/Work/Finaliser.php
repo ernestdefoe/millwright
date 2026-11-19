@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Apply\Tree;
 use ErnestDefoe\Millwright\Host\CoreVersion;
 use ErnestDefoe\Millwright\Host\FlarumUpdater;
 use ErnestDefoe\Millwright\Host\Opcache;
@@ -329,7 +330,7 @@ class Finaliser
                 ? $this->run->installPath.'/vendor/autoload.php'
                 : $this->run->installPath.'/vendor/composer/'.substr($name, strlen('composer.'));
 
-            RunContext::replaceFile($saved, $target);
+            Tree::replaceFile($saved, $target);
         }
     }
 
@@ -358,7 +359,7 @@ class Finaliser
 
         $ledger->before($run->forum->db);
         $this->flarum('migrate', 'migrations run');
-        $added = $ledger->after($run->forum->db, $run->forum->extensions, $run->vendorPath);
+        $added = $ledger->after($run->forum->db, $run->forum->extensions, $run->vendorPath, $run->forum->log);
 
         return $added === []
             ? $run->translator->trans('ernestdefoe-millwright.api.composer.migrations_none')

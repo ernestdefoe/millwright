@@ -99,13 +99,20 @@ class JsonFile
         @chmod($tmp, $mode);
 
         try {
-            fwrite($handle, $json."\n");
+            // A full disk writes part of the file and says so only here.
+            $complete = fwrite($handle, $json."\n") === strlen($json) + 1;
             fflush($handle);
             // The file must be on disk before the rename, or a crash between the
             // two leaves an empty file where a valid one used to be.
             @fsync($handle);
         } finally {
             fclose($handle);
+        }
+
+        if (! $complete) {
+            @unlink($tmp);
+
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.config.json_write_failed', ['path' => $this->path]));
         }
 
         if (! @rename($tmp, $this->path)) {

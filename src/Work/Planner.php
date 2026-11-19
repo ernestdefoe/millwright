@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Apply\Tree;
 use ErnestDefoe\Millwright\Config\JsonFile;
 use ErnestDefoe\Millwright\Plan\Change;
 use ErnestDefoe\Millwright\Plan\LockDiff;
@@ -159,11 +160,17 @@ class Planner
         $diff = new LockDiff();
         $changes = $diff->between($before, $after);
 
-        file_put_contents($run->workDir.'/plan.json', json_encode([
+        $written = file_put_contents($run->workDir.'/plan.json', json_encode([
             'changes' => array_map(fn (Change $c) => $c->toArray(), $changes),
             'sources' => $diff->sources($after),
             'reasons' => $diff->reasons($changes, $after, $run->requested),
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+        // Every later phase reads the plan; one that was not written would
+        // read as "nothing to do" and finish a run that changed composer.lock.
+        if ($written === false) {
+            throw new RuntimeException($run->translator->trans('ernestdefoe-millwright.api.composer.plan_write_failed', ['path' => $run->workDir.'/plan.json']));
+        }
 
         if ($changes === []) {
             return match ($run->mode) {
@@ -190,7 +197,7 @@ class Planner
 
             if (is_file($saved)) {
                 if (@file_get_contents($saved) !== @file_get_contents($live)) {
-                    RunContext::replaceFile($saved, $live);
+                    Tree::replaceFile($saved, $live);
                 }
             } elseif (! copy($live, $saved)) {
                 throw new RuntimeException($this->run->translator->trans('ernestdefoe-millwright.api.composer.save_before_resolve_failed', ['file' => $file]));
@@ -245,7 +252,7 @@ class Planner
 
             foreach (['composer.lock', 'composer.json'] as $file) {
                 if (is_file("$workDir/$file.before")) {
-                    RunContext::replaceFile("$workDir/$file.before", "$installPath/$file");
+                    Tree::replaceFile("$workDir/$file.before", "$installPath/$file");
                 }
             }
 
@@ -488,8 +495,8 @@ class Planner
             // refusal's "Nothing was changed" is true and no rollback is owed.
             foreach (['composer.lock', 'composer.json'] as $file) {
                 $saved = $run->workDir.'/'.$file.'.before';
-                if (is_file($saved)) {
-                    @copy($saved, $run->installPath.'/'.$file);
+                if (is_file($saved) && ! Tree::replaceFile($saved, $run->installPath.'/'.$file)) {
+                    throw new RuntimeException($run->translator->trans('ernestdefoe-millwright.api.rollback.put_back_failed', ['file' => $file, 'from' => $saved]));
                 }
             }
 

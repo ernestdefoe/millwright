@@ -230,6 +230,33 @@ class FetcherTest extends TestCase
         $this->assertFileExists($this->dir.'/staging/a/b/marker', 'it re-downloaded something already staged');
     }
 
+    /**
+     * A request killed part-way through unpacking must not leave something
+     * that looks staged. composer.json is often one of the first entries in an
+     * archive, so "has a composer.json" used to be true of a half-unpacked
+     * package, and resume swapped it into vendor/.
+     */
+    public function test_a_half_unpacked_package_is_unpacked_again(): void
+    {
+        // What a kill mid-unzip leaves now: only the .partial folder.
+        mkdir($this->dir.'/staging/a/b.partial', 0775, true);
+        file_put_contents($this->dir.'/staging/a/b.partial/composer.json', '{"name":"a/b"}');
+
+        $archive = $this->zip('h.zip', ['pkg/composer.json' => '{"name":"a/b"}', 'pkg/src/Last.php' => '<?php // last entry']);
+        $this->fetchLocal($archive, 'a/b');
+
+        $this->assertFileExists($this->dir.'/staging/a/b/src/Last.php', 'the package was not unpacked in full');
+        $this->assertDirectoryDoesNotExist($this->dir.'/staging/a/b.partial');
+    }
+
+    public function test_unpacking_writes_beside_the_target_and_renames_last(): void
+    {
+        $source = (string) file_get_contents(dirname(__DIR__, 2).'/src/Work/Fetcher.php');
+
+        $this->assertStringContainsString("\$target .= '.partial';", $source);
+        $this->assertMatchesRegularExpression('/rename\(\$target, \$final\)/', $source);
+    }
+
     private function rmrf(string $dir): void
     {
         if (! is_dir($dir)) {

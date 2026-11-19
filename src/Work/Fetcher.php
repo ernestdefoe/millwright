@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Apply\Tree;
 use ErnestDefoe\Millwright\Config\AuthTokens;
 use Flarum\Locale\TranslatorInterface;
 use GuzzleHttp\ClientInterface;
@@ -41,7 +42,8 @@ class Fetcher
         if (is_dir($target) && is_file($target.'/composer.json')) {
             // Already staged by an earlier attempt. Fetch is idempotent because
             // the driver saves progress AFTER the work, so a process killed in
-            // between will ask for this package again.
+            // between will ask for this package again. Only a COMPLETE unpack
+            // is ever at $target: see unzip().
             return;
         }
 
@@ -149,6 +151,11 @@ class Fetcher
      * top-level directory whose name nobody should depend on. It is stripped, so
      * what lands in staging is the package itself and the apply phase can move
      * it straight into place.
+     *
+     * Unpacked beside the target and renamed into place last. A request killed
+     * half-way through the entries leaves only `<target>.partial`, which the
+     * next attempt deletes and starts again; a half-unpacked package can never
+     * be mistaken for a staged one and swapped into vendor/.
      */
     protected function unzip(string $archive, string $target, string $package): void
     {
@@ -159,7 +166,9 @@ class Fetcher
         }
 
         $root = $this->commonRoot($zip);
-        $this->deleteTree($target);
+        $final = $target;
+        $target .= '.partial';
+        Tree::delete($target);
 
         if (! mkdir($target, 0775, true) && ! is_dir($target)) {
             throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fetch.staging_failed', ['package' => $package]));
@@ -191,11 +200,20 @@ class Fetcher
                 throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fetch.read_entry_failed', ['name' => $name, 'package' => $package]));
             }
 
-            file_put_contents($to, $stream);
+            $written = file_put_contents($to, $stream);
             fclose($stream);
+
+            // A full disk writes nothing, or part of the file, and says so only here.
+            if ($written === false) {
+                throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fetch.write_failed', ['path' => $to, 'package' => $package]));
+            }
         }
 
         $zip->close();
+
+        if (! @rename($target, $final)) {
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fetch.staging_failed', ['package' => $package]));
+        }
     }
 
     /** The single wrapping directory, if every entry shares one. */
@@ -227,28 +245,10 @@ class Fetcher
     {
         foreach (explode('/', $package) as $part) {
             if (! preg_match('/^[A-Za-z0-9._-]+$/', $part) || $part === '.' || $part === '..') {
-                throw new RuntimeException("Refusing to stage a package named: $package");
+                throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fetch.bad_name', ['package' => $package]));
             }
         }
 
         return $package;
-    }
-
-    protected function deleteTree(string $dir): void
-    {
-        if (! is_dir($dir)) {
-            return;
-        }
-
-        $items = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::CHILD_FIRST
-        );
-
-        foreach ($items as $item) {
-            $item->isDir() ? @rmdir($item->getPathname()) : @unlink($item->getPathname());
-        }
-
-        @rmdir($dir);
     }
 }

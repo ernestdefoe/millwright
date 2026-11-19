@@ -6,6 +6,7 @@ use Flarum\Database\Migrator;
 use Flarum\Extension\ExtensionManager;
 use Flarum\Foundation\Config;
 use Illuminate\Database\ConnectionInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * The forum's own services that an update and an undo talk to.
@@ -14,7 +15,8 @@ use Illuminate\Database\ConnectionInterface;
  * of a run reaches into the container: the database the migration ledger
  * reads, the migrator that reverses what it recorded, the extension list it
  * matches migrations to, and the database settings Flarum's own updater is
- * handed on a host that cannot start a process.
+ * handed on a host that cannot start a process, and the forum's log for what
+ * goes wrong without stopping the run.
  */
 class Forum
 {
@@ -23,6 +25,7 @@ class Forum
         public readonly Migrator $migrator,
         public readonly ExtensionManager $extensions,
         public readonly Config $config,
+        public readonly LoggerInterface $log,
     ) {
     }
 

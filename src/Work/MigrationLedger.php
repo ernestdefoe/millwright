@@ -7,6 +7,7 @@ use Flarum\Database\Migrator;
 use Flarum\Extension\ExtensionManager;
 use Flarum\Locale\TranslatorInterface;
 use Illuminate\Database\ConnectionInterface;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Throwable;
 
@@ -63,7 +64,7 @@ class MigrationLedger
      * After it: what this update added, in the order it ran, with a copy of
      * each migration file so undo can still reach its down step later.
      */
-    public function after(ConnectionInterface $db, ExtensionManager $extensions, string $vendorPath): array
+    public function after(ConnectionInterface $db, ExtensionManager $extensions, string $vendorPath, LoggerInterface $log): array
     {
         $before = $this->beforeState();
         $seen = array_flip(array_map(fn ($m) => $m['extension'].'|'.$m['migration'], $before['migrations']));
@@ -78,12 +79,39 @@ class MigrationLedger
             $from = $this->liveDir($m['extension'], $extensions, $vendorPath).'/'.$m['migration'].'.php';
             $to = $this->copyDir($m['extension']).'/'.$m['migration'].'.php';
             @mkdir(dirname($to), 0775, true);
-            @copy($from, $to);
+
+            /*
+             * Not fatal: the migration has already run, and failing the update
+             * here would only offer an undo that then could not find it. Without
+             * the copy, undo falls back to the live file, and refuses (changing
+             * nothing) if that has gone. Logged so the reason is findable.
+             */
+            if (! @copy($from, $to)) {
+                $log->warning("[millwright] could not keep a copy of migration {$m['migration']} for undo (from $from)");
+            }
         }
 
-        file_put_contents($this->workDir.'/migrations.json', json_encode($added, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        $this->record($added);
 
         return $added;
+    }
+
+    /**
+     * Written beside and renamed into place, so a kill mid-write never leaves
+     * a ledger that lists half a migration.
+     *
+     * @param list<array{migration:string, extension:?string}> $migrations
+     */
+    protected function record(array $migrations): void
+    {
+        $path = $this->workDir.'/migrations.json';
+        $tmp = $path.'.'.bin2hex(random_bytes(3));
+
+        if (@file_put_contents($tmp, json_encode($migrations, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) === false || ! @rename($tmp, $path)) {
+            @unlink($tmp);
+
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.migrations.ledger_write_failed', ['path' => $path]));
+        }
     }
 
     /** @return list<array{migration:string, extension:?string}> what this update ran */
@@ -133,7 +161,34 @@ class MigrationLedger
             return [];
         }
 
+        /*
+         * The admin page asks for its state every couple of seconds, and each
+         * of those requests may arrive here. One reverses; the others leave it
+         * to that one rather than running the same down steps twice.
+         */
+        $lock = @fopen($this->workDir.'/migrations.lock', 'c');
+
+        if ($lock === false || ! flock($lock, LOCK_EX | LOCK_NB)) {
+            return [];
+        }
+
+        try {
+            return $this->reverse($db, $migrator, $extensions, $vendorPath);
+        } finally {
+            flock($lock, LOCK_UN);
+            fclose($lock);
+        }
+    }
+
+    /** @return list<string> */
+    protected function reverse(ConnectionInterface $db, Migrator $migrator, ExtensionManager $extensions, string $vendorPath): array
+    {
+        if (! $this->pending()) {
+            return [];   // finished by the request that held the lock before this one
+        }
+
         $done = [];
+        $left = $this->ran();
 
         foreach ($this->downs($migrator, $extensions, $vendorPath) as [$m, $down]) {
             try {
@@ -147,6 +202,15 @@ class MigrationLedger
 
             $migrator->getRepository()->delete($m['migration'], $m['extension']);
             $done[] = $m['migration'];
+
+            /*
+             * Crossed off as it goes. A later down step that fails must not
+             * leave this one on the list: the retry would run it a second time
+             * against a schema it already took apart, fail on that, and never
+             * get past it.
+             */
+            $left = array_values(array_filter($left, fn ($r) => $r !== $m));
+            $this->record($left);
         }
 
         // Reversed once; a second undo of the same run has nothing left to do.

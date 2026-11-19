@@ -602,6 +602,7 @@ ernestdefoe-millwright:
       pinned_to: "{package} is pinned to {constraint}"
       registered: "Composer now knows about the change"
       reread_done: "The web server has re-read the new files."
+      plan_write_failed: "Could not write the plan at {path}. Check that storage/ is writable."
       resolve_failed: "Composer could not work out an update:"
       resolve_gave_up: "Nothing was changed. {how} — {attempts} times in a row, before Composer finished working out this update."
       resolve_retrying: "{how} before Composer finished. Nothing was changed. Trying again (attempt {attempt} of {attempts}); Composer kept what it had already downloaded, so this attempt starts further along."
@@ -659,6 +660,8 @@ ernestdefoe-millwright:
       private_hint: "If this package is private, Millwright found no credentials for it — check auth.json."
       read_entry_failed: "Could not read {name} out of the {package} archive."
       staging_failed: "Could not create the staging directory for {package}."
+      write_failed: "Could not write {path} while unpacking {package}. Is the disk full?"
+      bad_name: "Refusing to stage a package named {package}."
     flarum_command:
       no_console: "`flarum {command}` could not be run: Flarum's console is not available here."
       unknown: "`flarum {command}` is not a command on this forum."
@@ -711,6 +714,7 @@ ernestdefoe-millwright:
       write_failed: "Cannot write the journal at {path}"
     migrations:
       already_reversed: "Already reversed: {list}."
+      ledger_write_failed: "Could not record the database changes this update made at {path}. Check that storage/ is writable."
       irreversible: "Nothing was undone: this update changed the database with {migration}, which has no way to reverse itself. Putting the old version back would leave it running on a database it was not written for."
       irreversible_ext: "Nothing was undone: this update changed the database with {migration} ({extension}), which has no way to reverse itself. Putting the old version back would leave it running on a database it was not written for."
       none_reversed: "Nothing had been reversed yet."

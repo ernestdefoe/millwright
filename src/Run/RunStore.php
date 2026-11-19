@@ -36,13 +36,20 @@ class RunStore
 
         $json = json_encode($run->toArray(), JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
 
-        $handle = fopen($temp, 'wb');
+        $handle = @fopen($temp, 'wb');
 
         if ($handle === false) {
             throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.run.state_write_failed', ['path' => $temp]));
         }
 
-        fwrite($handle, $json);
+        // A short write (a full disk) must not be renamed over the last good state.
+        if (fwrite($handle, (string) $json) !== strlen((string) $json)) {
+            fclose($handle);
+            @unlink($temp);
+
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.run.state_write_failed', ['path' => $temp]));
+        }
+
         fflush($handle);
         fsync($handle);
         fclose($handle);

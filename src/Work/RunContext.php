@@ -128,18 +128,4 @@ class RunContext
             $this->storagePath
         );
     }
-
-    /** Copy beside, then rename over: never a half-written file in place. */
-    public static function replaceFile(string $from, string $to): bool
-    {
-        $tmp = $to.'.millwright-'.bin2hex(random_bytes(3));
-
-        if (! @copy($from, $tmp) || ! @rename($tmp, $to)) {
-            @unlink($tmp);
-
-            return false;
-        }
-
-        return true;
-    }
 }

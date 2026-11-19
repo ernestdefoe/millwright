@@ -115,12 +115,12 @@ class Rollback
             $saved = $this->savedManifests.'/'.$file.'.before';
 
             if (! is_file($saved)) {
-                // composer.json is only saved when the run was an install, so
-                // its absence is the normal case rather than a problem.
+                // Saved by every resolve; absent only when the run stopped
+                // before planning, so there is nothing of it to put back.
                 continue;
             }
 
-            if (! @copy($saved, $this->installPath.'/'.$file)) {
+            if (! Tree::replaceFile($saved, $this->installPath.'/'.$file)) {
                 throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.rollback.put_back_failed', ['file' => $file, 'from' => $saved]));
             }
 
