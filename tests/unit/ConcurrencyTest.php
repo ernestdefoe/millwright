@@ -97,6 +97,43 @@ class ConcurrencyTest extends TestCase
         $this->assertLessThan(5, $elapsed, 'it blocked waiting for the lock instead of returning');
     }
 
+    /**
+     * An undo, or a second start, while a driver holds the lock: refused at
+     * once, with nothing done. Before, the undo had no lock at all and could
+     * put files back while a queue worker was still swapping them in.
+     */
+    public function test_holding_work_is_refused_while_a_step_has_the_run(): void
+    {
+        mkdir($this->dir.'/locks', 0775, true);
+        $held = fopen($this->dir.'/locks/r1.lock', 'c');
+        flock($held, LOCK_EX);
+
+        $runner = new \ErnestDefoe\Millwright\Run\StepRunner(
+            EnglishTranslator::make(),
+            new RunStore(EnglishTranslator::make(), $this->dir.'/runs'),
+            $this->createStub(\ErnestDefoe\Millwright\Run\StepsFactory::class),
+            fn (): int => time(),
+            $this->dir.'/locks'
+        );
+
+        $ran = false;
+
+        try {
+            $runner->whileHolding('r1', 'busy', function () use (&$ran) { $ran = true; });
+            $this->fail('it did not refuse');
+        } catch (\ErnestDefoe\Millwright\Exception\RefusedException $e) {
+            $this->assertSame('busy', $e->getMessage());
+        } finally {
+            flock($held, LOCK_UN);
+            fclose($held);
+        }
+
+        $this->assertFalse($ran);
+
+        // And once the lock is free, the work runs and its result comes back.
+        $this->assertSame(42, $runner->whileHolding('r1', 'busy', fn () => 42));
+    }
+
     private function cmd(array $plan, int $budget): string
     {
         return sprintf(

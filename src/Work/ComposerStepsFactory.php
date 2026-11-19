@@ -4,6 +4,7 @@ namespace ErnestDefoe\Millwright\Work;
 
 use ErnestDefoe\Millwright\Apply\Applier;
 use ErnestDefoe\Millwright\Apply\Journal;
+use ErnestDefoe\Millwright\Apply\Restore;
 use ErnestDefoe\Millwright\Run\Steps;
 use ErnestDefoe\Millwright\Run\StepsFactory;
 use Flarum\Foundation\Config;
@@ -61,18 +62,47 @@ class ComposerStepsFactory implements StepsFactory
         return str_starts_with($url, 'http') ? rtrim($url, '/').'/' : '';
     }
 
-    public function for(string $runId): Steps
+    /** Composer for this forum, through the PHP binary the admin chose if any. */
+    protected function composer(): ComposerRunner
     {
-        $workDir = new WorkDir($this->translator, $this->paths->storage, $runId);
-        $journal = new Journal($this->translator, $workDir->journalPath());
-
-        $composer = new ComposerRunner(
+        return new ComposerRunner(
             $this->translator,
             $this->paths->base,
             null,
             $this->paths->storage.'/.composer',
             (new \ErnestDefoe\Millwright\Host\PhpOverride($this->translator, $this->paths->storage))->get()
         );
+    }
+
+    /**
+     * The undo for one run: the same Restore the run uses when it undoes
+     * itself. Two copies of "put it back" (one for the button, one for the
+     * automatic path) is exactly the pair that drifts, and the half that
+     * drifts is Composer's record, which fails silently and months later.
+     */
+    public function restoreFor(string $runId): Restore
+    {
+        $workDir = new WorkDir($this->translator, $this->paths->storage, $runId);
+
+        return new Restore(
+            $this->translator,
+            $this->forum,
+            $this->paths->vendor,
+            $this->paths->base,
+            $workDir->root(),
+            $workDir->trash(),
+            new Journal($this->translator, $workDir->journalPath()),
+            $this->composer(),
+            $this->paths->storage
+        );
+    }
+
+    public function for(string $runId): Steps
+    {
+        $workDir = new WorkDir($this->translator, $this->paths->storage, $runId);
+        $journal = new Journal($this->translator, $workDir->journalPath());
+
+        $composer = $this->composer();
 
         $run = new RunContext(
             $this->translator,

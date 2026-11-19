@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Run;
 
+use ErnestDefoe\Millwright\Exception\RefusedException;
 use Flarum\Locale\TranslatorInterface;
 use Throwable;
 
@@ -141,6 +142,34 @@ class StepRunner
 
         try {
             return $this->work($run);
+        } finally {
+            flock($lock, LOCK_UN);
+            fclose($lock);
+        }
+    }
+
+    /**
+     * Run $work holding the lock a step of run $id takes, so no driver can
+     * step that run meanwhile, or refuse (changing nothing) while one is.
+     *
+     * The undo holds its run's lock, so it never unwinds files a queue
+     * worker is still swapping in. Starting holds the 'site' lock, so two tabs
+     * pressing Update at once cannot both see "nothing running" and both start.
+     *
+     * @template T
+     * @param \Closure(): T $work
+     * @return T
+     */
+    public function whileHolding(string $id, string $busy, \Closure $work): mixed
+    {
+        $lock = $this->acquire($id);
+
+        if ($lock === null) {
+            throw new RefusedException($busy, 'run_in_progress', 409);
+        }
+
+        try {
+            return $work();
         } finally {
             flock($lock, LOCK_UN);
             fclose($lock);

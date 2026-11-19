@@ -769,6 +769,7 @@ ernestdefoe-millwright:
       record_failed: "The files are back, but Composer could not update its own record. Run `composer install` to finish putting things back."
       record_put_back: "Composer's record put back"
     rollback:
+      busy: "An update step is running right now. Try again in a moment."
       move_aside_failed: "Could not move {path} aside during rollback"
       nothing: "There is nothing to roll back."
       nothing_changed: "That update never got as far as changing anything, so there is nothing to undo."
@@ -794,6 +795,7 @@ ernestdefoe-millwright:
     stale_cache:
       set_aside: "Set aside a cache owned by another user, which Flarum rebuilds; delete it as root when convenient:"
     start:
+      busy: "Another update is being started right now. Try again in a moment."
       in_progress: "An update is already in progress."
       in_progress_stale: "An update is already in progress, though nothing has moved for {minutes} minutes."
       no_nightly: "There is no nightly build to move to: Packagist has no development branch for this Flarum, or could not be reached. Nothing was started."

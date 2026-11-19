@@ -64,7 +64,7 @@ class MillwrightServiceProvider extends AbstractServiceProvider
          *
          * Handing the id in at step() time removes the question entirely.
          */
-        $this->container->singleton(StepsFactory::class, function ($container) {
+        $this->container->singleton(ComposerStepsFactory::class, function ($container) {
             /*
              * Config is REQUIRED here, and this line is why.
              *
@@ -84,6 +84,8 @@ class MillwrightServiceProvider extends AbstractServiceProvider
                 $container->make(Client::class)
             );
         });
+
+        $this->container->singleton(StepsFactory::class, fn ($container) => $container->make(ComposerStepsFactory::class));
 
         /*
          * The HTTP client for Millwright's own classes only. A plain binding of

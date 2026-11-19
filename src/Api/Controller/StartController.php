@@ -170,30 +170,32 @@ class StartController implements RequestHandlerInterface
             throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.start.not_enough_memory'), 'not_enough_memory');
         }
 
-        $existing = $this->runs->latest();
+        $run = $this->runner->whileHolding('site', $this->translator->trans('ernestdefoe-millwright.api.start.busy'), function () use ($packages, $nightly, $mode, $body) {
+            $existing = $this->runs->latest();
 
-        if ($existing !== null && ! $existing->isFinished()) {
-            /*
-             * Refused, but loudly, and with the age of the thing in the way so
-             * the admin can tell a working update from a dead one. The screen
-             * reloads the state, which carries the run, and offers to abandon
-             * it; this endpoint never decides that for them.
-             */
-            $age = time() - $existing->movedAt;
+            if ($existing !== null && ! $existing->isFinished()) {
+                /*
+                 * Refused, but loudly, and with the age of the thing in the way so
+                 * the admin can tell a working update from a dead one. The screen
+                 * reloads the state, which carries the run, and offers to abandon
+                 * it; this endpoint never decides that for them.
+                 */
+                $age = time() - $existing->movedAt;
 
-            throw new RefusedException($age > 120
-                ? $this->translator->trans('ernestdefoe-millwright.api.start.in_progress_stale', ['minutes' => round($age / 60)])
-                : $this->translator->trans('ernestdefoe-millwright.api.start.in_progress'), 'run_in_progress', 409);
-        }
+                throw new RefusedException($age > 120
+                    ? $this->translator->trans('ernestdefoe-millwright.api.start.in_progress_stale', ['minutes' => round($age / 60)])
+                    : $this->translator->trans('ernestdefoe-millwright.api.start.in_progress'), 'run_in_progress', 409);
+            }
 
-        $id = 'r'.date('Ymd-His').'-'.bin2hex(random_bytes(3));
+            $id = 'r'.date('Ymd-His').'-'.bin2hex(random_bytes(3));
 
-        (new WorkDir($this->translator, $this->paths->storage, $id))->create()->remember($packages, $nightly !== null ? 'update' : $mode, $nightly ?? $this->repinFor($packages, $body, $mode));
+            (new WorkDir($this->translator, $this->paths->storage, $id))->create()->remember($packages, $nightly !== null ? 'update' : $mode, $nightly ?? $this->repinFor($packages, $body, $mode));
 
-        $run = $this->runner->begin($id);
+            return $this->runner->begin($id);
+        });
 
         // A worker if there is one; the page keeps polling either way.
-        $queued = $this->drivers->nudge($id);
+        $queued = $this->drivers->nudge($run->id);
 
         return new JsonResponse([
             'run' => $this->runs->present($run),

@@ -2,15 +2,11 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
-use ErnestDefoe\Millwright\Apply\Journal;
-use ErnestDefoe\Millwright\Apply\Restore;
-use ErnestDefoe\Millwright\Run\RunStore;
-use ErnestDefoe\Millwright\Work\ComposerRunner;
-use ErnestDefoe\Millwright\Work\Forum;
-use ErnestDefoe\Millwright\Work\WorkDir;
-use Flarum\Foundation\Paths;
-use Flarum\Http\RequestUtil;
 use ErnestDefoe\Millwright\Exception\RefusedException;
+use ErnestDefoe\Millwright\Run\RunStore;
+use ErnestDefoe\Millwright\Run\StepRunner;
+use ErnestDefoe\Millwright\Work\ComposerStepsFactory;
+use Flarum\Http\RequestUtil;
 use Flarum\Locale\TranslatorInterface;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
@@ -30,20 +26,9 @@ class RollbackController implements RequestHandlerInterface
     public function __construct(
         protected TranslatorInterface $translator,
         protected RunStore $runs,
-        protected Paths $paths,
-        protected Forum $forum,
+        protected ComposerStepsFactory $factory,
+        protected StepRunner $runner,
     ) {
-    }
-
-    protected function composer(): ComposerRunner
-    {
-        return new ComposerRunner(
-            $this->translator,
-            $this->paths->base,
-            null,
-            $this->paths->storage.'/.composer',
-            (new \ErnestDefoe\Millwright\Host\PhpOverride($this->translator, $this->paths->storage))->get()
-        );
     }
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -56,14 +41,13 @@ class RollbackController implements RequestHandlerInterface
             throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.rollback.nothing'), 'nothing_to_roll_back', 404);
         }
 
-        $workDir = new WorkDir($this->translator, $this->paths->storage, $run->id);
-        $journal = new Journal($this->translator, $workDir->journalPath());
+        $restore = $this->factory->restoreFor($run->id);
 
         /*
          * An empty journal does NOT mean nothing changed.
          *
          * The plan phase runs Composer with --no-install, and Composer rewrites
-         * composer.json and composer.lock the moment it succeeds — before a
+         * composer.json and composer.lock the moment it succeeds, before a
          * single file has been moved, so before the journal has anything in it.
          * A run that then fails leaves the manifests describing a site that does
          * not exist, and the version of this that refused on an empty journal
@@ -72,47 +56,32 @@ class RollbackController implements RequestHandlerInterface
          * then exited non-zero.
          *
          * So the question is not "is there a journal" but "is there anything
-         * saved to put back".
+         * saved to put back", which is what possible() asks.
          */
-        $savedLock = $workDir->root().'/composer.lock.before';
-
-        if (! $journal->exists() && ! is_file($savedLock)) {
+        if (! $restore->possible()) {
             throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.rollback.nothing_changed'), 'nothing_to_roll_back');
         }
 
         /*
-         * The same Restore the run uses when it undoes itself. Two copies of
-         * "put it back" — one for the button, one for the automatic path — is
-         * exactly the pair that drifts, and the half that drifts is Composer's
-         * record, which fails silently and months later.
+         * Holding the run's step lock: a queue worker or another tab stepping
+         * this run would otherwise be swapping files in while these are put
+         * back. A refusal (a database change that cannot be reversed) changes
+         * nothing and reaches the admin as a RefusedException.
          */
-        $restore = new Restore(
-            $this->translator,
-            $this->forum,
-            $this->paths->vendor,
-            $this->paths->base,
-            $workDir->root(),
-            $workDir->trash(),
-            $journal,
-            $this->composer(),
-            $this->paths->storage
-        );
+        $result = $this->runner->whileHolding($run->id, $this->translator->trans('ernestdefoe-millwright.api.rollback.busy'), function () use ($restore, $run) {
+            $result = $restore->run();
 
-        // A refusal (a database change that cannot be reversed) changes nothing
-        // and reaches the admin as a RefusedException.
-        $result = $restore->run();
+            $this->runs->save($run->rolledBack(time(), $this->translator->trans('ernestdefoe-millwright.api.run.rolled_back', [
+                'undone' => implode(', ', $result['undone']) ?: $this->translator->trans('ernestdefoe-millwright.api.run.nothing_to_undo'),
+            ])));
 
-        $undone = $result['undone'];
-        $note = $result['note'];
-
-        $this->runs->save($run->rolledBack(time(), $this->translator->trans('ernestdefoe-millwright.api.run.rolled_back', [
-            'undone' => implode(', ', $undone) ?: $this->translator->trans('ernestdefoe-millwright.api.run.nothing_to_undo'),
-        ])));
+            return $result;
+        });
 
         return new JsonResponse([
-            'undone' => $undone,
+            'undone' => $result['undone'],
             'run' => $this->runs->present($this->runs->latest()),
-            'next' => $note,
+            'next' => $result['note'],
         ]);
     }
 }
