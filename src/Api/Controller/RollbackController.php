@@ -6,6 +6,7 @@ use ErnestDefoe\Millwright\Apply\Journal;
 use ErnestDefoe\Millwright\Apply\Restore;
 use ErnestDefoe\Millwright\Run\RunStore;
 use ErnestDefoe\Millwright\Work\ComposerRunner;
+use ErnestDefoe\Millwright\Work\Forum;
 use ErnestDefoe\Millwright\Work\WorkDir;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
@@ -30,6 +31,7 @@ class RollbackController implements RequestHandlerInterface
         protected TranslatorInterface $translator,
         protected RunStore $runs,
         protected Paths $paths,
+        protected Forum $forum,
     ) {
     }
 
@@ -86,6 +88,7 @@ class RollbackController implements RequestHandlerInterface
          */
         $restore = new Restore(
             $this->translator,
+            $this->forum,
             $this->paths->vendor,
             $this->paths->base,
             $workDir->root(),

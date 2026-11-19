@@ -8,6 +8,8 @@ use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use ErnestDefoe\Millwright\Work\ComposerRunner;
 use ErnestDefoe\Millwright\Work\ComposerSteps;
 use ErnestDefoe\Millwright\Work\Fetcher;
+use ErnestDefoe\Millwright\Tests\unit\Fakes;
+use ErnestDefoe\Millwright\Work\SiteCheck;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -35,19 +37,13 @@ class CodeLiveAtTest extends TestCase
 
     private function liveAt(int $freq): int
     {
-        $journal = new Journal(EnglishTranslator::make(), $this->dir.'/work/journal.jsonl');
-        $steps = new ComposerSteps(
-            EnglishTranslator::make(),
-            $this->dir.'/project',
-            $this->dir.'/work',
+        $run = Fakes::run(
+            $this->dir,
             new ComposerRunner(EnglishTranslator::make(), $this->dir.'/project', __FILE__, $this->dir.'/home'),
-            new Fetcher(EnglishTranslator::make(), new \GuzzleHttp\Client(), $this->dir.'/work/staging'),
-            new Applier(EnglishTranslator::make(), $this->dir.'/project/vendor', $this->dir.'/work/staging', $this->dir.'/work/trash', $journal),
-            $journal,
             vendorPath: $this->dir.'/project/vendor',
         );
 
-        return (new \ReflectionMethod($steps, 'codeLiveAt'))->invoke($steps, $freq);
+        return (new SiteCheck($run, new \GuzzleHttp\Client()))->codeLiveAt($freq);
     }
 
     public function test_an_untouched_autoloader_does_not_end_the_wait_early(): void

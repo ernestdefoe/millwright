@@ -15,6 +15,7 @@ use Illuminate\Container\Container;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Foundation\Application as ApplicationContract;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
+use ErnestDefoe\Millwright\Tests\unit\Fakes;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -73,6 +74,11 @@ class WiringTest extends TestCase
         $this->container->instance(QueueFactory::class, $queue);
         $this->container->instance(Dispatcher::class, $this->createStub(Dispatcher::class));
         $this->container->instance(TranslatorInterface::class, EnglishTranslator::make());
+
+        $forum = Fakes::forum();
+        $this->container->instance(\Illuminate\Database\ConnectionInterface::class, $forum->db);
+        $this->container->instance(\Flarum\Database\Migrator::class, $forum->migrator);
+        $this->container->instance(\Flarum\Extension\ExtensionManager::class, $forum->extensions);
 
         /*
          * Flarum's AbstractServiceProvider takes the Application contract and

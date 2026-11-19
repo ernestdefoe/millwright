@@ -4,6 +4,9 @@ namespace ErnestDefoe\Millwright\Tests\Unit;
 
 use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use ErnestDefoe\Millwright\Work\ComposerSteps;
+use ErnestDefoe\Millwright\Tests\unit\Fakes;
+use ErnestDefoe\Millwright\Work\Planner;
+use ErnestDefoe\Millwright\Work\ComposerRunner;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -42,7 +45,7 @@ class UpdateScopeTest extends TestCase
      */
     public function test_an_update_does_not_move_root_requirements(): void
     {
-        $source = file_get_contents(dirname(__DIR__, 2).'/src/Work/ComposerSteps.php');
+        $source = file_get_contents(dirname(__DIR__, 2).'/src/Work/Planner.php');
 
         $this->assertIsString($source);
         $this->assertStringContainsString("'--with-dependencies'", $source);
@@ -83,7 +86,7 @@ class UpdateScopeTest extends TestCase
      */
     public function test_the_update_branch_uses_that_explanation(): void
     {
-        $source = file_get_contents(dirname(__DIR__, 2).'/src/Work/ComposerSteps.php');
+        $source = file_get_contents(dirname(__DIR__, 2).'/src/Work/Planner.php');
 
         $this->assertIsString($source);
         $this->assertMatchesRegularExpression(
@@ -135,12 +138,9 @@ class UpdateScopeTest extends TestCase
     {
         file_put_contents($this->dir.'/composer.json', json_encode($composerJson));
 
-        $reflection = new ReflectionClass(ComposerSteps::class);
-        $steps = $reflection->newInstanceWithoutConstructor();
-
-        foreach (['installPath' => $this->dir, 'requested' => $requested, 'mode' => 'update', 'translator' => EnglishTranslator::make()] as $prop => $value) {
-            $reflection->getProperty($prop)->setValue($steps, $value);
-        }
+        $composer = new ComposerRunner(EnglishTranslator::make(), $this->dir, __FILE__, $this->dir.'/home');
+        $steps = new Planner(Fakes::run($this->dir, $composer, $requested, installPath: $this->dir));
+        $reflection = new ReflectionClass($steps);
 
         return $reflection->getMethod('whyNothingMoved')->invoke($steps);
     }

@@ -23,6 +23,14 @@ use Symfony\Component\Console\Input\InputOption;
  */
 class RebuildAssetsCommand extends AbstractCommand
 {
+    public function __construct(
+        protected SettingsRepositoryInterface $settings,
+        protected LocaleManager $locales,
+        protected AssetManager $assets,
+    ) {
+        parent::__construct();
+    }
+
     protected function configure(): void
     {
         $this
@@ -38,8 +46,8 @@ class RebuildAssetsCommand extends AbstractCommand
 
     protected function fire(): int
     {
-        $settings = resolve(SettingsRepositoryInterface::class);
-        $locales = array_keys(resolve(LocaleManager::class)->getLocales());
+        $settings = $this->settings;
+        $locales = array_keys($this->locales->getLocales());
         $markDirty = (bool) $this->input->getOption('mark-dirty');
 
         /*
@@ -55,7 +63,7 @@ class RebuildAssetsCommand extends AbstractCommand
             $settings->delete('custom_less_error');
         }
 
-        foreach (resolve(AssetManager::class)->all() as $assets) {
+        foreach ($this->assets->all() as $assets) {
             $dirty = 'assets_dirty.'.$assets->getName();
 
             if ($markDirty) {

@@ -19,6 +19,7 @@ use ErnestDefoe\Millwright\Work\Fetcher;
 use ErnestDefoe\Millwright\Work\FreshCode;
 use ErnestDefoe\Millwright\Work\InProcess;
 use ErnestDefoe\Millwright\Work\NeedsGit;
+use ErnestDefoe\Millwright\Tests\unit\Fakes;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -382,19 +383,7 @@ class InProcessComposerTest extends TestCase
     /** @param list<string> $packages */
     private function steps(array $packages, string $mode): ComposerSteps
     {
-        $journal = new Journal(EnglishTranslator::make(), $this->dir.'/work/journal.jsonl');
-
-        return new ComposerSteps(
-            EnglishTranslator::make(),
-            $this->dir.'/project',
-            $this->dir.'/work',
-            $this->runner('proc_open'),
-            new Fetcher(EnglishTranslator::make(), new \GuzzleHttp\Client(), $this->dir.'/work/staging'),
-            new Applier(EnglishTranslator::make(), $this->dir.'/project/vendor', $this->dir.'/work/staging', $this->dir.'/work/trash', $journal),
-            $journal,
-            $packages,
-            $mode
-        );
+        return Fakes::steps(Fakes::run($this->dir, $this->runner('proc_open'), $packages, $mode));
     }
 
     /** A project whose only source is a local package repository: no network. */

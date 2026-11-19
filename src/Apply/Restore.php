@@ -5,13 +5,11 @@ namespace ErnestDefoe\Millwright\Apply;
 use ErnestDefoe\Millwright\Host\Opcache;
 use ErnestDefoe\Millwright\Work\ComposerRunner;
 use ErnestDefoe\Millwright\Work\FlarumCommand;
+use ErnestDefoe\Millwright\Work\Forum;
 use ErnestDefoe\Millwright\Work\InstalledRecord;
 use ErnestDefoe\Millwright\Work\MigrationLedger;
 use ErnestDefoe\Millwright\Work\StaleCache;
-use Flarum\Database\Migrator;
-use Flarum\Extension\ExtensionManager;
 use Flarum\Locale\TranslatorInterface;
-use Illuminate\Database\ConnectionInterface;
 use Throwable;
 
 /**
@@ -29,6 +27,7 @@ class Restore
 {
     public function __construct(
         protected TranslatorInterface $translator,
+        protected Forum $forum,
         protected string $vendorPath,
         protected string $basePath,
         protected string $workDirRoot,
@@ -57,12 +56,7 @@ class Restore
          * the restored code. See MigrationLedger.
          */
         $ledger = new MigrationLedger($this->translator, $this->workDirRoot);
-        $pending = $ledger->prepare(
-            resolve(ConnectionInterface::class),
-            resolve(Migrator::class),
-            resolve(ExtensionManager::class),
-            $this->vendorPath
-        );
+        $pending = $ledger->prepare($this->forum->db, $this->forum->migrator, $this->forum->extensions, $this->vendorPath);
 
         $undone = array_merge($pending ? [$this->translator->trans('ernestdefoe-millwright.api.restore.migrations_queued')] : [], (new Rollback(
             $this->translator,

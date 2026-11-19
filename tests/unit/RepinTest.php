@@ -6,6 +6,9 @@ use ErnestDefoe\Millwright\Api\Controller\StartController;
 use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use ErnestDefoe\Millwright\Work\ComposerSteps;
 use ErnestDefoe\Millwright\Work\WorkDir;
+use ErnestDefoe\Millwright\Tests\unit\Fakes;
+use ErnestDefoe\Millwright\Work\Planner;
+use ErnestDefoe\Millwright\Work\ComposerRunner;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -256,20 +259,8 @@ class RepinTest extends TestCase
     {
         file_put_contents($this->dir.'/composer.json', json_encode($composerJson));
 
-        $reflection = new ReflectionClass(ComposerSteps::class);
-        $steps = $reflection->newInstanceWithoutConstructor();
-
-        foreach ([
-            'installPath' => $this->dir,
-            'requested' => $requested,
-            'mode' => 'update',
-            'repin' => $repin,
-            'translator' => EnglishTranslator::make(),
-        ] as $prop => $value) {
-            $reflection->getProperty($prop)->setValue($steps, $value);
-        }
-
-        $reflection->getMethod('raisePins')->invoke($steps);
+        $composer = new ComposerRunner(EnglishTranslator::make(), $this->dir, __FILE__, $this->dir.'/home');
+        (new Planner(Fakes::run($this->dir, $composer, $requested, repin: $repin, installPath: $this->dir)))->raisePins();
 
         return json_decode((string) file_get_contents($this->dir.'/composer.json'), true);
     }

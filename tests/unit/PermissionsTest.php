@@ -2,6 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Tests\Unit;
 
+use ErnestDefoe\Millwright\Tests\unit\Fakes;
+
 use ErnestDefoe\Millwright\Plan\Change;
 use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
@@ -103,7 +105,7 @@ class PermissionsTest extends TestCase
             'base' => $this->dir, 'public' => $this->dir.'/public',
             'storage' => $this->dir.'/storage', 'vendor' => $this->dir.'/vendor',
         ]);
-        $steps = (new ComposerStepsFactory(EnglishTranslator::make(), $paths, new Config(['url' => 'https://example.test'])))->for('r1');
+        $steps = (new ComposerStepsFactory(EnglishTranslator::make(), $paths, new Config(['url' => 'https://example.test']), Fakes::forum(), new \GuzzleHttp\Client()))->for('r1');
         $run = Run::start('r1', time());
 
         $this->assertContains('check file permissions', $steps->itemsFor('plan', $run));
@@ -171,7 +173,7 @@ class PermissionsTest extends TestCase
             'base' => $this->dir, 'public' => $this->dir.'/public',
             'storage' => $this->dir.'/storage', 'vendor' => $this->dir.'/vendor',
         ]);
-        $steps = (new ComposerStepsFactory(EnglishTranslator::make(), $paths, new Config(['url' => 'https://example.test'])))->for('r1');
+        $steps = (new ComposerStepsFactory(EnglishTranslator::make(), $paths, new Config(['url' => 'https://example.test']), Fakes::forum(), new \GuzzleHttp\Client()))->for('r1');
 
         $result = $steps->doItem('plan', 'check file permissions', Run::start('r1', time()));
 

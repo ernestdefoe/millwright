@@ -35,6 +35,13 @@ use Flarum\Foundation\Paths;
  */
 class RepairFormatterCommand extends AbstractCommand
 {
+    public function __construct(
+        protected Paths $paths,
+        protected Formatter $formatter,
+    ) {
+        parent::__construct();
+    }
+
     protected function configure(): void
     {
         $this
@@ -53,9 +60,9 @@ class RepairFormatterCommand extends AbstractCommand
     {
         // A root-owned cache is moved aside first where it can be (see
         // StaleCache), so the flush below can actually clear it.
-        StaleCache::setAside(resolve(Paths::class)->storage);
+        StaleCache::setAside($this->paths->storage);
 
-        $formatter = resolve(Formatter::class);
+        $formatter = $this->formatter;
 
         $formatter->flush();
 
@@ -120,7 +127,7 @@ class RepairFormatterCommand extends AbstractCommand
             return [];
         }
 
-        $root = resolve(Paths::class)->storage.'/cache';
+        $root = $this->paths->storage.'/cache';
 
         if (! is_dir($root)) {
             return [];

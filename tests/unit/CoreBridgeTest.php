@@ -13,6 +13,10 @@ use ErnestDefoe\Millwright\Work\Fetcher;
 use Illuminate\Container\Container;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Database\ConnectionInterface;
+use ErnestDefoe\Millwright\Tests\unit\Fakes;
+use ErnestDefoe\Millwright\Work\SiteCheck;
+use ErnestDefoe\Millwright\Work\Planner;
+use ErnestDefoe\Millwright\Work\Finaliser;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -28,6 +32,8 @@ class CoreBridgeTest extends TestCase
     private string $dir;
 
     private ?Container $previous;
+
+    private ConnectionInterface $db;
 
     protected function setUp(): void
     {
@@ -81,27 +87,22 @@ class CoreBridgeTest extends TestCase
             $table->string('extension')->nullable();
         });
 
-        $container = new Container();
-        $container->instance(ConnectionInterface::class, $db);
-        Container::setInstance($container);
+        $this->db = $db;
     }
 
     private function bridge(): string
     {
-        $journal = new Journal(EnglishTranslator::make(), $this->dir.'/work/journal.jsonl');
         $php = new PhpBinary(EnglishTranslator::make(), PHP_BINARY, null, '', null, PHP_BINARY, 'cli', '');
 
-        $steps = new ComposerSteps(
-            EnglishTranslator::make(),
-            $this->dir.'/project',
-            $this->dir.'/work',
+        $run = Fakes::run(
+            $this->dir,
             (new ComposerRunner(EnglishTranslator::make(), $this->dir.'/project', __FILE__, $this->dir.'/home'))->withPhp($php),
-            new Fetcher(EnglishTranslator::make(), new \GuzzleHttp\Client(), $this->dir.'/work/staging'),
-            new Applier(EnglishTranslator::make(), $this->dir.'/project/vendor', $this->dir.'/work/staging', $this->dir.'/work/trash', $journal),
-            $journal,
             vendorPath: $this->dir.'/project/vendor',
+            forum: Fakes::forum($this->db),
         );
+        $http = new \GuzzleHttp\Client();
+        $planner = new Planner($run);
 
-        return (new \ReflectionMethod($steps, 'bridgeCore'))->invoke($steps);
+        return (new Finaliser($run, $planner, new SiteCheck($run, $http), $http))->bridgeCore();
     }
 }

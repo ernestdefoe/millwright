@@ -33,6 +33,7 @@ class Verdict
     /**
      * @param string $before 'ok' | 'down' | 'unchecked' — what was seen BEFORE
      * @param bool   $okNow  whether the site answers now
+     * @return self::NOT_JUDGED|self::HEALTHY|self::BROKEN_BY_THIS|self::ALREADY_BROKEN
      */
     public static function from(string $before, bool $okNow): string
     {

@@ -6,6 +6,7 @@ use ErnestDefoe\Millwright\Host\Capability;
 use ErnestDefoe\Millwright\Host\PhpBinary;
 use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Run\RunStore;
+use ErnestDefoe\Millwright\Work\Forum;
 use ErnestDefoe\Millwright\Work\PendingUndo;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 use Flarum\Extension\ExtensionManager;
@@ -20,10 +21,14 @@ use Psr\Http\Server\RequestHandlerInterface;
 /**
  * Everything the admin screen draws, in one read.
  *
- * Polled while a run is going, so it stays a read — it never advances
- * anything, never repairs anything, and never has a side effect. Mixing "tell me
- * the state" with "make something happen" is how a page refresh ends up
- * starting a second update.
+ * Polled while a run is going, so it never advances a run, never starts one
+ * and never repairs anything. Mixing "tell me the state" with "make something
+ * happen" is how a page refresh ends up starting a second update.
+ *
+ * One thing it does finish, because the admin already asked for it: the
+ * database half of an undo, which has to run on a request booted after the
+ * files were put back (see PendingUndo), and this is the request the page
+ * always makes next.
  */
 class StateController implements RequestHandlerInterface
 {
@@ -32,6 +37,7 @@ class StateController implements RequestHandlerInterface
         protected ExtensionManager $extensions,
         protected Paths $paths,
         protected RunStore $runs,
+        protected Forum $forum,
     ) {
     }
 
@@ -40,7 +46,7 @@ class StateController implements RequestHandlerInterface
         RequestUtil::getActor($request)->assertAdmin();
 
         $run = $this->runs->latest();
-        $undoError = PendingUndo::finish($this->translator, $run, $this->paths);
+        $undoError = PendingUndo::finish($this->translator, $run, $this->paths, $this->forum);
 
         $check = new UpdateCheck(StorageDir::of($this->paths->storage).'/updates.json');
         $cached = $check->current($this->paths->base.'/composer.lock');

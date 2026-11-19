@@ -8,6 +8,8 @@ use ErnestDefoe\Millwright\Run\RunStore;
 use ErnestDefoe\Millwright\Run\StepRunner;
 use ErnestDefoe\Millwright\Run\StepsFactory;
 use ErnestDefoe\Millwright\Work\ComposerStepsFactory;
+use ErnestDefoe\Millwright\Work\Forum;
+use GuzzleHttp\Client;
 use Flarum\Foundation\AbstractServiceProvider;
 use Flarum\Foundation\Config;
 use Flarum\Foundation\Paths;
@@ -77,7 +79,11 @@ class MillwrightServiceProvider extends AbstractServiceProvider
             return new ComposerStepsFactory(
                 $container->make(TranslatorInterface::class),
                 $container->make(Paths::class),
-                $container->make(Config::class)
+                $container->make(Config::class),
+                $container->make(Forum::class),
+                // Its own client, not a container binding: binding Guzzle's
+                // shared interface would hand every other extension this one.
+                new Client()
             );
         });
 

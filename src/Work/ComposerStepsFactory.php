@@ -8,7 +8,7 @@ use ErnestDefoe\Millwright\Run\Steps;
 use ErnestDefoe\Millwright\Run\StepsFactory;
 use Flarum\Foundation\Config;
 use Flarum\Foundation\Paths;
-use GuzzleHttp\Client;
+use GuzzleHttp\ClientInterface;
 use Flarum\Locale\TranslatorInterface;
 
 /**
@@ -35,6 +35,8 @@ class ComposerStepsFactory implements StepsFactory
         protected TranslatorInterface $translator,
         protected Paths $paths,
         protected Config $config,
+        protected Forum $forum,
+        protected ClientInterface $http,
     ) {
     }
 
@@ -64,26 +66,34 @@ class ComposerStepsFactory implements StepsFactory
         $workDir = new WorkDir($this->translator, $this->paths->storage, $runId);
         $journal = new Journal($this->translator, $workDir->journalPath());
 
-        return new ComposerSteps(
+        $composer = new ComposerRunner(
+            $this->translator,
+            $this->paths->base,
+            null,
+            $this->paths->storage.'/.composer',
+            (new \ErnestDefoe\Millwright\Host\PhpOverride($this->translator, $this->paths->storage))->get()
+        );
+
+        $run = new RunContext(
             $this->translator,
             $this->paths->base,
             $workDir->root(),
-            new ComposerRunner(
-                $this->translator,
-                $this->paths->base,
-                null,
-                $this->paths->storage.'/.composer',
-                (new \ErnestDefoe\Millwright\Host\PhpOverride($this->translator, $this->paths->storage))->get()
-            ),
-            new Fetcher($this->translator, new Client(), $workDir->staging(), $this->paths->base.'/auth.json'),
-            new Applier($this->translator, $this->paths->vendor, $workDir->staging(), $workDir->trash(), $journal),
+            $composer,
             $journal,
+            $this->forum,
             $workDir->requested(),
             $workDir->mode(),
             $this->paths->vendor,
             $this->paths->storage,
             $this->siteUrl(),
             $workDir->repin()
+        );
+
+        return ComposerSteps::for(
+            $run,
+            new Fetcher($this->translator, $this->http, $workDir->staging(), $this->paths->base.'/auth.json'),
+            new Applier($this->translator, $this->paths->vendor, $workDir->staging(), $workDir->trash(), $journal),
+            $this->http
         );
     }
 }

@@ -114,6 +114,11 @@ class StepJob extends AbstractJob
      * Otherwise the job dies, the run still says `running`, and every later
      * update is refused because something looks busy. Recording the failure means the admin
      * screen can show it and offer a rollback.
+     *
+     * The container is asked here because nothing else can supply these:
+     * Laravel calls failed() with the exception alone (no method injection,
+     * unlike handle()), and the constructor runs at dispatch time, so anything
+     * injected there would be serialized into the queue payload.
      */
     public function failed(\Throwable $e): void
     {

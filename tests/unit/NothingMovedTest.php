@@ -2,6 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Tests\Unit;
 
+use ErnestDefoe\Millwright\Tests\unit\Fakes;
+
 use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
 use ErnestDefoe\Millwright\Work\ComposerStepsFactory;
@@ -63,7 +65,7 @@ class NothingMovedTest extends TestCase
             'storage' => $this->dir.'/storage', 'vendor' => $this->dir.'/vendor',
         ]);
 
-        return (new ComposerStepsFactory(EnglishTranslator::make(), $paths, new Config(['url' => 'https://example.test'])))
+        return (new ComposerStepsFactory(EnglishTranslator::make(), $paths, new Config(['url' => 'https://example.test']), Fakes::forum(), new \GuzzleHttp\Client()))
             ->for('r1')->itemsFor('finalise', Run::start('r1', time()));
     }
 }
