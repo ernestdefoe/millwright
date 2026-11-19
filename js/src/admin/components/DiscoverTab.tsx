@@ -73,70 +73,9 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
   view() {
     return (
       <div className="Millwright-discover">
-        <form
-          className="Millwright-search"
-          onsubmit={(e: Event) => {
-            e.preventDefault();
+        {this.searchForm()}
 
-            /*
-             * Cancel the pending keystroke search first, or Return fires one
-             * search immediately and a second one 350ms later for the same
-             * query — two round trips and a list that redraws under the reader.
-             */
-            this.stopTyping();
-
-            if (submittedSearchPlan().search) this.search();
-          }}
-        >
-          <input
-            className="FormControl"
-            type="search"
-            placeholder={app.translator.trans('ernestdefoe-millwright.admin.sections.discover.search', {}, true)}
-            value={this.query}
-            oninput={(e: InputEvent) => {
-              this.query = (e.target as HTMLInputElement).value;
-              this.queueSearch();
-            }}
-          />
-          {/*
-           * Kept, and not decorative: it forces a search the typing rule
-           * declines — a one-character vendor prefix, or the same query again
-           * after an error.
-           */}
-          <Button className="Button Button--primary" type="submit" disabled={this.searching}>
-            {this.searching
-              ? app.translator.trans('ernestdefoe-millwright.admin.sections.discover.searching')
-              : app.translator.trans('ernestdefoe-millwright.admin.sections.discover.search_button')}
-          </Button>
-        </form>
-
-        {/*
-         * Under the search rather than as tabs: the tab row above is already the
-         * page's own navigation, and a second row of tabs reads as a level of it.
-         * A row of chips, so every category is visible without opening anything.
-         */}
-        <div
-          className="Millwright-chips"
-          role="radiogroup"
-          aria-label={app.translator.trans('ernestdefoe-millwright.admin.sections.discover.tabs.label', {}, true)}
-        >
-          {CATEGORIES.map((c) => (
-            <button
-              type="button"
-              role="radio"
-              aria-checked={this.category === c.id ? 'true' : 'false'}
-              className={'Millwright-chip' + (this.category === c.id ? ' is-on' : '')}
-              onclick={() => {
-                if (this.category === c.id) return;
-                this.category = c.id;
-                this.stopTyping();
-                this.search();
-              }}
-            >
-              {app.translator.trans(c.label)}
-            </button>
-          ))}
-        </div>
+        {this.categoryChips()}
 
         <div className="Millwright-searchNote">
           {this.core
@@ -172,6 +111,79 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
           </div>
         ) : null}
       </div>
+    );
+  }
+
+  searchForm() {
+    return (
+    <form
+      className="Millwright-search"
+      onsubmit={(e: Event) => {
+        e.preventDefault();
+
+        /*
+         * Cancel the pending keystroke search first, or Return fires one
+         * search immediately and a second one 350ms later for the same
+         * query — two round trips and a list that redraws under the reader.
+         */
+        this.stopTyping();
+
+        if (submittedSearchPlan().search) this.search();
+      }}
+    >
+      <input
+        className="FormControl"
+        type="search"
+        placeholder={app.translator.trans('ernestdefoe-millwright.admin.sections.discover.search', {}, true)}
+        value={this.query}
+        oninput={(e: InputEvent) => {
+          this.query = (e.target as HTMLInputElement).value;
+          this.queueSearch();
+        }}
+      />
+      {/*
+       * Kept, and not decorative: it forces a search the typing rule
+       * declines — a one-character vendor prefix, or the same query again
+       * after an error.
+       */}
+      <Button className="Button Button--primary" type="submit" disabled={this.searching}>
+        {this.searching
+          ? app.translator.trans('ernestdefoe-millwright.admin.sections.discover.searching')
+          : app.translator.trans('ernestdefoe-millwright.admin.sections.discover.search_button')}
+      </Button>
+    </form>
+    );
+  }
+
+  /**
+   * Under the search rather than as tabs: the tab row above is already the
+   * page's own navigation, and a second row of tabs reads as a level of it.
+   * A row of chips, so every category is visible without opening anything.
+   */
+  categoryChips() {
+    return (
+    <div
+      className="Millwright-chips"
+      role="radiogroup"
+      aria-label={app.translator.trans('ernestdefoe-millwright.admin.sections.discover.tabs.label', {}, true)}
+    >
+      {CATEGORIES.map((c) => (
+        <button
+          type="button"
+          role="radio"
+          aria-checked={this.category === c.id ? 'true' : 'false'}
+          className={'Millwright-chip' + (this.category === c.id ? ' is-on' : '')}
+          onclick={() => {
+            if (this.category === c.id) return;
+            this.category = c.id;
+            this.stopTyping();
+            this.search();
+          }}
+        >
+          {app.translator.trans(c.label)}
+        </button>
+      ))}
+    </div>
     );
   }
 

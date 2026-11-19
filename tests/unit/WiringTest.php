@@ -157,10 +157,31 @@ class WiringTest extends TestCase
 
         $root = dirname(__DIR__, 2).'/src';
 
-        foreach ([...glob($root.'/Api/Controller/*.php') ?: [], ...glob($root.'/Console/*.php') ?: []] as $file) {
+        foreach ([...glob($root.'/Api/Controller/*.php') ?: [], ...glob($root.'/Api/Controller/Config/*Controller.php') ?: [], ...glob($root.'/Console/*.php') ?: []] as $file) {
             $class = 'ErnestDefoe\\Millwright\\'.str_replace('/', '\\', substr($file, strlen($root) + 1, -4));
             $this->assertInstanceOf($class, $this->container->make($class), $class);
         }
+    }
+
+    /**
+     * One endpoint, one action: nothing dispatches on an `action` field in
+     * the body, and every route names a class that exists.
+     */
+    public function test_each_route_does_one_thing(): void
+    {
+        $root = dirname(__DIR__, 2);
+
+        foreach (glob($root.'/src/Api/Controller/{,Config/}*.php', GLOB_BRACE) ?: [] as $file) {
+            $this->assertStringNotContainsString("'action'", (string) file_get_contents($file), basename($file).' dispatches on an action field');
+        }
+
+        preg_match_all('/Controller\\\\([\\\\\w]+)::class/', (string) file_get_contents($root.'/extend.php'), $m);
+
+        foreach (array_unique($m[1]) as $class) {
+            $this->assertTrue(class_exists('ErnestDefoe\\Millwright\\Api\\Controller\\'.$class), "extend.php routes to a missing $class");
+        }
+
+        $this->assertGreaterThan(15, count(array_unique($m[1])));
     }
 
     public function test_the_steps_factory_resolves(): void

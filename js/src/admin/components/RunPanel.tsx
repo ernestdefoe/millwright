@@ -139,157 +139,184 @@ export default class RunPanel extends Component<RunPanelAttrs> {
     const failed = run.state === 'failed';
     const done = run.state === 'done';
     const rolled = run.state === 'rolled-back';
+    const ended = done || failed || rolled;
+
+    return (
+      <div className={'Millwright-run' + (failed ? ' Millwright-run--failed' : '')}>
+        {this.head(run, done, failed, rolled)}
+
+        {!ended ? this.phases(run) : null}
+        {!ended ? this.bar(run) : null}
+
+        {this.reason(run, failed, rolled)}
+        {this.notices(ended)}
+        {this.actions(run, done, rolled, failed)}
+        {this.log(run, failed || rolled)}
+      </div>
+    );
+  }
+
+  /** What the run is doing or did, and to which extensions. */
+  head(run: Run, done: boolean, failed: boolean, rolled: boolean) {
     const mode = ['install', 'remove'].includes(run.mode) ? run.mode : 'update';
     const target = this.target(run.packages || []);
 
     return (
-      <div className={'Millwright-run' + (failed ? ' Millwright-run--failed' : '')}>
-        <div className="Millwright-runHead">
-          <div>
-            <h3>
-              {done
-                ? app.translator.trans('ernestdefoe-millwright.admin.run.done')
-                : rolled
+      <div className="Millwright-runHead">
+        <div>
+          <h3>
+            {done
+              ? app.translator.trans('ernestdefoe-millwright.admin.run.done')
+              : rolled
                 ? app.translator.trans('ernestdefoe-millwright.admin.run.rolled_back')
                 : failed
-                ? app.translator.trans('ernestdefoe-millwright.admin.run.failed')
-                : target
-                ? app.translator.trans('ernestdefoe-millwright.admin.run.target.' + mode, { packages: target })
-                : app.translator.trans('ernestdefoe-millwright.admin.run.working')}
-            </h3>
-            {target && (done || failed || rolled) ? <div className="Millwright-runTarget">{target}</div> : null}
-          </div>
-          {this.attrs.driver ? <span className="Millwright-driver">{this.attrs.driver}</span> : null}
+                  ? app.translator.trans('ernestdefoe-millwright.admin.run.failed')
+                  : target
+                    ? app.translator.trans('ernestdefoe-millwright.admin.run.target.' + mode, { packages: target })
+                    : app.translator.trans('ernestdefoe-millwright.admin.run.working')}
+          </h3>
+          {target && (done || failed || rolled) ? <div className="Millwright-runTarget">{target}</div> : null}
         </div>
-
-        {!done && !failed && !rolled ? this.phases(run) : null}
-        {!done && !failed && !rolled ? this.bar(run) : null}
-
-        {failed ? (
-          <div className="Millwright-error">
-            <div className="Millwright-errorWhere">
-              {app.translator.trans('ernestdefoe-millwright.admin.run.failed_at', { step: whereLabel(run.errorStep) })}
-            </div>
-            <pre className="Millwright-errorText">{run.error}</pre>
-            {/*
-             * Offered on a FAILURE, not just on a finished run. The journal
-             * records each move before it is made, so a half-finished apply is
-             * exactly as reversible as a complete one — and this is the moment
-             * somebody most needs to know that.
-             */}
-            <Button className="Button" disabled={this.rollingBack} onclick={() => this.rollback()}>
-              {this.rollingBack
-                ? app.translator.trans('ernestdefoe-millwright.admin.run.rolling_back')
-                : app.translator.trans('ernestdefoe-millwright.admin.run.roll_back')}
-            </Button>
-          </div>
-        ) : null}
-
-        {/*
-         * A rolled-back run shows its reason too, and this used to be the
-         * one state that did not.
-         *
-         * When the admin pressed the button they knew why. Now a run can undo
-         * ITSELF — the site stopped answering and it put everything back — and
-         * "Rolled back" on its own leaves them with a forum that works, an
-         * update that vanished, and no idea which of the two is the problem.
-         * The sentence names the extension and the line.
-         *
-         * No Roll back button here: the tree is already correct, and offering
-         * to undo it again is the first thing a worried admin would press.
-         */}
-        {rolled && run.error ? (
-          <div className="Millwright-error">
-            <div className="Millwright-errorWhere">
-              {app.translator.trans('ernestdefoe-millwright.admin.run.failed_at', { step: whereLabel(run.errorStep) })}
-            </div>
-            <pre className="Millwright-errorText">{run.error}</pre>
-          </div>
-        ) : null}
-
-        {this.attrs.rollbackNote ? <div className="Millwright-next">{this.attrs.rollbackNote}</div> : null}
-
-        {this.misses > 2 && !done && !failed && !rolled ? (
-          <div className="Millwright-stall">
-            {/*
-             * Says WHICH problem. A 400 or 401 here is an expired session —
-             * the update is fine and a reload fixes the screen — and telling
-             * somebody "nothing has moved" instead sends them looking at the
-             * update.
-             */}
-            {this.outcome.message === 'unauthorised'
-              ? app.translator.trans('ernestdefoe-millwright.admin.run.poll_unauthorised')
-              : app.translator.trans('ernestdefoe-millwright.admin.run.poll_failing', { count: this.misses })}
-            {this.watching ? ' ' + app.translator.trans('ernestdefoe-millwright.admin.run.watching_only', {}, true) : ''}
-          </div>
-        ) : null}
-
-        {this.attrs.busy && !done && !failed && !rolled ? (
-          <div className="Millwright-stall">{app.translator.trans('ernestdefoe-millwright.admin.run.another_driver')}</div>
-        ) : null}
-
-        {/*
-         * Every one of these is silenced once the run has ended. "Nothing
-         * has moved for a couple of minutes" is true of a failed run and
-         * useless — it points somebody at a stall when the panel above already
-         * says exactly what went wrong.
-         */}
-        {this.attrs.stale && !done && !failed && !rolled ? (
-          <div className="Millwright-stall">{app.translator.trans('ernestdefoe-millwright.admin.run.nothing_moved')}</div>
-        ) : null}
-
-        {/*
-         * A FINISHED update can be undone too, and the screen used to
-         * offer that only on a failure. The endpoint, the journal and the
-         * trash all exist for exactly this — "it worked, and I wish it had
-         * not" is the rollback people actually need — so a button that only
-         * appears when something broke left the feature unreachable.
-         *
-         * But on a finished run it is the last resort, not the next step:
-         * Dismiss leads, and Undo is a quiet link after it. "Put everything
-         * back" sat first, as a full button, and read to a tester like a
-         * cleanup of leftover files (ClaudiusH, 2026-10-07).
-         */}
-        {done || rolled || failed ? (
-          <div className="Millwright-runActions">
-            <Button className="Button" onclick={() => this.attrs.ondismiss()}>
-              {app.translator.trans('ernestdefoe-millwright.admin.run.dismiss')}
-            </Button>
-            {/* The page still holds each changed extension's old admin code and
-                version until it reloads (ClaudiusH). */}
-            {done || rolled ? (
-              <Button
-                className="Button Button--link Millwright-undo"
-                title={app.translator.trans('ernestdefoe-millwright.admin.run.reload_page_why', {}, true)}
-                onclick={() => window.location.reload()}
-              >
-                {app.translator.trans('ernestdefoe-millwright.admin.run.reload_page')}
-              </Button>
-            ) : null}
-            {done ? (
-              <Button className="Button Button--link Millwright-undo" disabled={this.rollingBack} onclick={() => this.confirmRollback(run)}>
-                {this.rollingBack
-                  ? app.translator.trans('ernestdefoe-millwright.admin.run.rolling_back')
-                  : app.translator.trans('ernestdefoe-millwright.admin.run.roll_back')}
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-
-        {/*
-         * The step-by-step log, for the curious: the phases and the bar above
-         * already say what is happening (ClaudiusH, 2026-10-09). Open on a
-         * failure, where it is the evidence.
-         */}
-        <details className="Millwright-details" open={failed || rolled}>
-          <summary>{app.translator.trans('ernestdefoe-millwright.admin.run.details')}</summary>
-          <ol className="Millwright-log">
-            {(run.log || []).map((line, i) => (
-              <li key={i}>{line}</li>
-            ))}
-          </ol>
-        </details>
+        {this.attrs.driver ? <span className="Millwright-driver">{this.attrs.driver}</span> : null}
       </div>
+    );
+  }
+
+  /** Where it stopped and why: on a failure, and on a run that undid itself. */
+  reason(run: Run, failed: boolean, rolled: boolean) {
+    if (failed) {
+      return (
+        <div className="Millwright-error">
+          <div className="Millwright-errorWhere">
+            {app.translator.trans('ernestdefoe-millwright.admin.run.failed_at', { step: whereLabel(run.errorStep) })}
+          </div>
+          <pre className="Millwright-errorText">{run.error}</pre>
+          {/*
+           * Offered on a FAILURE, not just on a finished run. The journal
+           * records each move before it is made, so a half-finished apply is
+           * exactly as reversible as a complete one — and this is the moment
+           * somebody most needs to know that.
+           */}
+          <Button className="Button" disabled={this.rollingBack} onclick={() => this.rollback()}>
+            {this.rollingBack
+              ? app.translator.trans('ernestdefoe-millwright.admin.run.rolling_back')
+              : app.translator.trans('ernestdefoe-millwright.admin.run.roll_back')}
+          </Button>
+        </div>
+      );
+    }
+
+    /*
+     * A rolled-back run shows its reason too, and this used to be the
+     * one state that did not.
+     *
+     * When the admin pressed the button they knew why. Now a run can undo
+     * ITSELF — the site stopped answering and it put everything back — and
+     * "Rolled back" on its own leaves them with a forum that works, an
+     * update that vanished, and no idea which of the two is the problem.
+     * The sentence names the extension and the line.
+     *
+     * No Roll back button here: the tree is already correct, and offering
+     * to undo it again is the first thing a worried admin would press.
+     */
+    return rolled && run.error ? (
+      <div className="Millwright-error">
+        <div className="Millwright-errorWhere">
+          {app.translator.trans('ernestdefoe-millwright.admin.run.failed_at', { step: whereLabel(run.errorStep) })}
+        </div>
+        <pre className="Millwright-errorText">{run.error}</pre>
+      </div>
+    ) : null;
+  }
+
+  /** What else is true of a run still going: a stall, another driver, a note from an undo. */
+  notices(ended: boolean) {
+    return [
+      this.attrs.rollbackNote ? <div className="Millwright-next">{this.attrs.rollbackNote}</div> : null,
+      this.misses > 2 && !ended ? (
+        <div className="Millwright-stall">
+          {/*
+           * Says WHICH problem. A 400 or 401 here is an expired session —
+           * the update is fine and a reload fixes the screen — and telling
+           * somebody "nothing has moved" instead sends them looking at the
+           * update.
+           */}
+          {this.outcome.message === 'unauthorised'
+            ? app.translator.trans('ernestdefoe-millwright.admin.run.poll_unauthorised')
+            : app.translator.trans('ernestdefoe-millwright.admin.run.poll_failing', { count: this.misses })}
+          {this.watching ? ' ' + app.translator.trans('ernestdefoe-millwright.admin.run.watching_only', {}, true) : ''}
+        </div>
+      ) : null,
+      this.attrs.busy && !ended ? (
+        <div className="Millwright-stall">{app.translator.trans('ernestdefoe-millwright.admin.run.another_driver')}</div>
+      ) : null,
+      /*
+       * Every one of these is silenced once the run has ended. "Nothing
+       * has moved for a couple of minutes" is true of a failed run and
+       * useless — it points somebody at a stall when the panel above already
+       * says exactly what went wrong.
+       */
+      this.attrs.stale && !ended ? (
+        <div className="Millwright-stall">{app.translator.trans('ernestdefoe-millwright.admin.run.nothing_moved')}</div>
+      ) : null,
+    ];
+  }
+
+  /**
+   * A FINISHED update can be undone too, and the screen used to
+   * offer that only on a failure. The endpoint, the journal and the
+   * trash all exist for exactly this — "it worked, and I wish it had
+   * not" is the rollback people actually need — so a button that only
+   * appears when something broke left the feature unreachable.
+   *
+   * But on a finished run it is the last resort, not the next step:
+   * Dismiss leads, and Undo is a quiet link after it. "Put everything
+   * back" sat first, as a full button, and read to a tester like a
+   * cleanup of leftover files (ClaudiusH, 2026-10-07).
+   */
+  actions(run: Run, done: boolean, rolled: boolean, failed: boolean) {
+    return done || rolled || failed ? (
+      <div className="Millwright-runActions">
+        <Button className="Button" onclick={() => this.attrs.ondismiss()}>
+          {app.translator.trans('ernestdefoe-millwright.admin.run.dismiss')}
+        </Button>
+        {/* The page still holds each changed extension's old admin code and
+            version until it reloads (ClaudiusH). */}
+        {done || rolled ? (
+          <Button
+            className="Button Button--link Millwright-undo"
+            title={app.translator.trans('ernestdefoe-millwright.admin.run.reload_page_why', {}, true)}
+            onclick={() => window.location.reload()}
+          >
+            {app.translator.trans('ernestdefoe-millwright.admin.run.reload_page')}
+          </Button>
+        ) : null}
+        {done ? (
+          <Button className="Button Button--link Millwright-undo" disabled={this.rollingBack} onclick={() => this.confirmRollback(run)}>
+            {this.rollingBack
+              ? app.translator.trans('ernestdefoe-millwright.admin.run.rolling_back')
+              : app.translator.trans('ernestdefoe-millwright.admin.run.roll_back')}
+          </Button>
+        ) : null}
+      </div>
+    ) : null;
+  }
+
+  /**
+   * The step-by-step log, for the curious: the phases and the bar above
+   * already say what is happening (ClaudiusH, 2026-10-09). Open on a
+   * failure, where it is the evidence.
+   */
+  log(run: Run, open: boolean) {
+    return (
+      <details className="Millwright-details" open={open}>
+        <summary>{app.translator.trans('ernestdefoe-millwright.admin.run.details')}</summary>
+        <ol className="Millwright-log">
+          {(run.log || []).map((line, i) => (
+            <li key={i}>{line}</li>
+          ))}
+        </ol>
+      </details>
     );
   }
 
@@ -361,8 +388,8 @@ export default class RunPanel extends Component<RunPanelAttrs> {
           {total
             ? app.translator.trans('ernestdefoe-millwright.admin.run.working_on', { item, index: Math.min(run.index + 1, total), total })
             : run.phase === 'plan'
-            ? app.translator.trans('ernestdefoe-millwright.admin.run.working_out')
-            : null}
+              ? app.translator.trans('ernestdefoe-millwright.admin.run.working_out')
+              : null}
         </div>
       </div>
     );

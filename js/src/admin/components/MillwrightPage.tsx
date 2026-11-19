@@ -2,7 +2,7 @@ import app from 'flarum/admin/app';
 import type RequestError from 'flarum/common/utils/RequestError';
 import apiUrl from '../apiUrl';
 import { alertError, errorPayload, serverMessage } from '../errors';
-import { cardOffers, dismissalApplies, hidesPage, runIsLive, showingRun, sortForGrid } from '../runState';
+import { cardOffers, dismissalApplies, hidesPage, runIsLive, showingRun } from '../runState';
 import type {
   CheckPayload,
   Installed,
@@ -18,7 +18,6 @@ import type {
 } from '../types';
 import ExtensionPage, { type ExtensionPageAttrs } from 'flarum/admin/components/ExtensionPage';
 import LoadingIndicator from 'flarum/common/components/LoadingIndicator';
-import Link from 'flarum/common/components/Link';
 import Button from 'flarum/common/components/Button';
 import Alert from 'flarum/common/components/Alert';
 import type Mithril from 'mithril';
@@ -30,19 +29,15 @@ import DiscoverTab from './DiscoverTab';
 import CorePanel from './CorePanel';
 import SourcesTab from './SourcesTab';
 import HistoryTab from './HistoryTab';
+import ExtensionGrid from './ExtensionGrid';
+import CheckLine from './CheckLine';
+import PageTabs from './PageTabs';
+import extensionId from '../extensionId';
 
 /** This extension's own package: updating it means this page's code is out of date. */
 const SELF_PACKAGE = 'ernestdefoe/millwright';
 
-/** Flarum's id for an extension package, as core derives it (Extension::nameToId). */
-function extensionId(name: string): string {
-  const at = name.indexOf('/');
-  const pkg = at < 0 ? name : name.slice(at + 1);
-  return (at < 0 ? name : name.slice(0, at)) + '-' + pkg.replace(/flarum-ext-|flarum-/g, '');
-}
-
 type Tab = 'installed' | 'history' | 'discover' | 'sources' | 'host';
-type CheckAge = 'fresh' | 'recent' | 'overdue';
 
 export interface MillwrightPageAttrs extends ExtensionPageAttrs {
   /** The dashboard's update banner links here with ?tab=installed. */
@@ -246,32 +241,21 @@ export default class MillwrightPage extends ExtensionPage<MillwrightPageAttrs> {
           {this.showingRun() ? this.runPanel() : null}
 
           {this.hidesPage() ? null : (
-            <div className="Millwright-tabs" role="tablist">
-              {(
-                [
-                  { id: 'discover', label: app.translator.trans('ernestdefoe-millwright.admin.sections.discover.title'), badge: 0 },
-                  {
-                    id: 'installed',
-                    label: app.translator.trans('ernestdefoe-millwright.admin.sections.installed.title', { count: this.installed.length }),
-                    badge: this.updateCount(),
-                  },
-                  { id: 'history', label: app.translator.trans('ernestdefoe-millwright.admin.sections.queue.title'), badge: 0 },
-                  { id: 'sources', label: app.translator.trans('ernestdefoe-millwright.admin.composer.title'), badge: 0 },
-                  { id: 'host', label: app.translator.trans('ernestdefoe-millwright.admin.host.title'), badge: 0 },
-                ] as { id: Tab; label: Mithril.Children; badge: number }[]
-              ).map((tab) => (
-                <button
-                  key={tab.id}
-                  role="tab"
-                  aria-selected={this.tab === tab.id}
-                  className={'Millwright-tab' + (this.tab === tab.id ? ' is-active' : '')}
-                  onclick={() => (this.tab = tab.id)}
-                >
-                  {tab.label}
-                  {tab.badge > 0 ? <span className="Millwright-count">{tab.badge}</span> : null}
-                </button>
-              ))}
-            </div>
+            <PageTabs
+              active={this.tab}
+              tabs={[
+                { id: 'discover', label: app.translator.trans('ernestdefoe-millwright.admin.sections.discover.title'), badge: 0 },
+                {
+                  id: 'installed',
+                  label: app.translator.trans('ernestdefoe-millwright.admin.sections.installed.title', { count: this.installed.length }),
+                  badge: this.updateCount(),
+                },
+                { id: 'history', label: app.translator.trans('ernestdefoe-millwright.admin.sections.queue.title'), badge: 0 },
+                { id: 'sources', label: app.translator.trans('ernestdefoe-millwright.admin.composer.title'), badge: 0 },
+                { id: 'host', label: app.translator.trans('ernestdefoe-millwright.admin.host.title'), badge: 0 },
+              ]}
+              choose={(id: string) => (this.tab = id as Tab)}
+            />
           )}
 
           {this.hidesPage() ? null : this.tab === 'host' ? (
@@ -545,7 +529,13 @@ export default class MillwrightPage extends ExtensionPage<MillwrightPageAttrs> {
    */
   installedTab() {
     return [
-      this.checkLine(),
+      <CheckLine
+        updates={this.updates}
+        count={this.updateCount()}
+        coreNewer={this.coreHasUpdate()}
+        checking={this.checking}
+        check={() => this.checkNow()}
+      />,
       /*
        * Above the extensions, because it is the thing whose blast radius is
        * the whole forum. It is also the one panel that disables its own button —
@@ -559,7 +549,12 @@ export default class MillwrightPage extends ExtensionPage<MillwrightPageAttrs> {
         onnightly={() => this.start(['flarum/core'], 'update', false, true)}
       />,
       this.updateAll(),
-      this.grid(),
+      <ExtensionGrid
+        installed={this.installed}
+        starting={this.starting}
+        updateOne={(e: Installed) => (cardOffers(e).repin ? this.confirmRepin(e) : this.start([e.package]))}
+        removeOne={(e: Installed) => this.confirmRemove(e)}
+      />,
     ].filter(Boolean);
   }
 
@@ -576,91 +571,6 @@ export default class MillwrightPage extends ExtensionPage<MillwrightPageAttrs> {
 
   coreHasUpdate(): boolean {
     return !!this.updates.available?.['flarum/core'];
-  }
-
-  /**
-   * The count is always shown WITH its age and its blind spots. "1 newer
-   * version" is a claim; "1 newer version, checked 2 hours ago, 9 packages could
-   * not be checked" is the truth, and only the second lets somebody decide
-   * whether to believe it.
-   */
-  checkLine() {
-    const n = this.updateCount();
-    const uncheckable = (this.updates.uncheckable || []).length;
-    const tracking = (this.updates.tracking || []).length;
-    const age = this.checkAge();
-
-    // Never checked: there is no result to state, only the prompt (ClaudiusH, 2026-10-09:
-    // "up to date" beside "check for updates" contradicted itself).
-    const checkedAt = this.updates.checkedAt;
-
-    if (!checkedAt) {
-      return (
-        <div className="Millwright-checkline Millwright-checkline--overdue">
-          <p className="Millwright-checkPrompt">{app.translator.trans('ernestdefoe-millwright.admin.updater.check_overdue')}</p>
-          {this.checkButton(age)}
-        </div>
-      );
-    }
-
-    return (
-      <div className={'Millwright-checkline Millwright-checkline--' + age}>
-        {age === 'overdue' ? (
-          <p className="Millwright-checkPrompt">{app.translator.trans('ernestdefoe-millwright.admin.updater.check_overdue')}</p>
-        ) : null}
-        <span>
-          <b>
-            {n === 0 && !this.coreHasUpdate()
-              ? app.translator.trans('ernestdefoe-millwright.admin.updater.up_to_date')
-              : n === 0
-              ? app.translator.trans('ernestdefoe-millwright.admin.updater.core_newer')
-              : [
-                  app.translator.trans('ernestdefoe-millwright.admin.updater.some_newer', { count: n }),
-                  this.coreHasUpdate() ? ' ' + app.translator.trans('ernestdefoe-millwright.admin.updater.core_newer_too', {}, true) : '',
-                ]}
-          </b>{' '}
-          {app.translator.trans('ernestdefoe-millwright.admin.updater.last_update_checked_at', { when: this.ago(checkedAt) })}
-          {uncheckable > 0 ? ' ' + app.translator.trans('ernestdefoe-millwright.admin.updater.uncheckable', { count: uncheckable }, true) : ''}
-          {tracking > 0 ? ' ' + app.translator.trans('ernestdefoe-millwright.admin.updater.tracking', { count: tracking }, true) : ''}
-        </span>
-        {this.checkButton(age)}
-      </div>
-    );
-  }
-
-  /**
-   * How hard to ask, by how old the last check is (ClaudiusH, 2026-10-09):
-   * within the week, an ordinary button; older than that, or never, a primary
-   * button and a prompt that says why it matters. Always a button, never a
-   * link: it is the main action on the Installed tab (ClaudiusH, 2026-10-27).
-   */
-  checkAge(): CheckAge {
-    const at = this.updates.checkedAt;
-    if (!at) return 'overdue';
-
-    const days = (Date.now() / 1000 - at) / 86400;
-
-    return days < 1 ? 'fresh' : days <= 7 ? 'recent' : 'overdue';
-  }
-
-  checkButton(age: CheckAge) {
-    const className = age === 'overdue' ? 'Button Button--primary' : 'Button';
-
-    return (
-      <Button
-        className={className + ' Millwright-checkNow'}
-        disabled={this.checking}
-        // A spinner as well as the words: "Checking…" alone reads as a label.
-        icon={this.checking ? 'fas fa-circle-notch fa-spin' : undefined}
-        onclick={() => this.checkNow()}
-      >
-        {this.checking
-          ? app.translator.trans('ernestdefoe-millwright.admin.updater.checking')
-          : age === 'fresh'
-          ? app.translator.trans('ernestdefoe-millwright.admin.updater.check_now')
-          : app.translator.trans('ernestdefoe-millwright.admin.updater.check_for_updates')}
-      </Button>
-    );
   }
 
   checkNow() {
@@ -682,143 +592,5 @@ export default class MillwrightPage extends ExtensionPage<MillwrightPageAttrs> {
         this.checking = false;
         m.redraw();
       });
-  }
-
-  ago(unix: number): string {
-    const mins = Math.max(1, Math.round(Date.now() / 1000 - unix) / 60);
-    if (mins < 60) return app.translator.trans('ernestdefoe-millwright.admin.updater.ago.minutes', { count: Math.round(mins) }, true);
-    const hours = Math.round(mins / 60);
-    return hours < 48
-      ? app.translator.trans('ernestdefoe-millwright.admin.updater.ago.hours', { count: hours }, true)
-      : app.translator.trans('ernestdefoe-millwright.admin.updater.ago.days', { count: Math.round(hours / 24) }, true);
-  }
-
-  /** Anything with a newer version first — that is what somebody came to see. */
-  sorted(): Installed[] {
-    return sortForGrid(this.installed);
-  }
-
-  cardTop(e: Installed) {
-    return [
-      <div
-        className="Millwright-icon"
-        style={{ background: e.icon?.backgroundColor || 'var(--primary-color)', color: e.icon?.color || 'var(--button-primary-color)' }}
-      >
-        {e.library ? <i className="fas fa-box" /> : e.icon?.name ? <i className={e.icon.name} /> : e.name.charAt(0)}
-      </div>,
-      <div className="Millwright-cardId">
-        <div className="Millwright-name">{e.name}</div>
-        <div className="Millwright-pkg">{e.library ? app.translator.trans('ernestdefoe-millwright.admin.extensions.library') : e.package}</div>
-      </div>,
-    ];
-  }
-
-  grid() {
-    return (
-      <div className="Millwright-grid">
-        {this.sorted().map((e) => (
-          <div className={'Millwright-card' + (cardOffers(e).highlight ? ' Millwright-card--update' : '')} key={e.id}>
-            {/* The extension's own settings page, the way the Extensions list opens it. A library has none. */}
-            {e.library ? (
-              <div className="Millwright-cardTop" title={app.translator.trans('ernestdefoe-millwright.admin.extensions.library_why', {}, true)}>
-                {this.cardTop(e)}
-              </div>
-            ) : (
-              <Link
-                className="Millwright-cardTop"
-                href={app.route('extension', { id: e.id })}
-                title={app.translator.trans('ernestdefoe-millwright.admin.extensions.open_settings', { name: e.name }, true)}
-              >
-                {this.cardTop(e)}
-              </Link>
-            )}
-
-            {/*
-             * One place for the version: the pair when there is a newer one,
-             * else the version installed. The border and the Update button
-             * already say an update is waiting — a badge saying it a third
-             * time only crowded the package name out (ClaudiusH, 2026-10-13).
-             */}
-            <div className="Millwright-meta">
-              <span>
-                {e.update
-                  ? `${e.update.from} → ${e.update.to}`
-                  : e.version || app.translator.trans('ernestdefoe-millwright.admin.extensions.version_unknown')}
-              </span>
-            </div>
-
-            <div className="Millwright-foot">
-              {/*
-               * Always two groups: what is TRUE about this extension on the
-               * left, what you can DO with it on the right. The foot is
-               * space-between, so loose chips get pushed to opposite ends of
-               * the card and read as unrelated — which is what "enabled" and
-               * "local checkout" did.
-               */}
-              <span className="Millwright-tags">
-                {e.library ? (
-                  <span
-                    className="Millwright-tag Millwright-tag--muted"
-                    title={app.translator.trans('ernestdefoe-millwright.admin.extensions.library_why', {}, true)}
-                  >
-                    {app.translator.trans('ernestdefoe-millwright.admin.extensions.library')}
-                  </span>
-                ) : (
-                  <span className={'Millwright-tag' + (e.enabled ? ' Millwright-tag--ok' : '')}>
-                    {e.enabled
-                      ? app.translator.trans('ernestdefoe-millwright.admin.extensions.enabled')
-                      : app.translator.trans('ernestdefoe-millwright.admin.extensions.disabled')}
-                  </span>
-                )}
-                {e.pathInstall ? (
-                  <span
-                    className="Millwright-tag Millwright-tag--muted"
-                    title={app.translator.trans('ernestdefoe-millwright.admin.extensions.path_install_why', {}, true)}
-                  >
-                    {app.translator.trans('ernestdefoe-millwright.admin.extensions.path_install')}
-                  </span>
-                ) : null}
-              </span>
-
-              <span className="Millwright-actions">
-                {/*
-                 * What the update gives you, from the release on GitHub: not
-                 * every author posts changelogs anywhere else.
-                 */}
-                {e.update?.notes ? (
-                  <Button
-                    className="Button Button--link Button--sm Millwright-notes"
-                    onclick={() =>
-                      app.modal.show(() => import('./ReleaseNotesModal'), {
-                        name: e.name,
-                        package: e.package,
-                        from: e.update!.from,
-                        to: e.update!.to,
-                      })
-                    }
-                  >
-                    {app.translator.trans('ernestdefoe-millwright.admin.extensions.learn_more')}
-                  </Button>
-                ) : null}
-                {cardOffers(e).update ? (
-                  <Button
-                    className="Button Button--primary Button--sm"
-                    disabled={this.starting}
-                    onclick={() => (cardOffers(e).repin ? this.confirmRepin(e) : this.start([e.package]))}
-                  >
-                    {app.translator.trans('ernestdefoe-millwright.admin.extensions.update')}
-                  </Button>
-                ) : null}
-                {cardOffers(e).remove ? (
-                  <Button className="Button Button--sm" disabled={this.starting} onclick={() => this.confirmRemove(e)}>
-                    {app.translator.trans('ernestdefoe-millwright.admin.extensions.remove')}
-                  </Button>
-                ) : null}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
   }
 }

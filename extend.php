@@ -82,21 +82,27 @@ return [
         ->post('/millwright/step', 'millwright.step', Controller\StepController::class)
         ->post('/millwright/rollback', 'millwright.rollback', Controller\RollbackController::class)
         /*
-         * GET is a dry run (what a prune would free, for the confirm); POST
-         * prunes or saves the retention settings. Kept off /state, which is
-         * polled during an update — sizing the trash walks every file in it.
+         * GET is a dry run (what a prune would free, for the confirm); the
+         * other two prune or save the retention settings. Kept off /state,
+         * which is polled during an update — sizing the trash walks every
+         * file in it.
          */
         ->get('/millwright/trash', 'millwright.trash', Controller\TrashController::class)
-        ->post('/millwright/trash', 'millwright.trash.act', Controller\TrashController::class)
+        ->post('/millwright/trash/prune', 'millwright.trash.prune', Controller\PruneTrashController::class)
+        ->patch('/millwright/trash/settings', 'millwright.trash.settings', Controller\TrashSettingsController::class)
         ->get('/millwright/core', 'millwright.core', Controller\CoreController::class)
         /*
-         * One route, both verbs. GET reports where Composer looks, what it
-         * accepts and which hosts have a credential — never the credentials
-         * themselves. POST carries an action. Keeping them together means there
-         * is one place that asserts admin for all of it.
+         * GET reports where Composer looks, what it accepts and which hosts
+         * have a credential — never the credentials themselves. Each change
+         * has its own route, and each answers with the settings as they now are.
          */
         ->get('/millwright/config', 'millwright.config', Controller\ConfigController::class)
-        ->post('/millwright/config', 'millwright.config.set', Controller\ConfigController::class)
+        ->post('/millwright/config/repositories', 'millwright.config.repositories.add', Controller\Config\AddRepositoryController::class)
+        ->delete('/millwright/config/repositories', 'millwright.config.repositories.remove', Controller\Config\RemoveRepositoryController::class)
+        ->patch('/millwright/config/stability', 'millwright.config.stability', Controller\Config\StabilityController::class)
+        ->post('/millwright/config/auth', 'millwright.config.auth.set', Controller\Config\SetAuthController::class)
+        ->delete('/millwright/config/auth', 'millwright.config.auth.remove', Controller\Config\RemoveAuthController::class)
+        ->patch('/millwright/config/php', 'millwright.config.php', Controller\Config\PhpPathController::class)
         /*
          * Discovery is two endpoints, and the split is deliberate. `discover`
          * is one call to Packagist's search. `compat` is one call PER PACKAGE to

@@ -100,7 +100,9 @@ export default class TrashPanel extends Component {
           onsubmit={(e: Event) => {
             e.preventDefault();
             this.send(
-              { action: 'settings', keepDays: this.keepDays, keepRuns: this.keepRuns },
+              'PATCH',
+              '/settings',
+              { keepDays: this.keepDays, keepRuns: this.keepRuns },
               app.translator.trans('ernestdefoe-millwright.admin.trash.saved', {}, true)
             );
           }}
@@ -153,7 +155,7 @@ export default class TrashPanel extends Component {
       message: app.translator.trans('ernestdefoe-millwright.admin.trash.confirm', { count: d.removeCount, size: human(d.removeBytes) }),
       confirmText: app.translator.trans('ernestdefoe-millwright.admin.trash.prune'),
       danger: true,
-      onconfirm: () => this.send({ action: 'prune' }),
+      onconfirm: () => this.send('POST', '/prune', {}),
     });
   }
 
@@ -169,14 +171,14 @@ export default class TrashPanel extends Component {
   }
 
   /** A change: its outcome is announced through Flarum's alerts, and a refusal in the server's own words. */
-  send(body: Record<string, string>, doneText?: string) {
+  send(method: 'POST' | 'PATCH', path: string, body: Record<string, string>, doneText?: string) {
     this.busy = true;
     m.redraw();
 
     app
       .request<TrashPayload>({
-        method: 'POST',
-        url: apiUrl() + '/millwright/trash',
+        method,
+        url: apiUrl() + '/millwright/trash' + path,
         body,
         // A refusal here names the run it is protecting.
         errorHandler: alertError('ernestdefoe-millwright.admin.trash.failed'),

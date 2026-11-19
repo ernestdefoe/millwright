@@ -120,9 +120,9 @@ export default class HostPanel extends Component<HostPanelAttrs> {
 
     app
       .request({
-        method: 'POST',
-        url: apiUrl() + '/millwright/config',
-        body: { action: 'set-php', path },
+        method: 'PATCH',
+        url: apiUrl() + '/millwright/config/php',
+        body: { path },
         // The refusal names what is wrong with the path, in the server's words.
         errorHandler: alertError('ernestdefoe-millwright.admin.composer.config_failed'),
       })

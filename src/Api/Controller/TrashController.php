@@ -4,10 +4,8 @@ namespace ErnestDefoe\Millwright\Api\Controller;
 
 use ErnestDefoe\Millwright\Prune\Pruner;
 use ErnestDefoe\Millwright\Prune\Retention;
-use Flarum\Foundation\ValidationException;
 use Flarum\Http\RequestUtil;
 use Flarum\Locale\TranslatorInterface;
-use Illuminate\Support\Arr;
 use Laminas\Diactoros\Response\JsonResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -17,10 +15,10 @@ use Psr\Http\Server\RequestHandlerInterface;
  * The rollback copies: how much room they take, what a prune would free, and
  * the button that does it.
  *
- * GET is a dry run and nothing else. It is what the screen's confirm quotes,
+ * This is a dry run and nothing else. It is what the screen's confirm quotes,
  * so the number somebody agrees to is the number the same rule just computed —
- * and the POST recomputes it rather than trusting a list the browser sends
- * back. The browser asks WHETHER to prune, never WHAT.
+ * and PruneTrashController recomputes it rather than trusting a list the
+ * browser sends back. The browser asks WHETHER to prune, never WHAT.
  *
  * Not part of /millwright/state on purpose: that is polled every couple of
  * seconds during an update, and sizing the trash walks every file in it.
@@ -38,19 +36,18 @@ class TrashController implements RequestHandlerInterface
     {
         RequestUtil::getActor($request)->assertAdmin();
 
+        return $this->report(null);
+    }
+
+    /**
+     * What is kept, and what a prune would free now.
+     *
+     * @param array<string,mixed>|null $pruned the summary of a prune just made, if one was
+     */
+    protected function report(?array $pruned): ResponseInterface
+    {
         $retention = $this->retention;
         $pruner = $this->pruner;
-        $pruned = null;
-
-        if ($request->getMethod() === 'POST') {
-            $body = (array) $request->getParsedBody();
-
-            match ((string) Arr::get($body, 'action', '')) {
-                'prune' => $pruned = $pruner->prune('admin'),
-                'settings' => $retention->save(Arr::get($body, 'keepDays'), Arr::get($body, 'keepRuns')),
-                default => throw new ValidationException(['action' => $this->translator->trans('ernestdefoe-millwright.api.unknown_action')]),
-            };
-        }
 
         $plan = $pruner->plan(true);
 

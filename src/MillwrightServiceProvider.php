@@ -44,6 +44,11 @@ class MillwrightServiceProvider extends AbstractServiceProvider
             StorageDir::of($storage($container)).'/updates.json'
         ));
 
+        $this->container->bind(\ErnestDefoe\Millwright\Host\PhpOverride::class, fn ($container) => new \ErnestDefoe\Millwright\Host\PhpOverride(
+            $container->make(TranslatorInterface::class),
+            $storage($container)
+        ));
+
         $this->container->bind(\ErnestDefoe\Millwright\Host\Capability::class, fn ($container) => new \ErnestDefoe\Millwright\Host\Capability(
             $container->make(TranslatorInterface::class),
             $container->make(Paths::class)->base,

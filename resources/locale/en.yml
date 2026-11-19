@@ -545,7 +545,6 @@ ernestdefoe-millwright:
   # Messages the server writes: API errors, run notes, host checks.
   # Translated on the server through Flarum's translator.
   api:
-    unknown_action: "Unknown action."
     apply:
       unknown_change: "The plan asks for \"{op}\" on {package}, which is not something Millwright knows how to do."
       nothing_staged: "Nothing is staged for {package} at {path}, so it was not swapped in. Downloading has to finish first."
