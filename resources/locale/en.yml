@@ -603,6 +603,7 @@ ernestdefoe-millwright:
       pinned_to: "{package} is pinned to {constraint}"
       registered: "Composer now knows about the change"
       reread_done: "The web server has re-read the new files."
+      nothing_requested: "This run does not say which packages to change, so nothing was planned. Start the update again."
       plan_write_failed: "Could not write the plan at {path}. Check that storage/ is writable."
       resolve_failed: "Composer could not work out an update:"
       resolve_gave_up: "Nothing was changed. {how} — {attempts} times in a row, before Composer finished working out this update."
@@ -672,6 +673,7 @@ ernestdefoe-millwright:
       waiting_request: "Waiting for a fresh request so the new code is the code that runs."
     fs:
       create_failed: "Could not create {path}"
+      write_failed: "Could not write {path}. Check that storage/ is writable and the disk is not full."
       read_failed: "Could not read {path}."
     git:
       add_token: "Add a GitHub token under Millwright → Sources so Composer reads these through GitHub's API instead: {urls}."

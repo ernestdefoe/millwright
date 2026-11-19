@@ -2,6 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use RuntimeException;
+use ErnestDefoe\Millwright\Host\StateFile;
 use ErnestDefoe\Millwright\Config\AuthTokens;
 use ErnestDefoe\Millwright\Config\JsonFile;
 use ErnestDefoe\Millwright\Config\Repositories;
@@ -185,13 +187,9 @@ class UpdateCheck
          * screen said "Not checked yet" with no Update button anywhere, over a
          * check that had just reported eleven newer versions.
          */
-        $dir = dirname($this->cachePath);
-
-        if (! is_dir($dir)) {
-            @mkdir($dir, 0775, true);
+        if (! StateFile::write($this->cachePath, $result)) {
+            $result['unsaved'] = true;
         }
-
-        @file_put_contents($this->cachePath, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
         return $result;
     }
@@ -250,11 +248,19 @@ class UpdateCheck
             return null;
         }
 
-        return $this->refreshWith($this->interesting($packages, self::directRequires($base.'/composer.json')), new PrivateIndex(
+        $result = $this->refreshWith($this->interesting($packages, self::directRequires($base.'/composer.json')), new PrivateIndex(
             new Repositories($translator, new JsonFile($translator, $base.'/composer.json')),
             new AuthTokens($translator, new JsonFile($translator, $base.'/auth.json')),
             $web->client(),
         ), $web, $seconds);
+
+        // A check nobody can read back would leave the screen at "Not checked
+        // yet" over a check that had just found updates.
+        if (! empty($result['unsaved'])) {
+            throw new RuntimeException($translator->trans('ernestdefoe-millwright.api.fs.write_failed', ['path' => $this->cachePath]));
+        }
+
+        return $result;
     }
 
     /** @return array<string,mixed> */

@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Prune;
 
+use ErnestDefoe\Millwright\Host\StateFile;
 /**
  * How long rollback copies are kept, and when they were last tidied.
  *
@@ -31,9 +32,10 @@ class Retention
         ];
     }
 
-    public function save(mixed $keepDays, mixed $keepRuns): void
+    /** False when the settings could not be written, so the screen does not say "saved". */
+    public function save(mixed $keepDays, mixed $keepRuns): bool
     {
-        $this->write('retention.json', [
+        return StateFile::write($this->dir.'/retention.json', [
             'keepDays' => $this->clamp($keepDays, 3650, self::DEFAULT_DAYS),
             'keepRuns' => $this->clamp($keepRuns, 1000, self::DEFAULT_RUNS),
         ]);
@@ -50,7 +52,8 @@ class Retention
     /** @param array<string,mixed> $summary */
     public function recordPrune(array $summary): void
     {
-        $this->write('pruned.json', $summary);
+        // Only feeds the screen's "last tidied" line; the prune itself is done.
+        StateFile::write($this->dir.'/pruned.json', $summary);
     }
 
     /**
@@ -79,22 +82,5 @@ class Retention
         $data = is_file($path) ? json_decode((string) file_get_contents($path), true) : null;
 
         return is_array($data) ? $data : [];
-    }
-
-    /** @param array<string,mixed> $data */
-    protected function write(string $file, array $data): void
-    {
-        if (! is_dir($this->dir)) {
-            @mkdir($this->dir, 0775, true);
-        }
-
-        $path = $this->dir.'/'.$file;
-        $temp = $path.'.'.bin2hex(random_bytes(4)).'.tmp';
-
-        file_put_contents($temp, json_encode($data, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
-
-        if (! @rename($temp, $path)) {
-            @unlink($temp);
-        }
     }
 }

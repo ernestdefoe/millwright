@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Discover;
 
+use ErnestDefoe\Millwright\Host\StateFile;
 /**
  * A small on-disk cache with an expiry.
  *
@@ -35,11 +36,8 @@ class Cache
     /** @param array<string,mixed> $value */
     public function put(string $key, array $value): void
     {
-        if (! is_dir($this->dir) && ! @mkdir($this->dir, 0775, true) && ! is_dir($this->dir)) {
-            return;
-        }
-
-        @file_put_contents($this->path($key), json_encode($value));
+        // A cache that cannot be written only means Packagist is asked again.
+        StateFile::write($this->path($key), $value);
     }
 
     protected function path(string $key): string

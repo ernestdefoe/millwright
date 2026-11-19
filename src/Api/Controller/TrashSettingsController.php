@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use RuntimeException;
 use Flarum\Http\RequestUtil;
 use Illuminate\Support\Arr;
 use Psr\Http\Message\ResponseInterface;
@@ -15,7 +16,9 @@ class TrashSettingsController extends TrashController
         RequestUtil::getActor($request)->assertAdmin();
 
         $body = (array) $request->getParsedBody();
-        $this->retention->save(Arr::get($body, 'keepDays'), Arr::get($body, 'keepRuns'));
+        if (! $this->retention->save(Arr::get($body, 'keepDays'), Arr::get($body, 'keepRuns'))) {
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fs.write_failed', ['path' => 'storage/millwright/retention.json']));
+        }
 
         return $this->report(null);
     }

@@ -3,6 +3,7 @@
 namespace ErnestDefoe\Millwright\Work;
 
 use ErnestDefoe\Millwright\Exception\RefusedException;
+use ErnestDefoe\Millwright\Host\StateFile;
 use Flarum\Database\Migrator;
 use Flarum\Extension\ExtensionManager;
 use Flarum\Locale\TranslatorInterface;
@@ -53,10 +54,12 @@ class MigrationLedger
         $path = $this->workDir.'/migrations.before.json';
 
         if (! is_file($path)) {
-            file_put_contents($path, json_encode([
+            // Without it, every migration the forum has ever run would look
+            // new afterwards, and undo would try to reverse them all.
+            StateFile::writeOrFail($path, [
                 'migrations' => $this->current($db),
                 'version' => $db->table('settings')->where('key', 'version')->value('value'),
-            ]));
+            ], $this->translator);
         }
     }
 
@@ -66,6 +69,10 @@ class MigrationLedger
      */
     public function after(ConnectionInterface $db, ExtensionManager $extensions, string $vendorPath, LoggerInterface $log): array
     {
+        if (! is_file($this->workDir.'/migrations.before.json')) {
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fs.read_failed', ['path' => $this->workDir.'/migrations.before.json']));
+        }
+
         $before = $this->beforeState();
         $seen = array_flip(array_map(fn ($m) => $m['extension'].'|'.$m['migration'], $before['migrations']));
         $added = array_values(array_filter(
@@ -105,11 +112,8 @@ class MigrationLedger
     protected function record(array $migrations): void
     {
         $path = $this->workDir.'/migrations.json';
-        $tmp = $path.'.'.bin2hex(random_bytes(3));
 
-        if (@file_put_contents($tmp, json_encode($migrations, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) === false || ! @rename($tmp, $path)) {
-            @unlink($tmp);
-
+        if (! StateFile::write($path, $migrations)) {
             throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.migrations.ledger_write_failed', ['path' => $path]));
         }
     }

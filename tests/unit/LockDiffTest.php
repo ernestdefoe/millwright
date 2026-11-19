@@ -115,37 +115,4 @@ class LockDiffTest extends TestCase
         $this->assertArrayNotHasKey('a/local', $sources);
     }
 
-    public function test_it_says_why_each_package_is_in_the_plan(): void
-    {
-        // "You asked for this" and "something you asked for needs it" are
-        // different, and that difference is why anyone reads the screen.
-        $after = ['packages' => [
-            ['name' => 'fof/pwa', 'version' => '2.0.0', 'require' => ['psr/clock' => '^1.0']],
-            ['name' => 'psr/clock', 'version' => '1.0.0'],
-        ]];
-
-        $diff = new LockDiff();
-        $changes = [
-            new Change(Change::REPLACE, 'fof/pwa', '1.0.0', '2.0.0'),
-            new Change(Change::ADD, 'psr/clock', null, '1.0.0'),
-        ];
-
-        $reasons = $diff->reasons($changes, $after, ['fof/pwa']);
-
-        $this->assertSame('you asked for this', $reasons['fof/pwa']);
-        $this->assertSame('required by fof/pwa', $reasons['psr/clock']);
-    }
-
-    public function test_something_it_cannot_attribute_says_so_rather_than_guessing(): void
-    {
-        $after = ['packages' => [['name' => 'a/mystery', 'version' => '1.0.0']]];
-
-        $reasons = (new LockDiff())->reasons(
-            [new Change(Change::ADD, 'a/mystery', null, '1.0.0')],
-            $after,
-            ['a/other']
-        );
-
-        $this->assertSame('pulled in by this update', $reasons['a/mystery']);
-    }
 }

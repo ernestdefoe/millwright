@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Run;
 
+use ErnestDefoe\Millwright\Host\StateFile;
 /**
  * What changed on this forum, and when: the list an app store shows as
  * "recently updated" (ClaudiusH's idea, 2026-10-07).
@@ -45,12 +46,13 @@ class History
             'migrations' => count($migrations) ?: (int) ($previous['migrations'] ?? 0),
         ]);
 
-        $path = $this->path();
-        $tmp = $path.'.'.bin2hex(random_bytes(4)).'.tmp';
-        @mkdir(dirname($path), 0775, true);
-
-        if (@file_put_contents($tmp, json_encode(array_slice($entries, 0, self::LIMIT), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) !== false) {
-            @rename($tmp, $path) || @unlink($tmp);
+        /*
+         * The run itself is already saved, so a history that cannot be written
+         * must not fail it: logged instead, and the Recent updates tab simply
+         * lacks the line.
+         */
+        if (! StateFile::write($this->path(), array_slice($entries, 0, self::LIMIT))) {
+            error_log('[millwright] could not write the update history at '.$this->path());
         }
     }
 

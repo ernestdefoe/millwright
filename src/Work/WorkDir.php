@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Host\StateFile;
 use ErnestDefoe\Millwright\Host\StorageDir;
 use Flarum\Locale\TranslatorInterface;
 use RuntimeException;
@@ -77,7 +78,9 @@ class WorkDir
      */
     public function remember(array $packages, string $mode = 'update', array $repin = []): void
     {
-        file_put_contents($this->root().'/requested.json', json_encode([
+        // A run that cannot remember what it was asked for must not start: an
+        // empty package list would make the resolve update the whole site.
+        StateFile::writeOrFail($this->root().'/requested.json', [
             'mode' => in_array($mode, ['install', 'remove'], true) ? $mode : 'update',
             'packages' => array_values($packages),
             /*
@@ -88,7 +91,7 @@ class WorkDir
              * refreshed since.
              */
             'repin' => $repin,
-        ]));
+        ], $this->translator);
     }
 
     /**

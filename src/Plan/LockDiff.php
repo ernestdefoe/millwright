@@ -87,61 +87,6 @@ class LockDiff
         return $out;
     }
 
-    /**
-     * A one-line reason each package is in the plan.
-     *
-     * "Because you asked for it" and "because something you asked for needs
-     * it" are different, and the difference is the whole reason somebody reads
-     * this screen. Anything that cannot be attributed says so rather than
-     * inventing a plausible cause.
-     *
-     * @param list<Change> $changes
-     * @param array<string,mixed> $after
-     * @param list<string> $requested packages the user actually asked to change
-     * @return array<string,string>
-     */
-    public function reasons(array $changes, array $after, array $requested): array
-    {
-        $requires = [];
-
-        foreach ($this->packages($after) as $package) {
-            $requires[(string) $package['name']] = array_keys((array) ($package['require'] ?? []));
-        }
-
-        $reasons = [];
-
-        foreach ($changes as $change) {
-            if (in_array($change->package, $requested, true)) {
-                $reasons[$change->package] = 'you asked for this';
-                continue;
-            }
-
-            $blamed = null;
-
-            foreach ($requested as $want) {
-                if (in_array($change->package, $requires[$want] ?? [], true)) {
-                    $blamed = $want;
-                    break;
-                }
-            }
-
-            if ($blamed === null) {
-                foreach ($requires as $who => $needs) {
-                    if ($who !== $change->package && in_array($change->package, $needs, true)) {
-                        $blamed = $who;
-                        break;
-                    }
-                }
-            }
-
-            $reasons[$change->package] = $blamed === null
-                ? 'pulled in by this update'
-                : 'required by '.$blamed;
-        }
-
-        return $reasons;
-    }
-
     /** @return array<string,string> package => version */
     protected function index(array $lock): array
     {

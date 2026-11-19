@@ -3,6 +3,7 @@
 namespace ErnestDefoe\Millwright\Work;
 
 use ErnestDefoe\Millwright\Apply\Tree;
+use ErnestDefoe\Millwright\Host\StateFile;
 use ErnestDefoe\Millwright\Config\JsonFile;
 use ErnestDefoe\Millwright\Plan\Change;
 use ErnestDefoe\Millwright\Plan\LockDiff;
@@ -44,6 +45,12 @@ class Planner
     public function resolve(): string
     {
         $run = $this->run;
+
+        // `composer update` with no package names updates everything. A run
+        // that lost its list must stop here, not update the whole site.
+        if ($run->requested === []) {
+            throw new RuntimeException($run->translator->trans('ernestdefoe-millwright.api.composer.nothing_requested'));
+        }
 
         /*
          * Saved BEFORE Composer is allowed to rewrite them, and used by the
@@ -161,15 +168,12 @@ class Planner
         $diff = new LockDiff();
         $changes = $diff->between($before, $after);
 
-        $written = file_put_contents($run->workDir.'/plan.json', json_encode([
-            'changes' => array_map(fn (Change $c) => $c->toArray(), $changes),
-            'sources' => $diff->sources($after),
-            'reasons' => $diff->reasons($changes, $after, $run->requested),
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-
         // Every later phase reads the plan; one that was not written would
         // read as "nothing to do" and finish a run that changed composer.lock.
-        if ($written === false) {
+        if (! StateFile::write($run->workDir.'/plan.json', [
+            'changes' => array_map(fn (Change $c) => $c->toArray(), $changes),
+            'sources' => $diff->sources($after),
+        ])) {
             throw new RuntimeException($run->translator->trans('ernestdefoe-millwright.api.composer.plan_write_failed', ['path' => $run->workDir.'/plan.json']));
         }
 
