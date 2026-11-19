@@ -3,7 +3,6 @@
 namespace ErnestDefoe\Millwright\Api\Controller;
 
 use ErnestDefoe\Millwright\Config\AuthTokens;
-use ErnestDefoe\Millwright\Config\JsonFile;
 use ErnestDefoe\Millwright\Config\Repositories;
 use ErnestDefoe\Millwright\Config\Stability;
 use ErnestDefoe\Millwright\Host\PhpOverride;
@@ -32,6 +31,9 @@ class ConfigController implements RequestHandlerInterface
     public function __construct(
         protected TranslatorInterface $translator,
         protected Paths $paths,
+        protected Repositories $repositories,
+        protected Stability $stability,
+        protected AuthTokens $auth,
     ) {
     }
 
@@ -71,23 +73,23 @@ class ConfigController implements RequestHandlerInterface
          * a hostname" is actionable, "invalid input" is not.
          */
         match ($action) {
-            'add-repository' => $this->repositories()->add(
+            'add-repository' => $this->repositories->add(
                 (string) Arr::get($body, 'type', 'vcs'),
                 (string) Arr::get($body, 'url', ''),
                 Arr::get($body, 'name')
             ),
-            'remove-repository' => $this->repositories()->remove((string) Arr::get($body, 'url', '')),
-            'set-stability' => $this->stability()->set(
+            'remove-repository' => $this->repositories->remove((string) Arr::get($body, 'url', '')),
+            'set-stability' => $this->stability->set(
                 (string) Arr::get($body, 'minimumStability', 'stable'),
                 (bool) Arr::get($body, 'preferStable', true)
             ),
-            'set-auth' => $this->auth()->set(
+            'set-auth' => $this->auth->set(
                 (string) Arr::get($body, 'kind', ''),
                 (string) Arr::get($body, 'host', ''),
                 (string) Arr::get($body, 'secret', ''),
                 Arr::get($body, 'username')
             ),
-            'remove-auth' => $this->auth()->remove(
+            'remove-auth' => $this->auth->remove(
                 (string) Arr::get($body, 'kind', ''),
                 (string) Arr::get($body, 'host', '')
             ),
@@ -100,16 +102,16 @@ class ConfigController implements RequestHandlerInterface
     /** @return array<string,mixed> */
     protected function state(): array
     {
-        $stability = $this->stability();
+        $stability = $this->stability;
         $current = $stability->current();
 
         return [
-            'repositories' => $this->repositories()->all(),
+            'repositories' => $this->repositories->all(),
             'stability' => $current + [
                 'levels' => Stability::LEVELS,
             ],
             'auth' => [
-                'stored' => $this->auth()->all(),
+                'stored' => $this->auth->all(),
                 'kinds' => AuthTokens::KINDS,
                 'path' => 'auth.json',
             ],
@@ -122,20 +124,5 @@ class ConfigController implements RequestHandlerInterface
              */
             'note' => $this->translator->trans('ernestdefoe-millwright.api.config.takes_effect_next_time'),
         ];
-    }
-
-    protected function repositories(): Repositories
-    {
-        return new Repositories($this->translator, new JsonFile($this->translator, $this->paths->base.'/composer.json'));
-    }
-
-    protected function stability(): Stability
-    {
-        return new Stability($this->translator, new JsonFile($this->translator, $this->paths->base.'/composer.json'));
-    }
-
-    protected function auth(): AuthTokens
-    {
-        return new AuthTokens($this->translator, new JsonFile($this->translator, $this->paths->base.'/auth.json'));
     }
 }

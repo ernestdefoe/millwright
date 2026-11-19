@@ -26,6 +26,61 @@ class MillwrightServiceProvider extends AbstractServiceProvider
         $this->registerRuns();
         $this->registerSteps();
         $this->registerHttp();
+        $this->registerSite();
+    }
+
+    /**
+     * The forum's own files and settings, as the screens and commands read
+     * them: Composer's config, the host check, the update check's cache and
+     * the trash. Bound, not shared: each is a thin view over files that change
+     * under it, so every request gets one that reads them fresh.
+     */
+    protected function registerSite(): void
+    {
+        $storage = fn ($container) => $container->make(Paths::class)->storage;
+        $json = fn ($container, string $file) => new \ErnestDefoe\Millwright\Config\JsonFile($container->make(TranslatorInterface::class), $container->make(Paths::class)->base.'/'.$file);
+
+        $this->container->bind(\ErnestDefoe\Millwright\Work\UpdateCheck::class, fn ($container) => new \ErnestDefoe\Millwright\Work\UpdateCheck(
+            StorageDir::of($storage($container)).'/updates.json'
+        ));
+
+        $this->container->bind(\ErnestDefoe\Millwright\Host\Capability::class, fn ($container) => new \ErnestDefoe\Millwright\Host\Capability(
+            $container->make(TranslatorInterface::class),
+            $container->make(Paths::class)->base,
+            \ErnestDefoe\Millwright\Host\PhpBinary::forStorage($container->make(TranslatorInterface::class), $storage($container)),
+            $storage($container).'/.composer'
+        ));
+
+        $this->container->bind(\ErnestDefoe\Millwright\Prune\Retention::class, fn ($container) => new \ErnestDefoe\Millwright\Prune\Retention(
+            StorageDir::of($storage($container))
+        ));
+
+        $this->container->bind(\ErnestDefoe\Millwright\Prune\Pruner::class, fn ($container) => new \ErnestDefoe\Millwright\Prune\Pruner(
+            $container->make(TranslatorInterface::class),
+            StorageDir::of($storage($container)),
+            $container->make(\ErnestDefoe\Millwright\Prune\Retention::class)
+        ));
+
+        $this->container->bind(\ErnestDefoe\Millwright\Config\Repositories::class, fn ($container) => new \ErnestDefoe\Millwright\Config\Repositories(
+            $container->make(TranslatorInterface::class),
+            $json($container, 'composer.json')
+        ));
+
+        $this->container->bind(\ErnestDefoe\Millwright\Config\Stability::class, fn ($container) => new \ErnestDefoe\Millwright\Config\Stability(
+            $container->make(TranslatorInterface::class),
+            $json($container, 'composer.json')
+        ));
+
+        $this->container->bind(\ErnestDefoe\Millwright\Work\ReleaseNotes::class, fn ($container) => new \ErnestDefoe\Millwright\Work\ReleaseNotes(
+            StorageDir::of($storage($container)).'/release-notes',
+            $container->make(\ErnestDefoe\Millwright\Config\AuthTokens::class),
+            $container->make(\ErnestDefoe\Millwright\Host\Web::class)->client()
+        ));
+
+        $this->container->bind(\ErnestDefoe\Millwright\Config\AuthTokens::class, fn ($container) => new \ErnestDefoe\Millwright\Config\AuthTokens(
+            $container->make(TranslatorInterface::class),
+            $json($container, 'auth.json')
+        ));
     }
 
     /**

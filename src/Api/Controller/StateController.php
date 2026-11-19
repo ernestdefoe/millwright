@@ -3,8 +3,6 @@
 namespace ErnestDefoe\Millwright\Api\Controller;
 
 use ErnestDefoe\Millwright\Host\Capability;
-use ErnestDefoe\Millwright\Host\PhpBinary;
-use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Run\RunStore;
 use ErnestDefoe\Millwright\Work\Forum;
 use ErnestDefoe\Millwright\Work\PendingUndo;
@@ -38,6 +36,8 @@ class StateController implements RequestHandlerInterface
         protected Paths $paths,
         protected RunStore $runs,
         protected Forum $forum,
+        protected UpdateCheck $check,
+        protected Capability $capability,
     ) {
     }
 
@@ -48,11 +48,11 @@ class StateController implements RequestHandlerInterface
         $run = $this->runs->latest();
         $undoError = PendingUndo::finish($this->translator, $run, $this->paths, $this->forum);
 
-        $check = new UpdateCheck(StorageDir::of($this->paths->storage).'/updates.json');
+        $check = $this->check;
         $cached = $check->current($this->paths->base.'/composer.lock');
 
         return new JsonResponse([
-            'host' => (new Capability($this->translator, $this->paths->base, PhpBinary::forStorage($this->translator, $this->paths->storage), $this->paths->storage.'/.composer'))->report(),
+            'host' => $this->capability->report(),
             'installed' => $this->installed($cached['updates'] ?? []),
             'run' => $this->runs->present($run),
             'undoError' => $undoError,

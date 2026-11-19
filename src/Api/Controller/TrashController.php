@@ -2,10 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
-use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Prune\Pruner;
 use ErnestDefoe\Millwright\Prune\Retention;
-use Flarum\Foundation\Paths;
 use Flarum\Foundation\ValidationException;
 use Flarum\Http\RequestUtil;
 use Flarum\Locale\TranslatorInterface;
@@ -31,7 +29,8 @@ class TrashController implements RequestHandlerInterface
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        protected Paths $paths,
+        protected Pruner $pruner,
+        protected Retention $retention,
     ) {
     }
 
@@ -39,9 +38,8 @@ class TrashController implements RequestHandlerInterface
     {
         RequestUtil::getActor($request)->assertAdmin();
 
-        $dir = StorageDir::of($this->paths->storage);
-        $retention = new Retention($dir);
-        $pruner = new Pruner($this->translator, $dir, $retention);
+        $retention = $this->retention;
+        $pruner = $this->pruner;
         $pruned = null;
 
         if ($request->getMethod() === 'POST') {

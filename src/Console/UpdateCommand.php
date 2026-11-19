@@ -69,6 +69,8 @@ class UpdateCommand extends AbstractCommand
         protected RunStore $runs,
         protected StepRunner $runner,
         protected Web $web,
+        protected UpdateCheck $updates,
+        protected Capability $capability,
     ) {
         parent::__construct();
     }
@@ -203,7 +205,7 @@ class UpdateCommand extends AbstractCommand
             return 1;
         }
 
-        if ((new Capability($this->translator, $this->paths->base, \ErnestDefoe\Millwright\Host\PhpBinary::forStorage($this->translator, $this->paths->storage), $this->paths->storage.'/.composer'))->resolveTier() === Capability::NONE) {
+        if ($this->capability->resolveTier() === Capability::NONE) {
             $this->error('This host does not have enough memory for Composer to work out what an update involves. '
                 .'Nothing was started. Ask your host to raise memory_limit to 256 MB and try again.');
 
@@ -542,7 +544,7 @@ class UpdateCommand extends AbstractCommand
 
     protected function check(): UpdateCheck
     {
-        return new UpdateCheck($this->storagePath('updates.json'));
+        return $this->updates;
     }
 
     protected function storagePath(string $file): string

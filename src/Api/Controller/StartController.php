@@ -47,6 +47,7 @@ class StartController implements RequestHandlerInterface
         protected Application $app,
         protected Packagist $packagist,
         protected Web $web,
+        protected Capability $capability,
     ) {
     }
 
@@ -154,7 +155,6 @@ class StartController implements RequestHandlerInterface
             }
         }
 
-        $capability = new Capability($this->translator, $this->paths->base, \ErnestDefoe\Millwright\Host\PhpBinary::forStorage($this->translator, $this->paths->storage), $this->paths->storage.'/.composer');
 
         if ($packages === []) {
             throw new ValidationException(['packages' => $this->translator->trans('ernestdefoe-millwright.api.start.nothing_selected')]);
@@ -168,7 +168,7 @@ class StartController implements RequestHandlerInterface
             throw new RefusedException($refusal, 'cannot_remove_package');
         }
 
-        if ($capability->resolveTier() === Capability::NONE) {
+        if ($this->capability->resolveTier() === Capability::NONE) {
             throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.start.not_enough_memory'), 'not_enough_memory');
         }
 

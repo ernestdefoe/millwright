@@ -2,10 +2,6 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
-use ErnestDefoe\Millwright\Host\Web;
-use ErnestDefoe\Millwright\Config\AuthTokens;
-use ErnestDefoe\Millwright\Config\JsonFile;
-use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Work\ReleaseNotes;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 use Flarum\Foundation\Paths;
@@ -26,7 +22,8 @@ class ReleaseNotesController implements RequestHandlerInterface
     public function __construct(
         protected TranslatorInterface $translator,
         protected Paths $paths,
-        protected Web $web,
+        protected UpdateCheck $check,
+        protected ReleaseNotes $releaseNotes,
     ) {
     }
 
@@ -35,15 +32,11 @@ class ReleaseNotesController implements RequestHandlerInterface
         RequestUtil::getActor($request)->assertAdmin();
 
         $package = (string) ($request->getQueryParams()['package'] ?? '');
-        $updates = (new UpdateCheck(StorageDir::of($this->paths->storage).'/updates.json'))
+        $updates = $this->check
             ->current($this->paths->base.'/composer.lock')['updates'] ?? [];
 
         $notes = isset($updates[$package])
-            ? (new ReleaseNotes(
-                StorageDir::of($this->paths->storage).'/release-notes',
-                new AuthTokens($this->translator, new JsonFile($this->translator, $this->paths->base.'/auth.json')),
-                $this->web->client(),
-            ))->between($updates[$package])
+            ? $this->releaseNotes->between($updates[$package])
             : null;
 
         if ($notes === null) {

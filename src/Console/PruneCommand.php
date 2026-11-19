@@ -2,11 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Console;
 
-use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Prune\Pruner;
-use ErnestDefoe\Millwright\Prune\Retention;
 use Flarum\Console\AbstractCommand;
-use Flarum\Foundation\Paths;
 use Flarum\Locale\TranslatorInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Throwable;
@@ -25,7 +22,7 @@ class PruneCommand extends AbstractCommand
 {
     public function __construct(
         protected TranslatorInterface $translator,
-        protected Paths $paths,
+        protected Pruner $pruner,
     ) {
         parent::__construct();
     }
@@ -39,8 +36,7 @@ class PruneCommand extends AbstractCommand
 
     protected function fire(): int
     {
-        $dir = StorageDir::of($this->paths->storage);
-        $pruner = new Pruner($this->translator, $dir, new Retention($dir));
+        $pruner = $this->pruner;
 
         try {
             if ($this->input->getOption('dry-run')) {

@@ -460,7 +460,15 @@ class UpdateCommandTest extends TestCase
             public function __construct(Paths $paths, RunStore $runs, StepRunner $runner, callable $recheck)
             {
                 $this->recheckWith = $recheck;
-                parent::__construct(EnglishTranslator::make(), $paths, $runs, $runner, new \ErnestDefoe\Millwright\Host\Web(new \GuzzleHttp\Client()));
+                parent::__construct(
+                    EnglishTranslator::make(),
+                    $paths,
+                    $runs,
+                    $runner,
+                    new \ErnestDefoe\Millwright\Host\Web(new \GuzzleHttp\Client()),
+                    new \ErnestDefoe\Millwright\Work\UpdateCheck(\ErnestDefoe\Millwright\Host\StorageDir::of($paths->storage).'/updates.json'),
+                    new \ErnestDefoe\Millwright\Host\Capability(EnglishTranslator::make(), $paths->base, \ErnestDefoe\Millwright\Host\PhpBinary::forStorage(EnglishTranslator::make(), $paths->storage), $paths->storage.'/.composer'),
+                );
             }
 
             protected function recheck(): void

@@ -138,6 +138,30 @@ class WiringTest extends TestCase
         $this->assertFalse($this->container->bound(\GuzzleHttp\ClientInterface::class));
     }
 
+    /**
+     * Every endpoint and command is built by the container, with nothing
+     * made by hand inside it. A missing binding fails here, not on a forum.
+     */
+    public function test_every_controller_and_command_resolves(): void
+    {
+        foreach ([
+            \Flarum\Foundation\Application::class,
+            \Flarum\Formatter\Formatter::class,
+            \Flarum\Frontend\AssetManager::class,
+            \Flarum\Locale\LocaleManager::class,
+            \Flarum\Settings\SettingsRepositoryInterface::class,
+        ] as $abstract) {
+            $this->container->instance($abstract, $this->createStub($abstract));
+        }
+
+        $root = dirname(__DIR__, 2).'/src';
+
+        foreach ([...glob($root.'/Api/Controller/*.php') ?: [], ...glob($root.'/Console/*.php') ?: []] as $file) {
+            $class = 'ErnestDefoe\\Millwright\\'.str_replace('/', '\\', substr($file, strlen($root) + 1, -4));
+            $this->assertInstanceOf($class, $this->container->make($class), $class);
+        }
+    }
+
     public function test_the_steps_factory_resolves(): void
     {
         $this->assertInstanceOf(StepsFactory::class, $this->container->make(StepsFactory::class));
