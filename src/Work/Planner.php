@@ -6,6 +6,7 @@ use ErnestDefoe\Millwright\Apply\Tree;
 use ErnestDefoe\Millwright\Config\JsonFile;
 use ErnestDefoe\Millwright\Plan\Change;
 use ErnestDefoe\Millwright\Plan\LockDiff;
+use ErnestDefoe\Millwright\Plan\PackageName;
 use ErnestDefoe\Millwright\Run\NotYet;
 use RuntimeException;
 
@@ -416,12 +417,8 @@ class Planner
                 continue;
             }
 
-            /*
-             * A constraint with no wildcard, caret or tilde admits exactly one
-             * version, so a newer one can never satisfy it. Ranges are left out:
-             * those genuinely can be "already newest".
-             */
-            if (preg_match('/^v?\d+\.\d+\.\d+/', $constraint) && ! preg_match('/[\^~*|]|\s-\s/', $constraint)) {
+            // Only an exact pin can explain it; a range genuinely can be "already newest".
+            if (PackageName::isExactPin($constraint)) {
                 $pinned[] = $translator->trans('ernestdefoe-millwright.api.composer.pinned_to', ['package' => $package, 'constraint' => $constraint]);
             }
         }

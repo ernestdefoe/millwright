@@ -72,8 +72,6 @@ class WorkDir
      *        for ones being added, 'remove' to take one out. The difference
      *        decides which Composer command the plan phase runs, and it has to
      *        survive the request that chose it.
-     */
-    /**
      * @param array<string,string> $repin package => the exact version its
      *        requirement should be raised to, for packages the site has pinned
      */

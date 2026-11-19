@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use ErnestDefoe\Millwright\Plan\PackageName;
 use Composer\Semver\VersionParser;
 use ErnestDefoe\Millwright\Config\JsonFile;
 use ErnestDefoe\Millwright\Config\Stability;
@@ -43,7 +44,7 @@ class CompatController implements RequestHandlerInterface
 
         $names = array_values(array_filter(
             (array) Arr::get((array) $request->getParsedBody(), 'packages', []),
-            fn ($n) => is_string($n) && preg_match('#^[a-z0-9]([_.-]?[a-z0-9]+)*/[a-z0-9](([_.]|-{1,2})?[a-z0-9]+)*$#', $n)
+            fn ($n) => is_string($n) && PackageName::valid($n)
         ));
 
         if ($names === []) {

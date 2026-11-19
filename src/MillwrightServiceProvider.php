@@ -21,12 +21,20 @@ class MillwrightServiceProvider extends AbstractServiceProvider
 {
     public function register(): void
     {
-        /*
-         * A CLI update asking the web server to drop its compiled code; see
-         * Opcache::requestWebReset(). bootstrap/web-reset.php takes it before any
-         * extension boots; this covers a site whose storage is not where that
-         * file looks, and is not a second stat everywhere else.
-         */
+        $this->honourWebReset();
+        $this->registerRuns();
+        $this->registerSteps();
+        $this->registerHttp();
+    }
+
+    /**
+     * A CLI update asking the web server to drop its compiled code; see
+     * Opcache::requestWebReset(). bootstrap/web-reset.php takes it before any
+     * extension boots; this covers a site whose storage is not where that
+     * file looks, and is not a second stat everywhere else.
+     */
+    protected function honourWebReset(): void
+    {
         if (PHP_SAPI !== 'cli') {
             $storage = $this->container->make(Paths::class)->storage;
 
@@ -34,7 +42,11 @@ class MillwrightServiceProvider extends AbstractServiceProvider
                 \ErnestDefoe\Millwright\Host\Opcache::honourWebReset($storage);
             }
         }
+    }
 
+    /** Where runs are kept, who drives them, and the lock that keeps two drivers apart. */
+    protected function registerRuns(): void
+    {
         $this->container->singleton(RunStore::class, function ($container) {
             /*
              * Under storage/, which is already writable, already excluded from
@@ -52,6 +64,27 @@ class MillwrightServiceProvider extends AbstractServiceProvider
             );
         });
 
+        /*
+         * The lock directory is what stops two drivers doing the same item.
+         * On a forum with a queue, the admin page polling and a worker WILL run
+         * at once — without this they both read the same index and a package is
+         * applied twice.
+         */
+        $this->container->singleton(StepRunner::class, function ($container) {
+            $storage = $container->make(Paths::class)->storage;
+
+            return new StepRunner(
+                $container->make(TranslatorInterface::class),
+                $container->make(RunStore::class),
+                $container->make(StepsFactory::class),
+                fn () => time(),
+                StorageDir::of($storage).'/locks'
+            );
+        });
+    }
+
+    protected function registerSteps(): void
+    {
         /*
          * Bound as a FACTORY, never as the work for "the current run".
          *
@@ -86,12 +119,19 @@ class MillwrightServiceProvider extends AbstractServiceProvider
         });
 
         $this->container->singleton(StepsFactory::class, fn ($container) => $container->make(ComposerStepsFactory::class));
+    }
 
+    protected function registerHttp(): void
+    {
         /*
          * The HTTP client for Millwright's own classes only. A plain binding of
          * Guzzle's shared ClientInterface would hand this one to every other
          * extension that asks for it.
          */
+        $this->container->when(\ErnestDefoe\Millwright\Host\Web::class)
+            ->needs(\GuzzleHttp\ClientInterface::class)
+            ->give(Client::class);
+
         // One search cache under storage/, shared by Find, the compatibility
         // check and the start-time refusal of a replaced package.
         $this->container->singleton(\ErnestDefoe\Millwright\Discover\Packagist::class, function ($container) {
@@ -101,28 +141,6 @@ class MillwrightServiceProvider extends AbstractServiceProvider
                 $container->make(TranslatorInterface::class),
                 new \ErnestDefoe\Millwright\Discover\Cache(StorageDir::of($container->make(Paths::class)->storage).'/packagist'),
                 fn (string $url) => $web->get($url)
-            );
-        });
-
-        $this->container->when(\ErnestDefoe\Millwright\Host\Web::class)
-            ->needs(\GuzzleHttp\ClientInterface::class)
-            ->give(Client::class);
-
-        /*
-         * The lock directory is what stops two drivers doing the same item.
-         * On a forum with a queue, the admin page polling and a worker WILL run
-         * at once — without this they both read the same index and a package is
-         * applied twice.
-         */
-        $this->container->singleton(StepRunner::class, function ($container) {
-            $storage = $container->make(Paths::class)->storage;
-
-            return new StepRunner(
-                $container->make(TranslatorInterface::class),
-                $container->make(RunStore::class),
-                $container->make(StepsFactory::class),
-                fn () => time(),
-                StorageDir::of($storage).'/locks'
             );
         });
     }

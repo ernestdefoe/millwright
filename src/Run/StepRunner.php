@@ -249,44 +249,10 @@ class StepRunner
                 return $this->leavePhase($run);
             }
 
-            try {
-                $note = $steps->doItem($phase, $item, $run);
-            } catch (Reverted $reverted) {
-                /*
-                 * The step has already put the tree back; all that is left is
-                 * to record it as such. Deliberately NOT the ordinary failure
-                 * path, which would leave the screen offering a rollback of a
-                 * tree that is already correct.
-                 */
-                $run = $run->revertedAfter(
-                    $reverted->getMessage(),
-                    "$phase → $item",
-                    [
-                        $this->failedNote("$phase → $item", $reverted->getMessage()),
-                        $this->translator->trans('ernestdefoe-millwright.api.run.put_back', ['undone' => $this->undoneList($reverted->undone)]),
-                    ],
-                    $this->now()
-                );
-                $this->store->save($run);
+            $outcome = $this->doItem($steps, $run, $item);
 
-                return $run;
-            } catch (NotYet $waiting) {
-                /*
-                 * Not done, not failed — and the index does NOT move.
-                 *
-                 * A step that has done everything it can but whose effect is
-                 * not live yet used to have no way to say so, so it said "done"
-                 * and put the caveat in the log. The run then went green while
-                 * the site was still serving code that did not match its own
-                 * database. Every driver calls step() again on its own, so
-                 * staying on the item costs nothing.
-                 */
-                $this->waiting = true;
-                $this->needsWeb = $waiting instanceof NeedsWebRequest;
-                $run = $run->waiting($this->now(), $waiting->getMessage());
-                $this->store->save($run);
-
-                return $run;
+            if ($outcome instanceof Run) {
+                return $outcome;
             }
 
             /*
@@ -295,7 +261,7 @@ class StepRunner
              * doItem must be idempotent: repeating work is recoverable, skipping
              * it silently is not.
              */
-            $run = $run->advanced($this->now(), $note);
+            $run = $run->advanced($this->now(), $outcome);
             $this->store->save($run);
 
             if ($run->index >= $run->total()) {
@@ -306,6 +272,53 @@ class StepRunner
         } catch (Throwable $e) {
             $where = $item === null ? "$phase (planning)" : "$phase → $item";
             $run = $run->failed($e->getMessage(), $where, $this->now(), $this->failedNote($where, $e->getMessage()));
+            $this->store->save($run);
+
+            return $run;
+        }
+    }
+
+    /**
+     * One item's work: the line for the log, or the run as it now stands when
+     * the item undid itself or is waiting on something.
+     */
+    protected function doItem(Steps $steps, Run $run, string $item): string|Run|null
+    {
+        try {
+            return $steps->doItem($run->phase, $item, $run);
+        } catch (Reverted $reverted) {
+            /*
+             * The step has already put the tree back; all that is left is
+             * to record it as such. Deliberately NOT the ordinary failure
+             * path, which would leave the screen offering a rollback of a
+             * tree that is already correct.
+             */
+            $run = $run->revertedAfter(
+                $reverted->getMessage(),
+                "{$run->phase} → $item",
+                [
+                    $this->failedNote("{$run->phase} → $item", $reverted->getMessage()),
+                    $this->translator->trans('ernestdefoe-millwright.api.run.put_back', ['undone' => $this->undoneList($reverted->undone)]),
+                ],
+                $this->now()
+            );
+            $this->store->save($run);
+
+            return $run;
+        } catch (NotYet $waiting) {
+            /*
+             * Not done, not failed — and the index does NOT move.
+             *
+             * A step that has done everything it can but whose effect is
+             * not live yet used to have no way to say so, so it said "done"
+             * and put the caveat in the log. The run then went green while
+             * the site was still serving code that did not match its own
+             * database. Every driver calls step() again on its own, so
+             * staying on the item costs nothing.
+             */
+            $this->waiting = true;
+            $this->needsWeb = $waiting instanceof NeedsWebRequest;
+            $run = $run->waiting($this->now(), $waiting->getMessage());
             $this->store->save($run);
 
             return $run;

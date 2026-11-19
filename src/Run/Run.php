@@ -137,8 +137,9 @@ class Run
      * A failure records WHICH STEP failed, not just that something did.
      * "Has been attempted too many times" is the anti-example: true, useless,
      * and three layers away from the cause.
+     *
+     * @param string $note the log line saying so
      */
-    /** @param string $note the log line saying so */
     public function failed(string $error, string $step, int $now, string $note): self
     {
         return $this->copy([

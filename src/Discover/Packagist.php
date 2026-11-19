@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Discover;
 
+use ErnestDefoe\Millwright\Plan\PackageName;
 use Flarum\Locale\TranslatorInterface;
 
 /**
@@ -244,7 +245,7 @@ class Packagist
         $body = ($this->get)("https://raw.githubusercontent.com/{$m[1]}/{$m[2]}/{$ref}/composer.json");
         $real = strtolower((string) (json_decode((string) $body, true)['name'] ?? ''));
 
-        return preg_match('#^[a-z0-9]([_.-]?[a-z0-9]+)*/[a-z0-9](([_.]|-{1,2})?[a-z0-9]+)*$#', $real) && $real !== strtolower($name)
+        return PackageName::valid($real) && $real !== strtolower($name)
             ? $real
             : null;
     }

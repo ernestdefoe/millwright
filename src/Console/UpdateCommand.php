@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Console;
 
+use ErnestDefoe\Millwright\Plan\PackageName;
 use ErnestDefoe\Millwright\Host\Web;
 use ErnestDefoe\Millwright\Host\Capability;
 use ErnestDefoe\Millwright\Host\StorageDir;
@@ -99,12 +100,45 @@ class UpdateCommand extends AbstractCommand
             return $this->resume();
         }
 
-        $named = array_values(array_filter(array_map('strval', (array) $this->input->getArgument('packages'))));
-        $all = (bool) $this->input->getOption('all');
-
         if ($this->input->getOption('nightly')) {
             return $this->nightly();
         }
+
+        $named = $this->packagesNamed();
+
+        if (is_int($named)) {
+            return $named;
+        }
+
+        if (($code = $this->refuseToStart($named)) !== null) {
+            return $code;
+        }
+
+        $repin = $this->repinFor($named);
+
+        if (is_int($repin)) {
+            return $repin;
+        }
+
+        $id = 'r'.date('Ymd-His').'-'.bin2hex(random_bytes(3));
+
+        (new WorkDir($this->translator, $this->paths->storage, $id))->create()->remember($named, 'update', $repin);
+
+        $this->info('Updating '.implode(', ', $named));
+
+        return $this->pump($this->runner->begin($id));
+    }
+
+    /**
+     * The packages to update, from the arguments or --all, each checked to be
+     * a package name; or the exit code when there is nothing to start.
+     *
+     * @return list<string>|int
+     */
+    protected function packagesNamed(): array|int
+    {
+        $named = array_values(array_filter(array_map('strval', (array) $this->input->getArgument('packages'))));
+        $all = (bool) $this->input->getOption('all');
 
         if ($all && $named !== []) {
             $this->error('Name the packages, or pass --all. Both together is ambiguous, so nothing was started.');
@@ -138,13 +172,25 @@ class UpdateCommand extends AbstractCommand
 
         foreach ($named as $package) {
             // The only value here that reaches a command line.
-            if (! preg_match('#^[a-z0-9]([_.-]?[a-z0-9]+)*/[a-z0-9](([_.]|-{1,2})?[a-z0-9]+)*$#', $package)) {
+            if (! PackageName::valid($package)) {
                 $this->error("That is not a package name: $package");
 
                 return 1;
             }
         }
 
+        return $named;
+    }
+
+    /**
+     * Why this run must not start, as an exit code, or null when it may:
+     * a package that is not installed, a host without the memory to resolve,
+     * or another run still going.
+     *
+     * @param list<string> $named
+     */
+    protected function refuseToStart(array $named): ?int
+    {
         if (($refusal = $this->notInstalled($named)) !== null) {
             /*
              * Refused rather than attempted, because `composer update` on a
@@ -176,6 +222,18 @@ class UpdateCommand extends AbstractCommand
             return 1;
         }
 
+        return null;
+    }
+
+    /**
+     * The requirements this run may raise, package => version, or the exit
+     * code when a pinned package cannot or may not be moved.
+     *
+     * @param list<string> $named
+     * @return array<string,string>|int
+     */
+    protected function repinFor(array $named): array|int
+    {
         $repinner = new Repin($this->paths->base.'/composer.json', $this->storagePath('updates.json'));
         $pins = $repinner->pins($named);
 
@@ -231,22 +289,9 @@ class UpdateCommand extends AbstractCommand
             }
         }
 
-        $id = 'r'.date('Ymd-His').'-'.bin2hex(random_bytes(3));
-
-        (new WorkDir($this->translator, $this->paths->storage, $id))->create()->remember($named, 'update', $repin);
-
-        $this->info('Updating '.implode(', ', $named));
-
-        return $this->pump($this->runner->begin($id));
+        return $repin;
     }
 
-    /**
-     * Take over a run somebody else started.
-     *
-     * Worth having on its own: a run left behind by a browser tab that was
-     * closed, or by a worker that died, is exactly the state that used to need
-     * someone to know what a work directory was.
-     */
     /**
      * Finish a run in a fresh process, after this one replaced its own code.
      */
@@ -273,6 +318,13 @@ class UpdateCommand extends AbstractCommand
         return is_resource($process) ? proc_close($process) : 1;
     }
 
+    /**
+     * Take over a run somebody else started.
+     *
+     * Worth having on its own: a run left behind by a browser tab that was
+     * closed, or by a worker that died, is exactly the state that used to need
+     * someone to know what a work directory was.
+     */
     protected function resume(): int
     {
         $run = $this->runs->latest();

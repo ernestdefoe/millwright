@@ -88,13 +88,6 @@ return [
          */
         ->get('/millwright/trash', 'millwright.trash', Controller\TrashController::class)
         ->post('/millwright/trash', 'millwright.trash.act', Controller\TrashController::class)
-        /*
-         * Discovery is two endpoints, and the split is deliberate. `discover`
-         * is one call to Packagist's search. `compat` is one call PER PACKAGE to
-         * work out whether each result fits the Flarum actually installed —
-         * doing both in one request would mean a dozen round trips before
-         * anything appeared on a screen somebody is typing into.
-         */
         ->get('/millwright/core', 'millwright.core', Controller\CoreController::class)
         /*
          * One route, both verbs. GET reports where Composer looks, what it
@@ -104,6 +97,13 @@ return [
          */
         ->get('/millwright/config', 'millwright.config', Controller\ConfigController::class)
         ->post('/millwright/config', 'millwright.config.set', Controller\ConfigController::class)
+        /*
+         * Discovery is two endpoints, and the split is deliberate. `discover`
+         * is one call to Packagist's search. `compat` is one call PER PACKAGE to
+         * work out whether each result fits the Flarum actually installed —
+         * doing both in one request would mean a dozen round trips before
+         * anything appeared on a screen somebody is typing into.
+         */
         ->get('/millwright/discover', 'millwright.discover', Controller\DiscoverController::class)
         ->post('/millwright/discover/compat', 'millwright.compat', Controller\CompatController::class),
 ];

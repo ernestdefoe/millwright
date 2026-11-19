@@ -91,8 +91,7 @@ class Repin
         foreach ($packages as $package) {
             $constraint = $require[$package] ?? null;
 
-            // An exact version, and nothing with a range operator anywhere in it.
-            if (is_string($constraint) && preg_match('/^v?\d+\.\d+\.\d+/', $constraint) && ! preg_match('/[\^~*|]|\s-\s/', $constraint)) {
+            if (is_string($constraint) && PackageName::isExactPin($constraint)) {
                 $out[$package] = $constraint;
             }
         }

@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use ErnestDefoe\Millwright\Plan\PackageName;
 use ErnestDefoe\Millwright\Discover\Compatibility;
 use ErnestDefoe\Millwright\Discover\Packagist;
 use ErnestDefoe\Millwright\Exception\RefusedException;
@@ -148,7 +149,7 @@ class StartController implements RequestHandlerInterface
 
         foreach ($packages as $package) {
             // The only user-supplied value that reaches a command line.
-            if (! preg_match('#^[a-z0-9]([_.-]?[a-z0-9]+)*/[a-z0-9](([_.]|-{1,2})?[a-z0-9]+)*$#', (string) $package)) {
+            if (! PackageName::valid((string) $package)) {
                 throw new ValidationException(['packages' => $this->translator->trans('ernestdefoe-millwright.api.start.not_a_package', ['package' => (string) $package])]);
             }
         }
