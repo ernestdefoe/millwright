@@ -40,7 +40,7 @@ class AuthTokens
     /**
      * Which hosts have a credential — never the credentials.
      *
-     * @return list<array{kind:string,host:string,detail:string}>
+     * @return list<array{kind:string,host:string,username:?string}>
      */
     public function all(): array
     {
@@ -60,9 +60,7 @@ class AuthTokens
                      * showing — it is how somebody tells two accounts on one host
                      * apart. The password is never included.
                      */
-                    'detail' => is_array($value) && isset($value['username'])
-                        ? $this->translator->trans('ernestdefoe-millwright.api.config.detail_username', ['username' => (string) $value['username']])
-                        : $this->translator->trans('ernestdefoe-millwright.api.config.detail_token_set'),
+                    'username' => is_array($value) && isset($value['username']) ? (string) $value['username'] : null,
                 ];
             }
         }

@@ -182,14 +182,17 @@ class StepRunner
         $dir = $this->lockDir;
 
         if ($dir === null) {
-            return fopen('php://memory', 'r+') ?: null;   // no lock configured
-        }
-
-        if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
+            // Built without one: the unit tests that drive a single process.
             return fopen('php://memory', 'r+') ?: null;
         }
 
-        $handle = fopen($dir.'/'.preg_replace('/[^A-Za-z0-9_-]/', '', $id).'.lock', 'c');
+        // Without the lock two drivers could do the same item, so a lock
+        // directory that cannot be made stops the step rather than skipping it.
+        if (! is_dir($dir) && ! @mkdir($dir, 0775, true) && ! is_dir($dir)) {
+            throw new \RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fs.create_failed', ['path' => $dir]));
+        }
+
+        $handle = @fopen($dir.'/'.preg_replace('/[^A-Za-z0-9_-]/', '', $id).'.lock', 'c');
 
         if ($handle === false) {
             return null;

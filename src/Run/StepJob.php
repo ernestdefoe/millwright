@@ -4,7 +4,7 @@ namespace ErnestDefoe\Millwright\Run;
 
 use Flarum\Locale\TranslatorInterface;
 use Flarum\Queue\AbstractJob;
-use Illuminate\Contracts\Bus\Dispatcher;
+use Illuminate\Contracts\Queue\Queue;
 
 /**
  * Turns the handle from a queue worker, where a forum has one.
@@ -63,7 +63,7 @@ class StepJob extends AbstractJob
         parent::__construct();
     }
 
-    public function handle(StepRunner $runner, RunStore $store, Dispatcher $bus): void
+    public function handle(StepRunner $runner, RunStore $store, Queue $queue): void
     {
         $until = time() + self::BUDGET_SECONDS;
 
@@ -105,7 +105,7 @@ class StepJob extends AbstractJob
 
         // Out of budget with work left. Hand on to a fresh job rather than
         // running past a worker timeout and being killed mid-item.
-        $bus->dispatch(new self($this->runId));
+        $queue->push(new self($this->runId));
     }
 
     /**

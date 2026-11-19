@@ -89,7 +89,9 @@ export default class CredentialsCard extends Component<CredentialsCardAttrs> {
             <span className="Millwright-src-badge">{app.translator.trans('ernestdefoe-millwright.admin.auth_config.types.' + c.kind)}</span>
             <span className="Millwright-src-held">
               <i className="fas fa-lock" aria-hidden="true" />{' '}
-              {c.detail === 'token set' ? app.translator.trans('ernestdefoe-millwright.admin.auth_config.token_stored') : c.detail}
+              {c.username
+                ? app.translator.trans('ernestdefoe-millwright.admin.auth_config.username_stored', { username: c.username })
+                : app.translator.trans('ernestdefoe-millwright.admin.auth_config.token_stored')}
             </span>
           </span>
         </span>

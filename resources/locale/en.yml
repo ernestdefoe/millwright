@@ -361,6 +361,7 @@ ernestdefoe-millwright:
       remove_q: Remove?
       submit_button: Save credential
       token_stored: token stored
+      username_stored: "username {username}"
       show: Show
       hide: Hide
       fields:
@@ -628,12 +629,11 @@ ernestdefoe-millwright:
     config:
       basic_needs_username: "http-basic needs a username as well as a password."
       credential_empty: "The credential is empty."
-      detail_token_set: "token set"
-      detail_username: "username {username}"
       json_encode_failed: "Could not encode {file}: {error}"
       json_invalid: "{file} is not valid JSON, so Millwright will not overwrite it. Fix it by hand first — {error}."
       json_refuse_write: "Refusing to write {file}: the result does not parse."
       json_replace_failed: "Could not replace {path}."
+      busy: "An update is going. Change these once it has finished, or the update's undo would put them back."
       json_unreadable: "Could not read {path}."
       json_write_failed: "Could not write next to {path}. Check the directory is writable."
       no_credential: "There is no credential stored for that host."
@@ -781,6 +781,7 @@ ernestdefoe-millwright:
       restore_failed: "Could not restore {from} to {to}"
       restored: "restored {file}"
     run:
+      retrying_finalise: "Retrying Finishing up from its first step, after: {error}"
       dir_failed: "Could not create the run directory at {path}"
       failed_during: "Failed during {step}: {error}"
       finished: "Finished"

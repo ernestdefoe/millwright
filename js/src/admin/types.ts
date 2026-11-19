@@ -226,7 +226,8 @@ export interface Repository {
 export interface StoredCredential {
   kind: string;
   host: string;
-  detail: string;
+  /** shown for http-basic, where it tells two accounts on one host apart; never the password */
+  username: string | null;
 }
 
 export interface ConfigPayload {

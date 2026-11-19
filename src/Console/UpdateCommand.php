@@ -344,7 +344,7 @@ class UpdateCommand extends AbstractCommand
          * hand-over below finishes: run --resume, and the new code completes it.
          */
         if ($run->state === Run::FAILED && $run->phase === 'finalise') {
-            $run = $run->retryingFinalise(time(), "Retrying Finishing up from its first step, after: {$run->error}");
+            $run = $run->retryingFinalise(time(), $this->translator->trans('ernestdefoe-millwright.api.run.retrying_finalise', ['error' => (string) $run->error]));
             $this->runs->save($run);
             $this->info("Retrying {$run->id} from the start of Finishing up.");
 

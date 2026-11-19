@@ -12,7 +12,6 @@ use Flarum\Foundation\Config;
 use Flarum\Foundation\Paths;
 use Flarum\Locale\TranslatorInterface;
 use Illuminate\Container\Container;
-use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Foundation\Application as ApplicationContract;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use ErnestDefoe\Millwright\Tests\unit\Fakes;
@@ -72,7 +71,6 @@ class WiringTest extends TestCase
         $queue->method('connection')->willReturn(new \Illuminate\Queue\SyncQueue());
 
         $this->container->instance(QueueFactory::class, $queue);
-        $this->container->instance(Dispatcher::class, $this->createStub(Dispatcher::class));
         $this->container->instance(TranslatorInterface::class, EnglishTranslator::make());
 
         $forum = Fakes::forum();

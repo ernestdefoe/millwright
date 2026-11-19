@@ -405,7 +405,13 @@ export default class RunPanel extends Component<RunPanelAttrs> {
     if (!this.polling) return;
 
     app
-      .request<StepPayload>({ method: 'POST', url: apiUrl() + '/millwright/step' })
+      .request<StepPayload>({
+        method: 'POST',
+        url: apiUrl() + '/millwright/step',
+        // A failed poll is counted and, after a few, explained in the panel
+        // itself; an alert for each one would stack up every couple of seconds.
+        errorHandler: () => {},
+      })
       .then((data) => {
         this.misses = 0;
         this.attrs.onprogress(data);
@@ -459,7 +465,7 @@ export default class RunPanel extends Component<RunPanelAttrs> {
    */
   private watch() {
     app
-      .request<StatePayload>({ method: 'GET', url: apiUrl() + '/millwright/state' })
+      .request<StatePayload>({ method: 'GET', url: apiUrl() + '/millwright/state', errorHandler: () => {} })
       .then((data) => {
         this.watching = true;
 

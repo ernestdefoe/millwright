@@ -3,6 +3,7 @@
 namespace ErnestDefoe\Millwright\Api\Controller\Config;
 
 use ErnestDefoe\Millwright\Host\PhpOverride;
+use ErnestDefoe\Millwright\Run\RunStore;
 use Flarum\Foundation\ValidationException;
 use Flarum\Http\RequestUtil;
 use Flarum\Locale\TranslatorInterface;
@@ -22,12 +23,14 @@ class PhpPathController implements RequestHandlerInterface
     public function __construct(
         protected TranslatorInterface $translator,
         protected PhpOverride $override,
+        protected RunStore $runs,
     ) {
     }
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         RequestUtil::getActor($request)->assertAdmin();
+        ConfigChange::refuseWhileRunning($this->runs, $this->translator);
 
         $path = trim((string) Arr::get((array) $request->getParsedBody(), 'path', ''));
 

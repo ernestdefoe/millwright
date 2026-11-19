@@ -3,7 +3,6 @@
 namespace ErnestDefoe\Millwright\Run;
 
 use Flarum\Locale\TranslatorInterface;
-use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Queue\SyncQueue;
 use Psr\Log\LoggerInterface;
@@ -25,7 +24,6 @@ class Drivers
     public function __construct(
         protected TranslatorInterface $translator,
         protected QueueFactory $queue,
-        protected Dispatcher $bus,
         protected LoggerInterface $log,
     ) {
     }
@@ -80,7 +78,7 @@ class Drivers
         }
 
         try {
-            $this->bus->dispatch(new StepJob($runId));
+            $this->queue->connection()->push(new StepJob($runId));
 
             return true;
         } catch (\Throwable $e) {

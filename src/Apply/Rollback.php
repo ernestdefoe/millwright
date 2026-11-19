@@ -75,7 +75,7 @@ class Rollback
                 Change::REPLACE => $this->restore($change, $trash),
                 Change::ADD => $this->uninstall($change),
                 Change::REMOVE => $this->restore($change, $trash),
-                default => throw new RuntimeException("Unknown change \"{$change->op}\" in the journal for {$change->package}"),
+                default => throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.apply.unknown_change', ['op' => $change->op, 'package' => $change->package])),
             };
 
             $undone[] = $change->describe($this->translator);

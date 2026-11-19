@@ -5,7 +5,7 @@ namespace ErnestDefoe\Millwright\Tests\Unit;
 use ErnestDefoe\Millwright\Run\Drivers;
 use ErnestDefoe\Millwright\Run\StepJob;
 use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
-use Illuminate\Contracts\Bus\Dispatcher;
+use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Contracts\Queue\Factory as QueueFactory;
 use Illuminate\Queue\SyncQueue;
 use PHPUnit\Framework\TestCase;
@@ -46,10 +46,7 @@ class DriversTest extends TestCase
          * it. Treating that as a worker would produce exactly the long request
          * this whole design avoids — on the hosts least able to survive one.
          */
-        $bus = $this->createMock(Dispatcher::class);
-        $bus->expects($this->never())->method('dispatch');
-
-        $drivers = new Drivers(EnglishTranslator::make(), $this->queue(new SyncQueue()), $bus, new \Psr\Log\NullLogger());
+        $drivers = new Drivers(EnglishTranslator::make(), $this->queue(new SyncQueue()), new \Psr\Log\NullLogger());
 
         $this->assertFalse($drivers->hasWorker());
         $this->assertFalse($drivers->nudge('r1'));
@@ -57,12 +54,12 @@ class DriversTest extends TestCase
 
     public function test_a_real_queue_gets_a_job(): void
     {
-        $bus = $this->createMock(Dispatcher::class);
-        $bus->expects($this->once())
-            ->method('dispatch')
+        $worker = $this->createMock(Queue::class);
+        $worker->expects($this->once())
+            ->method('push')
             ->with($this->isInstanceOf(StepJob::class));
 
-        $drivers = new Drivers(EnglishTranslator::make(), $this->queue(new stdClass()), $bus, new \Psr\Log\NullLogger());
+        $drivers = new Drivers(EnglishTranslator::make(), $this->queue($worker), new \Psr\Log\NullLogger());
 
         $this->assertTrue($drivers->hasWorker());
         $this->assertTrue($drivers->nudge('r1'));
@@ -73,7 +70,6 @@ class DriversTest extends TestCase
         $drivers = new Drivers(
             EnglishTranslator::make(),
             $this->queue(new RuntimeException('no connection')),
-            $this->createStub(Dispatcher::class),
             new \Psr\Log\NullLogger()
         );
 
@@ -85,10 +81,10 @@ class DriversTest extends TestCase
     {
         // The update is already running and its state is on disk; a failed
         // dispatch costs a background helper, not the update.
-        $bus = $this->createStub(Dispatcher::class);
-        $bus->method('dispatch')->willThrowException(new RuntimeException('queue is down'));
+        $worker = $this->createStub(Queue::class);
+        $worker->method('push')->willThrowException(new RuntimeException('queue is down'));
 
-        $drivers = new Drivers(EnglishTranslator::make(), $this->queue(new stdClass()), $bus, new \Psr\Log\NullLogger());
+        $drivers = new Drivers(EnglishTranslator::make(), $this->queue($worker), new \Psr\Log\NullLogger());
 
         $this->assertFalse($drivers->nudge('r1'));
     }
@@ -113,10 +109,7 @@ class DriversTest extends TestCase
             }
         };
 
-        $bus = $this->createMock(Dispatcher::class);
-        $bus->expects($this->never())->method('dispatch');
-
-        $drivers = new Drivers(EnglishTranslator::make(), $this->queue($wrapper), $bus, new \Psr\Log\NullLogger());
+        $drivers = new Drivers(EnglishTranslator::make(), $this->queue($wrapper), new \Psr\Log\NullLogger());
 
         $this->assertFalse($drivers->hasWorker(), 'a sync queue behind a wrapper is still a sync queue');
         $this->assertFalse($drivers->nudge('r1'));
@@ -135,17 +128,15 @@ class DriversTest extends TestCase
             }
         };
 
-        $drivers = new Drivers(EnglishTranslator::make(), $this->queue($wrapper), $this->createStub(Dispatcher::class), new \Psr\Log\NullLogger());
+        $drivers = new Drivers(EnglishTranslator::make(), $this->queue($wrapper), new \Psr\Log\NullLogger());
 
         $this->assertTrue($drivers->hasWorker());
     }
 
     public function test_it_tells_the_admin_which_situation_they_are_in(): void
     {
-        $bus = $this->createStub(Dispatcher::class);
-
-        $withWorker = new Drivers(EnglishTranslator::make(), $this->queue(new stdClass()), $bus, new \Psr\Log\NullLogger());
-        $without = new Drivers(EnglishTranslator::make(), $this->queue(new SyncQueue()), $bus, new \Psr\Log\NullLogger());
+        $withWorker = new Drivers(EnglishTranslator::make(), $this->queue($this->createStub(Queue::class)), new \Psr\Log\NullLogger());
+        $without = new Drivers(EnglishTranslator::make(), $this->queue(new SyncQueue()), new \Psr\Log\NullLogger());
 
         $this->assertStringContainsString('close this page', $withWorker->describe());
         $this->assertStringContainsString('keep this page open', $without->describe());
