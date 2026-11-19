@@ -17,6 +17,9 @@
  * Storage and config.php are looked for at Flarum's default places beside
  * vendor/; the service provider covers the reset for a site that moved its
  * storage.
+ *
+ * Inert while Millwright is disabled or idle: only Millwright writes the
+ * reset flag or issues a token, so both checks find nothing.
  */
 if (PHP_SAPI !== 'cli') {
     // The newest loader is this site's: keyed by its vendor dir, symlinks intact.

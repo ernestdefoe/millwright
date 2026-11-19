@@ -64,7 +64,12 @@ return [
         ->handler(RefusedException::class, RefusedExceptionHandler::class),
 
     /*
-     * Two endpoints, and the split matters.
+     * Actions, not JSON:API resources. Nothing here is a database model: a run
+     * lives in files under storage/, and each route starts, steps, undoes or
+     * reports on one. That is the shape of Flarum's own Extension Manager,
+     * which registers its update actions the same way. Every one asserts admin.
+     *
+     * Two of them matter most, and the split between them is deliberate.
      *
      * `state` is a read: the admin screen polls it, and it must stay cheap
      * enough to poll every second or two without being noticed.

@@ -120,7 +120,7 @@ class Finaliser
             $this->registerWith(null);
             $this->flarum('migrate', '');
         } else {
-            (new FlarumUpdater($run->translator, $this->http, $run->siteUrl, $run->forum->database(), $run->storagePath))->migrate();
+            (new FlarumUpdater($run->translator, $this->http, $run->siteUrl, $run->storagePath))->migrate();
         }
 
         $now = $run->forum->db->table('settings')->where('key', 'version')->value('value');

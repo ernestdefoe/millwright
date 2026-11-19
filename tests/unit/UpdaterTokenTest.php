@@ -107,7 +107,6 @@ class UpdaterTokenTest extends TestCase
             EnglishTranslator::make(),
             new Client(['handler' => $stack]),
             'https://forum.example.test/',
-            ['username' => 'forum', 'password' => 's3cret'],
             $this->dir.'/storage'
         );
 
@@ -117,17 +116,21 @@ class UpdaterTokenTest extends TestCase
         $this->assertSame('127.0.0.1', $request->getUri()->getHost(), 'the web server on this machine first');
         $this->assertSame('forum.example.test', $request->getHeaderLine('Host'));
         $this->assertSame(64, strlen($request->getHeaderLine(UpdaterToken::HEADER)));
-        $this->assertStringNotContainsString('s3cret', (string) $request->getBody());
+        $this->assertSame('', (string) $request->getBody());
         $this->assertFileDoesNotExist($this->dir.'/storage/millwright/updater-token', 'never left lying about');
     }
 
-    public function test_the_public_address_is_only_ever_sent_a_token(): void
+    /**
+     * Not even to 127.0.0.1. A site that cannot redeem the token gets an error,
+     * and the run puts the update back: on shared hosting whatever answers on
+     * the loopback address may be somebody else's site.
+     */
+    public function test_the_credentials_are_never_sent_anywhere(): void
     {
         $sent = [];
         $stack = HandlerStack::create(new MockHandler([
             new Response(301, ['Location' => 'https://forum.example.test/']),
             new Response(500, [], 'Incorrect database credentials.'),
-            new Response(200, [], 'Migrated'),
         ]));
         $stack->push(Middleware::history($sent));
 
@@ -135,17 +138,22 @@ class UpdaterTokenTest extends TestCase
             EnglishTranslator::make(),
             new Client(['handler' => $stack]),
             'https://forum.example.test/',
-            ['username' => 'forum', 'password' => 's3cret'],
             $this->dir.'/storage'
         );
 
-        $this->assertSame('Migrated', $updater->migrate());
-        $this->assertCount(3, $sent);
-        $this->assertSame('forum.example.test', $sent[1]['request']->getUri()->getHost());
-        $this->assertStringNotContainsString('s3cret', (string) $sent[1]['request']->getBody());
+        try {
+            $updater->migrate();
+            $this->fail('an updater that refused the token was reported as done');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('500', $e->getMessage());
+        }
 
-        // A token the site could not redeem: the credentials go to this machine only.
-        $this->assertSame('127.0.0.1', $sent[2]['request']->getUri()->getHost());
-        $this->assertStringContainsString('s3cret', (string) $sent[2]['request']->getBody());
+        $this->assertCount(2, $sent, 'it tried again with something other than a token');
+        $this->assertSame('forum.example.test', $sent[1]['request']->getUri()->getHost());
+
+        foreach ($sent as $call) {
+            $this->assertSame('', (string) $call['request']->getBody());
+            $this->assertSame(64, strlen($call['request']->getHeaderLine(UpdaterToken::HEADER)));
+        }
     }
 }

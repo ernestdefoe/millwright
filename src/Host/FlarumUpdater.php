@@ -22,22 +22,26 @@ use RuntimeException;
  * On a host that cannot start a process, this asks the updater itself, from the
  * same request that swapped the files.
  *
- * The credentials themselves are never sent. The request carries a one-time
- * token instead (see UpdaterToken), which the receiving request exchanges for
- * the credentials on the server. The web server is asked directly on
- * 127.0.0.1 first, with the forum's host name, and the forum's own address is
- * used only when that fails and it is https.
+ * The credentials themselves are never sent, to any address. The request
+ * carries a one-time token instead (see UpdaterToken), which the receiving
+ * request exchanges for the credentials on the server. The web server is asked
+ * directly on 127.0.0.1 first, with the forum's host name, and the forum's own
+ * address is used only when that fails and it is https.
+ *
+ * A site whose config.php or storage is not beside vendor/, where the
+ * bootstrap looks, cannot redeem the token. There the bridge fails, and the
+ * run puts the update back (see Finaliser::bridgeCore): a forum still on its
+ * old version beats database credentials posted to whichever site answers on
+ * 127.0.0.1, which on shared hosting may be somebody else's.
  */
 class FlarumUpdater
 {
     protected const TIMEOUT = 300;
 
-    /** @param array<string,mixed> $database config.php's `database` section */
     public function __construct(
         protected TranslatorInterface $translator,
         protected ClientInterface $http,
         protected string $siteUrl,
-        protected array $database,
         protected string $storagePath,
     ) {
     }
@@ -51,8 +55,7 @@ class FlarumUpdater
         $loopback = 'http://127.0.0.1'.$path;
         $hostHeader = $host.($port ? ':'.$port : '');
 
-        // Without a storage directory there is nowhere to keep a token.
-        $local = $this->post($loopback, $hostHeader, $this->storagePath === '' ? UpdaterToken::fields($this->database) : null);
+        $local = $this->post($loopback, $hostHeader);
 
         if ($local['status'] === 200) {
             return $local['body'];
@@ -71,22 +74,6 @@ class FlarumUpdater
             $local = $remote;
         }
 
-        /*
-         * The updater did not take the token: a site whose config.php or
-         * storage is not beside vendor/, where bootstrap/web-reset.php looks.
-         * The credentials go to the web server on this machine and nowhere
-         * else, never to the public address.
-         */
-        if ($this->storagePath !== '' && $local['status'] === 500 && str_contains($local['body'], 'Incorrect database credentials')) {
-            $direct = $this->post($loopback, $hostHeader, UpdaterToken::fields($this->database));
-
-            if ($direct['status'] === 200) {
-                return $direct['body'];
-            }
-
-            $local = $direct['status'] === null ? $local : $direct;
-        }
-
         throw new RuntimeException(
             $local['status'] === null
                 ? $this->translator->trans('ernestdefoe-millwright.api.updater.unreachable', ['error' => $local['error']])
@@ -95,23 +82,18 @@ class FlarumUpdater
     }
 
     /**
-     * One POST to the updater: with a fresh one-time token, or, to the
-     * loopback address only, with the credentials themselves.
+     * One POST to the updater, with a fresh one-time token.
      *
-     * @param array<string,string>|null $credentials
      * @return array{status:int|null, body:string, error:string}
      */
-    protected function post(string $url, ?string $hostHeader, ?array $credentials = null): array
+    protected function post(string $url, ?string $hostHeader): array
     {
-        $headers = ['User-Agent' => 'Millwright'] + ($hostHeader !== null ? ['Host' => $hostHeader] : []);
-
-        if ($credentials === null) {
-            $headers[UpdaterToken::HEADER] = UpdaterToken::issue($this->storagePath);
-        }
+        $headers = ['User-Agent' => 'Millwright', UpdaterToken::HEADER => UpdaterToken::issue($this->storagePath)]
+            + ($hostHeader !== null ? ['Host' => $hostHeader] : []);
 
         try {
             $response = $this->http->request('POST', $url, [
-                'form_params' => $credentials ?? [],
+                'form_params' => [],
                 'headers' => $headers,
                 'timeout' => self::TIMEOUT,
                 'connect_timeout' => 8,
@@ -124,9 +106,7 @@ class FlarumUpdater
             return ['status' => null, 'body' => '', 'error' => $e->getMessage()];
         } finally {
             // Used or not, it is never left lying about.
-            if ($credentials === null) {
-                UpdaterToken::revoke($this->storagePath);
-            }
+            UpdaterToken::revoke($this->storagePath);
         }
     }
 }

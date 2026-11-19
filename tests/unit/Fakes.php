@@ -11,7 +11,6 @@ use ErnestDefoe\Millwright\Work\Forum;
 use ErnestDefoe\Millwright\Work\RunContext;
 use Flarum\Database\Migrator;
 use Flarum\Extension\ExtensionManager;
-use Flarum\Foundation\Config;
 use GuzzleHttp\Client;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Database\ConnectionInterface;
@@ -40,7 +39,6 @@ class Fakes
             $db,
             (new ReflectionClass(Migrator::class))->newInstanceWithoutConstructor(),
             (new ReflectionClass(ExtensionManager::class))->newInstanceWithoutConstructor(),
-            new Config(['url' => 'https://example.test']),
             new \Psr\Log\NullLogger(),
             new \Illuminate\Container\Container()
         );
