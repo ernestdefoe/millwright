@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use GuzzleHttp\ClientInterface;
 use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 use Flarum\Foundation\Paths;
@@ -25,6 +26,7 @@ class CheckController implements RequestHandlerInterface
     public function __construct(
         protected TranslatorInterface $translator,
         protected Paths $paths,
+        protected ClientInterface $http,
     ) {
     }
 
@@ -36,7 +38,7 @@ class CheckController implements RequestHandlerInterface
 
         // The same check as the console command, protected repositories
         // included: see UpdateCheck::refreshSite().
-        $result = $check->refreshSite($this->translator, $this->paths->base);
+        $result = $check->refreshSite($this->translator, $this->paths->base, $this->http);
 
         if ($result === null) {
             throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.check.no_lock'), 'missing_lock_file', 500);

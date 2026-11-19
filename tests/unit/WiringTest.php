@@ -93,6 +93,7 @@ class WiringTest extends TestCase
         $app->method('bind')->willReturnCallback(fn ($a, $c = null, $shared = false) => $real->bind($a, $c, $shared));
         $app->method('instance')->willReturnCallback(fn ($a, $i) => $real->instance($a, $i));
         $app->method('make')->willReturnCallback(fn ($a, array $p = []) => $real->make($a, $p));
+        $app->method('when')->willReturnCallback(fn ($c) => $real->when($c));
 
         (new MillwrightServiceProvider($app))->register();
     }
@@ -115,6 +116,25 @@ class WiringTest extends TestCase
             Drivers::class => [Drivers::class],
             StepRunner::class => [StepRunner::class],
         ];
+    }
+
+    /**
+     * The update check, release notes and CLI get an HTTP client, and only
+     * Millwright's classes do: a global binding of Guzzle's shared interface
+     * would hand Millwright's client to every other extension.
+     */
+    public function test_the_http_client_reaches_only_millwright(): void
+    {
+        foreach ([
+            \ErnestDefoe\Millwright\Api\Controller\CheckController::class,
+            \ErnestDefoe\Millwright\Api\Controller\ReleaseNotesController::class,
+            \ErnestDefoe\Millwright\Console\CheckCommand::class,
+            \ErnestDefoe\Millwright\Console\UpdateCommand::class,
+        ] as $class) {
+            $this->assertInstanceOf($class, $this->container->make($class));
+        }
+
+        $this->assertFalse($this->container->bound(\GuzzleHttp\ClientInterface::class));
     }
 
     public function test_the_steps_factory_resolves(): void

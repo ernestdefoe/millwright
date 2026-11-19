@@ -81,11 +81,21 @@ class MillwrightServiceProvider extends AbstractServiceProvider
                 $container->make(Paths::class),
                 $container->make(Config::class),
                 $container->make(Forum::class),
-                // Its own client, not a container binding: binding Guzzle's
-                // shared interface would hand every other extension this one.
-                new Client()
+                $container->make(Client::class)
             );
         });
+
+        /*
+         * The HTTP client for Millwright's own classes only. A plain binding of
+         * Guzzle's shared ClientInterface would hand this one to every other
+         * extension that asks for it.
+         */
+        $this->container->when([
+            \ErnestDefoe\Millwright\Api\Controller\CheckController::class,
+            \ErnestDefoe\Millwright\Api\Controller\ReleaseNotesController::class,
+            \ErnestDefoe\Millwright\Console\CheckCommand::class,
+            \ErnestDefoe\Millwright\Console\UpdateCommand::class,
+        ])->needs(\GuzzleHttp\ClientInterface::class)->give(Client::class);
 
         /*
          * The lock directory is what stops two drivers doing the same item.

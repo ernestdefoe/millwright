@@ -181,7 +181,10 @@ export default class UpdateBanner extends Component {
           // Private browsing. It reappears next load, which is the safe way round.
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        // Remembering the dismissal is a nicety: if the state cannot be read,
+        // the banner is still hidden for this visit and simply returns next load.
+      });
 
     m.redraw();
   }

@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Console;
 
+use GuzzleHttp\ClientInterface;
 use ErnestDefoe\Millwright\Host\Capability;
 use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Plan\Nightly;
@@ -66,6 +67,7 @@ class UpdateCommand extends AbstractCommand
         protected Paths $paths,
         protected RunStore $runs,
         protected StepRunner $runner,
+        protected ClientInterface $http,
     ) {
         parent::__construct();
     }
@@ -483,7 +485,7 @@ class UpdateCommand extends AbstractCommand
      */
     protected function recheck(): void
     {
-        $this->check()->refreshSite($this->translator, $this->paths->base);
+        $this->check()->refreshSite($this->translator, $this->paths->base, $this->http);
     }
 
     protected function check(): UpdateCheck
