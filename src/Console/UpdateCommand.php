@@ -363,6 +363,17 @@ class UpdateCommand extends AbstractCommand
 
     /**
      * Turn the handle until the run stops, printing what it says as it says it.
+     *
+     * This process has the old version of this extension loaded. Once
+     * its own package has been swapped, the rest must run in a fresh
+     * process: the old classes in memory meeting new files on disk
+     * fail as soon as a constructor has changed (1.24.0 to 1.25.0,
+     * "TranslatorInterface, string given" at Finishing up).
+     *
+     * The run is NOT abandoned or rolled back here. It is on
+     * disk, mid-phase, and resumable — deciding to undo somebody's
+     * half-finished update because a timeout elapsed is not this
+     * command's call to make.
      */
     protected function pump(Run $run): int
     {
@@ -376,13 +387,6 @@ class UpdateCommand extends AbstractCommand
                 break;
             }
 
-            /*
-             * This process has the old version of this extension loaded. Once
-             * its own package has been swapped, the rest must run in a fresh
-             * process: the old classes in memory meeting new files on disk
-             * fail as soon as a constructor has changed (1.24.0 to 1.25.0,
-             * "TranslatorInterface, string given" at Finishing up).
-             */
             if ($run->phase === 'apply' && in_array(static::SELF, $run->items, true)) {
                 $replacedItself = true;
             }
@@ -392,12 +396,6 @@ class UpdateCommand extends AbstractCommand
             }
 
             if (time() > $deadline) {
-                /*
-                 * The run is NOT abandoned or rolled back here. It is on
-                 * disk, mid-phase, and resumable — deciding to undo somebody's
-                 * half-finished update because a timeout elapsed is not this
-                 * command's call to make.
-                 */
                 $this->error("Gave up waiting after {$this->input->getOption('timeout')}s. "
                     ."The run is not lost: {$run->id} is at {$run->phase} and `millwright:update --resume` will carry on.");
 
@@ -420,6 +418,12 @@ class UpdateCommand extends AbstractCommand
             }
         }
 
+        return $this->finished($run);
+    }
+
+    /** Say how the run ended, and exit with a code that does not overstate it. */
+    protected function finished(Run $run): int
+    {
         if ($run->state === Run::DONE && $this->movedNothing($run)) {
             /*
              * Green, and nothing changed. Whatever the reason — a dependency

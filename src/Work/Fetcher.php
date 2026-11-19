@@ -189,31 +189,35 @@ class Fetcher
                 throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fetch.path_escapes', ['package' => $package]));
             }
 
-            $to = $target.'/'.$rel;
-
-            if (! is_dir(dirname($to)) && ! mkdir(dirname($to), 0775, true) && ! is_dir(dirname($to))) {
-                throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fs.create_failed', ['path' => dirname($to)]));
-            }
-
-            $stream = $zip->getStream($name);
-
-            if ($stream === false) {
-                throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fetch.read_entry_failed', ['name' => $name, 'package' => $package]));
-            }
-
-            $written = file_put_contents($to, $stream);
-            fclose($stream);
-
-            // A full disk writes nothing, or part of the file, and says so only here.
-            if ($written === false) {
-                throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fetch.write_failed', ['path' => $to, 'package' => $package]));
-            }
+            $this->writeEntry($zip, $name, $target.'/'.$rel, $package);
         }
 
         $zip->close();
 
         if (! @rename($target, $final)) {
             throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fetch.staging_failed', ['package' => $package]));
+        }
+    }
+
+    /** One archive entry, written in full or the unpack stops. */
+    protected function writeEntry(ZipArchive $zip, string $name, string $to, string $package): void
+    {
+        if (! is_dir(dirname($to)) && ! mkdir(dirname($to), 0775, true) && ! is_dir(dirname($to))) {
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fs.create_failed', ['path' => dirname($to)]));
+        }
+
+        $stream = $zip->getStream($name);
+
+        if ($stream === false) {
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fetch.read_entry_failed', ['name' => $name, 'package' => $package]));
+        }
+
+        $written = file_put_contents($to, $stream);
+        fclose($stream);
+
+        // A full disk writes nothing, or part of the file, and says so only here.
+        if ($written === false) {
+            throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.fetch.write_failed', ['path' => $to, 'package' => $package]));
         }
     }
 

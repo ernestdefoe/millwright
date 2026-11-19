@@ -1,6 +1,6 @@
 import app from 'flarum/admin/app';
 import Component, { type ComponentAttrs } from 'flarum/common/Component';
-import type { HistoryEntry, Installed, RunState } from '../types';
+import type { HistoryChange, HistoryEntry, Installed, RunState } from '../types';
 
 export interface HistoryTabAttrs extends ComponentAttrs {
   history: HistoryEntry[];
@@ -39,18 +39,7 @@ export default class HistoryTab extends Component<HistoryTabAttrs> {
               </div>
               <ul className="Millwright-historyChanges">
                 {changes.length ? (
-                  changes.map((c) => (
-                    <li key={c.package}>
-                      <b>{names[c.package] || c.package}</b> <span className="Millwright-pkg">{c.package}</span>{' '}
-                      <span className="Millwright-historyVersions">
-                        {c.op === 'add'
-                          ? app.translator.trans('ernestdefoe-millwright.admin.sections.queue.new_version', { version: c.to })
-                          : c.op === 'remove'
-                          ? app.translator.trans('ernestdefoe-millwright.admin.sections.queue.removed_version', { version: c.from })
-                          : `${c.from} → ${c.to}`}
-                      </span>
-                    </li>
-                  ))
+                  changes.map((c) => this.change(c, names))
                 ) : (
                   <li>{requested.join(', ') || app.translator.trans('ernestdefoe-millwright.admin.sections.queue.nothing')}</li>
                 )}
@@ -64,6 +53,22 @@ export default class HistoryTab extends Component<HistoryTabAttrs> {
           );
         })}
       </ol>
+    );
+  }
+
+  /** One package's line: its name, and the versions it moved between. */
+  private change(c: HistoryChange, names: Record<string, string>) {
+    return (
+      <li key={c.package}>
+        <b>{names[c.package] || c.package}</b> <span className="Millwright-pkg">{c.package}</span>{' '}
+        <span className="Millwright-historyVersions">
+          {c.op === 'add'
+            ? app.translator.trans('ernestdefoe-millwright.admin.sections.queue.new_version', { version: c.to })
+            : c.op === 'remove'
+            ? app.translator.trans('ernestdefoe-millwright.admin.sections.queue.removed_version', { version: c.from })
+            : `${c.from} → ${c.to}`}
+        </span>
+      </li>
     );
   }
 

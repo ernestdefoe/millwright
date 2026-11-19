@@ -207,15 +207,25 @@ class StepRunner
         return $handle;
     }
 
+    /**
+     * Re-read inside the lock. Between loading it above and taking the lock,
+     * another driver may have finished a step — carrying on from the stale
+     * copy would repeat that item.
+     *
+     * Deciding what a phase consists of is itself a unit of work — on a
+     * constrained host, planning IS the expensive step, so it must be
+     * allowed a whole request of its own rather than being squeezed in
+     * before the first item.
+     *
+     * Saved AFTER the work, which means a process killed in between
+     * repeats this item on resume. That is deliberate and it is why
+     * doItem must be idempotent: repeating work is recoverable, skipping
+     * it silently is not.
+     */
     protected function work(Run $run): Run
     {
         $id = $run->id;
 
-        /*
-         * Re-read inside the lock. Between loading it above and taking the lock,
-         * another driver may have finished a step — carrying on from the stale
-         * copy would repeat that item.
-         */
         $run = $this->store->load($id) ?? $run;
 
         if ($run->isFinished()) {
@@ -227,23 +237,8 @@ class StepRunner
         $steps = $this->stepsFor($id);
 
         try {
-            /*
-             * Deciding what a phase consists of is itself a unit of work — on a
-             * constrained host, planning IS the expensive step, so it must be
-             * allowed a whole request of its own rather than being squeezed in
-             * before the first item.
-             */
             if ($run->total() === 0 && $run->index === 0) {
-                $items = $steps->itemsFor($phase, $run);
-
-                if ($items === []) {
-                    return $this->leavePhase($run);
-                }
-
-                $run = $run->withItems($items, $this->now());
-                $this->store->save($run);
-
-                return $run;
+                return $this->listItems($steps, $run);
             }
 
             $item = $run->current();
@@ -258,12 +253,6 @@ class StepRunner
                 return $outcome;
             }
 
-            /*
-             * Saved AFTER the work, which means a process killed in between
-             * repeats this item on resume. That is deliberate and it is why
-             * doItem must be idempotent: repeating work is recoverable, skipping
-             * it silently is not.
-             */
             $run = $run->advanced($this->now(), $outcome);
             $this->store->save($run);
 
@@ -279,6 +268,21 @@ class StepRunner
 
             return $run;
         }
+    }
+
+    /** Work out what the phase consists of, and save it; or leave a phase that has nothing to do. */
+    protected function listItems(Steps $steps, Run $run): Run
+    {
+        $items = $steps->itemsFor($run->phase, $run);
+
+        if ($items === []) {
+            return $this->leavePhase($run);
+        }
+
+        $run = $run->withItems($items, $this->now());
+        $this->store->save($run);
+
+        return $run;
     }
 
     /**

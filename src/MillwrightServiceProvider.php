@@ -26,6 +26,7 @@ class MillwrightServiceProvider extends AbstractServiceProvider
         $this->registerSteps();
         $this->registerHttp();
         $this->registerSite();
+        $this->registerComposerConfig();
     }
 
     /**
@@ -37,7 +38,6 @@ class MillwrightServiceProvider extends AbstractServiceProvider
     protected function registerSite(): void
     {
         $storage = fn ($container) => $container->make(Paths::class)->storage;
-        $json = fn ($container, string $file) => new \ErnestDefoe\Millwright\Config\JsonFile($container->make(TranslatorInterface::class), $container->make(Paths::class)->base.'/'.$file);
 
         $this->container->bind(\ErnestDefoe\Millwright\Work\UpdateCheck::class, fn ($container) => new \ErnestDefoe\Millwright\Work\UpdateCheck(
             StorageDir::of($storage($container)).'/updates.json'
@@ -70,6 +70,19 @@ class MillwrightServiceProvider extends AbstractServiceProvider
             $container->make(\ErnestDefoe\Millwright\Prune\Retention::class)
         ));
 
+        $this->container->bind(\ErnestDefoe\Millwright\Work\ReleaseNotes::class, fn ($container) => new \ErnestDefoe\Millwright\Work\ReleaseNotes(
+            StorageDir::of($storage($container)).'/release-notes',
+            $container->make(\ErnestDefoe\Millwright\Config\AuthTokens::class),
+            $container->make(\ErnestDefoe\Millwright\Host\Web::class)
+        ));
+
+    }
+
+    /** Where Composer looks, what it accepts, and how it signs in: composer.json and auth.json. */
+    protected function registerComposerConfig(): void
+    {
+        $json = fn ($container, string $file) => new \ErnestDefoe\Millwright\Config\JsonFile($container->make(TranslatorInterface::class), $container->make(Paths::class)->base.'/'.$file);
+
         $this->container->bind(\ErnestDefoe\Millwright\Config\Repositories::class, fn ($container) => new \ErnestDefoe\Millwright\Config\Repositories(
             $container->make(TranslatorInterface::class),
             $json($container, 'composer.json')
@@ -78,12 +91,6 @@ class MillwrightServiceProvider extends AbstractServiceProvider
         $this->container->bind(\ErnestDefoe\Millwright\Config\Stability::class, fn ($container) => new \ErnestDefoe\Millwright\Config\Stability(
             $container->make(TranslatorInterface::class),
             $json($container, 'composer.json')
-        ));
-
-        $this->container->bind(\ErnestDefoe\Millwright\Work\ReleaseNotes::class, fn ($container) => new \ErnestDefoe\Millwright\Work\ReleaseNotes(
-            StorageDir::of($storage($container)).'/release-notes',
-            $container->make(\ErnestDefoe\Millwright\Config\AuthTokens::class),
-            $container->make(\ErnestDefoe\Millwright\Host\Web::class)
         ));
 
         $this->container->bind(\ErnestDefoe\Millwright\Config\AuthTokens::class, fn ($container) => new \ErnestDefoe\Millwright\Config\AuthTokens(

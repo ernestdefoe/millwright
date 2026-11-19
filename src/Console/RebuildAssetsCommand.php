@@ -44,6 +44,39 @@ class RebuildAssetsCommand extends AbstractCommand
             ->addOption('mark-dirty', null, InputOption::VALUE_NONE, 'Only flag the assets for rebuilding on the next request.');
     }
 
+    /**
+     * One frontend's JavaScript, CSS and translations, rebuilt; or flagged for
+     * its next page load when it will not compile.
+     *
+     * One frontend that will not compile must not stop the others, nor an
+     * update: Flarum compiles these when they are first requested, and a set
+     * nobody loads may never have compiled at all.
+     *
+     * @param list<string> $locales
+     */
+    protected function rebuild(\Flarum\Frontend\Assets $assets, array $locales): void
+    {
+        $dirty = 'assets_dirty.'.$assets->getName();
+
+        try {
+            $assets->makeJs()->commit();
+            $assets->makeCss()->commit();
+
+            foreach ($locales as $locale) {
+                $assets->makeLocaleJs($locale)->commit();
+                $assets->makeLocaleCss($locale)->commit();
+            }
+
+            $assets->makeJsDirectory()->commit();
+
+            $this->settings->delete($dirty);
+        } catch (\Throwable $e) {
+            $this->settings->set($dirty, 1);
+            $this->info('Warning: the '.$assets->getName().' assets could not be rebuilt and will be on its next page load: '
+                .strtok($e->getMessage(), "\n"));
+        }
+    }
+
     protected function fire(): int
     {
         $settings = $this->settings;
@@ -71,28 +104,7 @@ class RebuildAssetsCommand extends AbstractCommand
                 continue;
             }
 
-            /*
-             * One frontend that will not compile must not stop the others, nor
-             * an update: Flarum compiles these when they are first requested,
-             * and a set nobody loads may never have compiled at all.
-             */
-            try {
-                $assets->makeJs()->commit();
-                $assets->makeCss()->commit();
-
-                foreach ($locales as $locale) {
-                    $assets->makeLocaleJs($locale)->commit();
-                    $assets->makeLocaleCss($locale)->commit();
-                }
-
-                $assets->makeJsDirectory()->commit();
-
-                $settings->delete($dirty);
-            } catch (\Throwable $e) {
-                $settings->set($dirty, 1);
-                $this->info('Warning: the '.$assets->getName().' assets could not be rebuilt and will be on its next page load: '
-                    .strtok($e->getMessage(), "\n"));
-            }
+            $this->rebuild($assets, $locales);
         }
 
         if ($markDirty) {

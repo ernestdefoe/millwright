@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Host\StateFile;
 use ErnestDefoe\Millwright\Host\Web;
 use DOMDocument;
 use DOMElement;
@@ -60,12 +61,8 @@ class ReleaseNotes
         $to = (string) ($update['to'] ?? '');
         $cache = $this->cacheDir.'/'.sha1($repo.'|'.$from.'|'.$to).'.json';
 
-        if (is_file($cache) && time() - (int) filemtime($cache) < $this->freshFor) {
-            $hit = json_decode((string) file_get_contents($cache), true);
-
-            if (is_array($hit)) {
-                return $hit;
-            }
+        if (is_file($cache) && time() - (int) filemtime($cache) < $this->freshFor && ($hit = StateFile::read($cache)) !== []) {
+            return $hit;
         }
 
         $body = ($get ?? fn (string $u) => $this->get($u))('https://api.github.com/repos/'.$repo.'/releases?per_page=100');
@@ -76,6 +73,26 @@ class ReleaseNotes
             return ['url' => $url, 'releases' => []];
         }
 
+        $releases = $this->inRangeReleases($list, $from, $to, $url);
+
+        usort($releases, fn ($a, $b) => version_compare(ltrim($b['tag'], 'v'), ltrim($a['tag'], 'v')));
+
+        $result = ['url' => $url, 'releases' => array_slice($releases, 0, 20)];
+
+        // A cache that cannot be written only means GitHub is asked again.
+        StateFile::write($cache, $result);
+
+        return $result;
+    }
+
+    /**
+     * The published releases between what is installed and what is on offer.
+     *
+     * @param list<mixed> $list GitHub's releases
+     * @return list<array<string,mixed>>
+     */
+    protected function inRangeReleases(array $list, string $from, string $to, string $url): array
+    {
         $releases = [];
 
         foreach ($list as $release) {
@@ -94,17 +111,7 @@ class ReleaseNotes
             ];
         }
 
-        usort($releases, fn ($a, $b) => version_compare(ltrim($b['tag'], 'v'), ltrim($a['tag'], 'v')));
-
-        $result = ['url' => $url, 'releases' => array_slice($releases, 0, 20)];
-
-        if (! is_dir($this->cacheDir)) {
-            @mkdir($this->cacheDir, 0775, true);
-        }
-
-        @file_put_contents($cache, json_encode($result, JSON_UNESCAPED_SLASHES));
-
-        return $result;
+        return $releases;
     }
 
     /** Newer than what is installed, and no newer than what is on offer. */

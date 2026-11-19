@@ -85,6 +85,36 @@ class FlarumCommand
      */
     protected function inProcess(string $command, array $options): array
     {
+        $found = $this->command($command);
+
+        $output = new \Symfony\Component\Console\Output\BufferedOutput(
+            \Symfony\Component\Console\Output\OutputInterface::VERBOSITY_NORMAL,
+            false
+        );
+
+        return InProcess::isolate(['COLUMNS' => '120', 'LINES' => '50'], function () use ($found, $command, $options, $output): array {
+            $console = new \Symfony\Component\Console\Application('Flarum');
+            $console->setAutoExit(false);
+            $console->setCatchExceptions(false);
+            $console->add($found);
+
+            try {
+                $code = $console->run(
+                    new \Symfony\Component\Console\Input\ArrayInput(['command' => $command, '--no-interaction' => true] + $options),
+                    $output
+                );
+            } catch (\Throwable $e) {
+                $code = 1;
+                $output->writeln($e->getMessage());
+            }
+
+            return ['code' => $code, 'output' => trim($output->fetch())];
+        });
+    }
+
+    /** The forum's own console command by name, built by its container. */
+    protected function command(string $command): \Symfony\Component\Console\Command\Command
+    {
         $container = $this->container;
 
         if (! $container->bound('flarum.console.commands')) {
@@ -110,28 +140,6 @@ class FlarumCommand
             throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.flarum_command.unknown', ['command' => $command]));
         }
 
-        $output = new \Symfony\Component\Console\Output\BufferedOutput(
-            \Symfony\Component\Console\Output\OutputInterface::VERBOSITY_NORMAL,
-            false
-        );
-
-        return InProcess::isolate(['COLUMNS' => '120', 'LINES' => '50'], function () use ($found, $command, $options, $output): array {
-            $console = new \Symfony\Component\Console\Application('Flarum');
-            $console->setAutoExit(false);
-            $console->setCatchExceptions(false);
-            $console->add($found);
-
-            try {
-                $code = $console->run(
-                    new \Symfony\Component\Console\Input\ArrayInput(['command' => $command, '--no-interaction' => true] + $options),
-                    $output
-                );
-            } catch (\Throwable $e) {
-                $code = 1;
-                $output->writeln($e->getMessage());
-            }
-
-            return ['code' => $code, 'output' => trim($output->fetch())];
-        });
+        return $found;
     }
 }

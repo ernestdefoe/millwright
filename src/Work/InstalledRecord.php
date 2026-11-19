@@ -43,15 +43,7 @@ class InstalledRecord
         $recordPath = $this->installPath.'/vendor/composer/installed.json';
         $record = is_file($recordPath) ? $this->read($recordPath) : [];
 
-        // Composer 1 wrote a bare list; 2 wraps it. Keep whatever extra keys
-        // an existing entry carries, above all `install-path`, which a custom
-        // installer can point outside vendor/<name>.
-        $existing = [];
-        foreach ($record['packages'] ?? (array_is_list($record) ? $record : []) as $entry) {
-            if (isset($entry['name'])) {
-                $existing[strtolower($entry['name'])] = $entry;
-            }
-        }
+        $existing = $this->byName($record);
 
         $packages = [];
         $devNames = [];
@@ -94,6 +86,27 @@ class InstalledRecord
         }
 
         return count($packages);
+    }
+
+    /**
+     * The record's entries by lower-cased name. Composer 1 wrote a bare list;
+     * 2 wraps it. Whatever extra keys an entry carries are kept, above all
+     * `install-path`, which a custom installer can point outside vendor/<name>.
+     *
+     * @param array<mixed> $record
+     * @return array<string, array<string,mixed>>
+     */
+    protected function byName(array $record): array
+    {
+        $existing = [];
+
+        foreach ($record['packages'] ?? (array_is_list($record) ? $record : []) as $entry) {
+            if (isset($entry['name'])) {
+                $existing[strtolower($entry['name'])] = $entry;
+            }
+        }
+
+        return $existing;
     }
 
     /**

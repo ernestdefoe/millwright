@@ -258,8 +258,19 @@ class PhpBinary
             return $out;
         }
 
-        // The candidate most likely to be "the one", hidden or broken. The
-        // list is already in order of likelihood.
+        return $this->whyNotFound($out);
+    }
+
+    /**
+     * No working PHP at the expected place: which candidate is most likely
+     * "the one", hidden by open_basedir or present and broken. The list is
+     * already in order of likelihood.
+     *
+     * @param array<string,mixed> $out diagnose()'s answer so far
+     * @return array<string,mixed>
+     */
+    protected function whyNotFound(array $out): array
+    {
         foreach ($this->candidates() as $candidate) {
             $p = $this->probe($candidate);
 

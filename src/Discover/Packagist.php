@@ -63,17 +63,7 @@ class Packagist
      */
     public function search(string $query, int $perPage = 12, int $page = 1, string $category = ''): array
     {
-        // An unknown category is no category, so the parameter cannot reach the URL as typed.
-        $narrow = self::CATEGORIES[$category] ?? [];
-        $query = trim($query.' '.($narrow['q'] ?? ''));
-
-        $url = 'https://packagist.org/search.json?type=flarum-extension&per_page='.$perPage
-            .'&page='.max(1, $page)
-            .($query === '' ? '' : '&q='.rawurlencode($query));
-
-        foreach ($narrow['tags'] ?? [] as $tag) {
-            $url .= '&tags[]='.rawurlencode($tag);
-        }
+        $url = $this->searchUrl($query, $perPage, $page, $category);
 
         $body = ($this->get)($url);
 
@@ -93,30 +83,7 @@ class Packagist
             return ['results' => [], 'total' => 0, 'error' => $this->translator->trans('ernestdefoe-millwright.api.discover.unexpected'), 'more' => false];
         }
 
-        $results = [];
-
-        foreach ((array) $data['results'] as $row) {
-            $name = (string) ($row['name'] ?? '');
-
-            if ($name === '') {
-                continue;
-            }
-
-            $results[] = [
-                'name' => $name,
-                'description' => (string) ($row['description'] ?? ''),
-                'downloads' => (int) ($row['downloads'] ?? 0),
-                'favers' => (int) ($row['favers'] ?? 0),
-                'repository' => (string) ($row['repository'] ?? ''),
-                /*
-                 * Carried through rather than dropped. Packagist marks a
-                 * package abandoned when its author says so, and installing one
-                 * unknowingly is exactly the kind of thing somebody would want
-                 * to have been told before rather than after.
-                 */
-                'abandoned' => $row['abandoned'] ?? false,
-            ];
-        }
+        $results = array_values(array_filter(array_map(fn ($row) => $this->result((array) $row), (array) $data['results'])));
 
         return [
             'results' => $results,
@@ -124,6 +91,53 @@ class Packagist
             'error' => null,
             // Packagist hands back the URL of the next page when there is one.
             'more' => ! empty($data['next']),
+        ];
+    }
+
+    /** The search URL, narrowed to a category. An unknown category is no category, so it cannot reach the URL as typed. */
+    protected function searchUrl(string $query, int $perPage, int $page, string $category): string
+    {
+        $narrow = self::CATEGORIES[$category] ?? [];
+        $query = trim($query.' '.($narrow['q'] ?? ''));
+
+        $url = 'https://packagist.org/search.json?type=flarum-extension&per_page='.$perPage
+            .'&page='.max(1, $page)
+            .($query === '' ? '' : '&q='.rawurlencode($query));
+
+        foreach ($narrow['tags'] ?? [] as $tag) {
+            $url .= '&tags[]='.rawurlencode($tag);
+        }
+
+        return $url;
+    }
+
+    /**
+     * One search result as the Find tab shows it, or null for a row with no name.
+     *
+     * @param array<string,mixed> $row
+     * @return array<string,mixed>|null
+     */
+    protected function result(array $row): ?array
+    {
+        $name = (string) ($row['name'] ?? '');
+
+        if ($name === '') {
+            return null;
+        }
+
+        return [
+            'name' => $name,
+            'description' => (string) ($row['description'] ?? ''),
+            'downloads' => (int) ($row['downloads'] ?? 0),
+            'favers' => (int) ($row['favers'] ?? 0),
+            'repository' => (string) ($row['repository'] ?? ''),
+            /*
+             * Carried through rather than dropped. Packagist marks a
+             * package abandoned when its author says so, and installing one
+             * unknowingly is exactly the kind of thing somebody would want
+             * to have been told before rather than after.
+             */
+            'abandoned' => $row['abandoned'] ?? false,
         ];
     }
 
