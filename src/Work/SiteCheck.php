@@ -53,7 +53,7 @@ class SiteCheck
             return $translator->trans('ernestdefoe-millwright.api.composer.health_no_address');
         }
 
-        $result = $health->check(2);
+        $result = $this->look($health, 'before', 2);
         $this->rememberHealth($result['ok'] ? 'ok' : 'down');
 
         return $result['ok']
@@ -79,7 +79,7 @@ class SiteCheck
             return $translator->trans('ernestdefoe-millwright.api.composer.health_not_checked');
         }
 
-        $result = $health->check(3);
+        $result = $this->look($health, 'after', 3);
 
         /*
          * Flarum answers 503 with its "Update Flarum" page while php-fpm is
@@ -104,6 +104,34 @@ class SiteCheck
             // It worked before and it does not now. The update is the difference.
             Verdict::BROKEN_BY_THIS => $this->putBack($run, $result['why']),
         };
+    }
+
+    /**
+     * Ask the site, and when it does not answer, ask again on a later turn
+     * rather than sleeping in this one.
+     *
+     * php-fpm workers do not all pick up new code in the same instant, and one
+     * unlucky request is not an outage; a few looks a couple of seconds apart
+     * is. The pause is the driver's: the admin page polls every couple of
+     * seconds, a queue worker waits between turns, the command line pauses.
+     *
+     * @return array{ok:bool, status:int|null, why:string}
+     */
+    protected function look(SiteHealth $health, string $when, int $looks): array
+    {
+        $result = $health->check();
+        $tries = $this->run->workDir.'/health.'.$when.'.tries';
+        $tried = (int) @file_get_contents($tries) + 1;
+
+        if (! $result['ok'] && $tried < $looks) {
+            @file_put_contents($tries, (string) $tried);
+
+            throw new NotYet($this->run->translator->trans('ernestdefoe-millwright.api.composer.health_looking_again', ['why' => $result['why']]));
+        }
+
+        @unlink($tries);
+
+        return $result;
     }
 
     /**
@@ -185,7 +213,7 @@ class SiteCheck
         Opcache::requestWebReset($this->run->storagePath);
 
         for ($i = 0; $i < 10; $i++) {
-            $health->check(1);   // any answer will do; booting Flarum takes the flag
+            $health->check();   // any answer will do; booting Flarum takes the flag
 
             if (! Opcache::webResetPending($this->run->storagePath)) {
                 return true;

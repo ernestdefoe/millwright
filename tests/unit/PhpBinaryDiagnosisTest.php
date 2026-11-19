@@ -222,4 +222,36 @@ class PhpBinaryDiagnosisTest extends TestCase
             }
         }
     }
+
+    /**
+     * The admin screen asks about PHP on every visit, and each probe starts a
+     * process. The answer is remembered for a few minutes, per binary.
+     */
+    public function test_a_probe_is_remembered_across_requests_until_the_binary_changes(): void
+    {
+        $cache = sys_get_temp_dir().'/mw-probes-'.bin2hex(random_bytes(4)).'.json';
+        $runs = 0;
+        $runner = function () use (&$runs) {
+            $runs++;
+
+            return ['code' => 0, 'out' => 'cli 8.4.0', 'err' => ''];
+        };
+        $php = fn () => new PhpBinary(EnglishTranslator::make(), null, [PHP_BINARY], '', $runner, '/x/php-fpm', 'fpm-fcgi', '', $cache);
+
+        try {
+            $this->assertTrue($php()->probe(PHP_BINARY)['ok']);
+            $this->assertTrue($php()->probe(PHP_BINARY)['ok'], 'a second request did not reuse the answer');
+            $this->assertSame(1, $runs);
+
+            // A PHP upgraded in place has a new modification time: asked again.
+            $all = json_decode((string) file_get_contents($cache), true);
+            $all[PHP_BINARY]['mtime'] = 1;
+            file_put_contents($cache, json_encode($all));
+
+            $php()->probe(PHP_BINARY);
+            $this->assertSame(2, $runs);
+        } finally {
+            @unlink($cache);
+        }
+    }
 }

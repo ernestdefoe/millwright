@@ -575,6 +575,7 @@ ernestdefoe-millwright:
       core_same_version: "Flarum still records {version}, the version of its new code, so its database is brought up to date with the other migrations"
       downloaded: "Downloaded {package}"
       flarum_command_failed: "`flarum {command}` failed:"
+      health_looking_again: "The site did not answer ({why}). Looking again in a moment."
       health_503_waiting: "The site answered 503 while the web server may still be re-reading the new files; looking again shortly."
       health_down_before: "The site was already not answering before this update started ({why}), so this update will not be judged by whether it answers afterwards."
       health_no_address: "No site address is configured, so this update will not be judged by whether the site answers."

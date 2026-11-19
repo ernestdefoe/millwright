@@ -34,40 +34,23 @@ class SiteHealth
     }
 
     /**
+     * One look. Never waits: a second look is the caller's to schedule (see
+     * SiteCheck), so a web request driving the run is never held asleep.
+     *
+     * A fresh query string every time. Between this extension, a CDN and
+     * Flarum's own response cache there are several places a 200 from before
+     * the update could be served from, and a cached success is the one answer
+     * that would make this check worse than not having it.
+     *
      * @return array{ok:bool, status:int|null, why:string}
      */
-    public function check(int $attempts = 3): array
+    public function check(): array
     {
-        $last = ['ok' => false, 'status' => null, 'why' => $this->translator->trans('ernestdefoe-millwright.api.health.never_reached')];
+        $result = $this->once($this->url.(str_contains($this->url, '?') ? '&' : '?')
+            .'millwright-health='.bin2hex(random_bytes(6)));
+        unset($result['body']);   // read for the loopback check, never passed on
 
-        for ($i = 0; $i < max(1, $attempts); $i++) {
-            /*
-             * A fresh query string every attempt. Between this extension, a
-             * CDN and Flarum's own response cache there are several places a
-             * 200 from before the update could be served from, and a cached
-             * success is the one answer that would make this check worse than
-             * not having it.
-             */
-            $last = $this->once($this->url.(str_contains($this->url, '?') ? '&' : '?')
-                .'millwright-health='.bin2hex(random_bytes(6)));
-            unset($last['body']);   // read for the loopback check, never passed on
-
-            if ($last['ok']) {
-                return $last;
-            }
-
-            /*
-             * A short pause, because php-fpm workers do not all pick up new
-             * code in the same instant and one unlucky request is not an
-             * outage. Three tries over a few seconds is: they cannot all be
-             * unlucky.
-             */
-            if ($i < $attempts - 1) {
-                sleep(2);
-            }
-        }
-
-        return $last;
+        return $result;
     }
 
     /**

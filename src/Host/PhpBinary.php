@@ -61,13 +61,21 @@ class PhpBinary
         protected ?string $phpBinary = null,
         protected ?string $sapi = null,
         protected ?string $disabledFunctions = null,
+        protected ?string $probeCache = null,
     ) {
     }
 
-    /** The PHP this forum's processes run with: the admin's choice, if they made one. */
+    /** How long a binary's answer is reused: it only changes when PHP is upgraded. */
+    protected const PROBE_FOR = 600;
+
+    /**
+     * The PHP this forum's processes run with: the admin's choice, if they made
+     * one. Its probes are remembered under storage/, because the admin screen
+     * asks on every visit and each probe starts a process.
+     */
     public static function forStorage(TranslatorInterface $translator, string $storagePath): self
     {
-        return new self($translator, (new PhpOverride($translator, $storagePath))->get());
+        return new self($translator, (new PhpOverride($translator, $storagePath))->get(), probeCache: StorageDir::of($storagePath).'/php-probes.json');
     }
 
     public function path(): ?string
@@ -127,12 +135,25 @@ class PhpBinary
             return $this->probes[$candidate] = $result;
         }
 
+        if (($remembered = $this->remembered($candidate)) !== null) {
+            return $this->probes[$candidate] = $remembered;
+        }
+
+        return $this->probes[$candidate] = $this->remember($candidate, $this->spawnProbe($candidate, $result, $hidden));
+    }
+
+    /**
+     * @param array{ok:bool, hidden:bool, ran:bool, sapi:?string, version:?string, error:?string} $result
+     * @return array{ok:bool, hidden:bool, ran:bool, sapi:?string, version:?string, error:?string}
+     */
+    protected function spawnProbe(string $candidate, array $result, bool $hidden): array
+    {
         $run = $this->run([$candidate, '-r', 'echo PHP_SAPI, " ", PHP_VERSION;']);
 
         // 127/126: exec could not start it — for a hidden path, that is "not
         // there", not "broken".
         if ($run['code'] === 127 || $run['code'] === 126 || ($run['code'] === -1 && $hidden)) {
-            return $this->probes[$candidate] = $result;
+            return $result;
         }
 
         [$sapi, $version] = array_pad(explode(' ', trim($run['out']), 2), 2, null);
@@ -154,7 +175,46 @@ class PhpBinary
                 : ($sapi !== null && $sapi !== 'cli' ? $this->translator->trans('ernestdefoe-millwright.api.php.wrong_sapi', ['sapi' => $sapi]) : $this->translator->trans('ernestdefoe-millwright.api.php.exit_code', ['code' => (string) $run['code']]));
         }
 
-        return $this->probes[$candidate] = $result;
+        return $result;
+    }
+
+    /**
+     * A probe of this binary from the last few minutes, if the binary has not
+     * changed since. Keyed by its modification time, so upgrading PHP in place
+     * is noticed at once rather than after the cache runs out.
+     *
+     * @return array{ok:bool, hidden:bool, ran:bool, sapi:?string, version:?string, error:?string}|null
+     */
+    protected function remembered(string $candidate): ?array
+    {
+        if ($this->probeCache === null) {
+            return null;
+        }
+
+        $entry = ((array) json_decode((string) @file_get_contents($this->probeCache), true))[$candidate] ?? null;
+
+        return is_array($entry)
+            && (int) ($entry['at'] ?? 0) > time() - self::PROBE_FOR
+            && ($entry['mtime'] ?? null) === @filemtime($candidate)
+            && is_array($entry['result'] ?? null)
+            ? $entry['result']
+            : null;
+    }
+
+    /**
+     * @param array{ok:bool, hidden:bool, ran:bool, sapi:?string, version:?string, error:?string} $result
+     * @return array{ok:bool, hidden:bool, ran:bool, sapi:?string, version:?string, error:?string}
+     */
+    protected function remember(string $candidate, array $result): array
+    {
+        if ($this->probeCache !== null) {
+            $all = (array) json_decode((string) @file_get_contents($this->probeCache), true);
+            $all[$candidate] = ['at' => time(), 'mtime' => @filemtime($candidate), 'result' => $result];
+            // Best effort: a cache that cannot be written only means the next visit probes again.
+            @file_put_contents($this->probeCache, json_encode($all), LOCK_EX);
+        }
+
+        return $result;
     }
 
     /**

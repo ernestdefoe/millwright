@@ -57,4 +57,25 @@ class HistoryTest extends TestCase
         $this->assertSame('acpl/mobile-tab', $history[0]['changes'][0]['package']);
         $this->assertSame(1, $history[0]['migrations']);
     }
+
+    /**
+     * The admin page polls the latest run every couple of seconds. It reads
+     * one record, not every run the forum has kept.
+     */
+    public function test_the_latest_run_is_found_without_reading_every_record(): void
+    {
+        $store = new RunStore(EnglishTranslator::make(), $this->dir.'/runs');
+        $store->save(Run::start('r-old', 100));
+        $store->save(Run::start('r-new', 200));
+        $store->save(Run::start('r-old', 100)->enteredPhase('fetch', 150));   // an old run saved again does not take over
+
+        // A record that is not valid JSON would break a scan that reads them all.
+        file_put_contents($this->dir.'/runs/r-broken.json', '{not json');
+
+        $this->assertSame('r-new', $store->latest()?->id);
+
+        // A pointer naming a record that has gone falls back to reading them.
+        unlink($this->dir.'/runs/r-new.json');
+        $this->assertSame('r-old', $store->latest()?->id);
+    }
 }

@@ -62,8 +62,27 @@ class RunStore
             throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.run.state_move_failed', ['path' => $path]));
         }
 
+        $this->pointAt($run);
+
         // Every run that reaches an end is in the history, from this one place.
         (new History(dirname(rtrim($this->dir, '/'))))->record($run);
+    }
+
+    /**
+     * Which run is the latest, kept beside the records so the admin page's
+     * poll reads one record rather than every run the forum has ever had.
+     * Named without `.json` so nothing that lists the records counts it.
+     */
+    protected function pointAt(Run $run, bool $force = false): void
+    {
+        $pointer = rtrim($this->dir, '/').'/latest';
+        $current = (array) json_decode((string) @file_get_contents($pointer), true);
+
+        if ($force || (int) ($current['startedAt'] ?? -1) <= $run->startedAt) {
+            // Best effort: without it, latest() falls back to reading them all.
+            @file_put_contents($pointer.'.tmp', json_encode(['id' => $run->id, 'startedAt' => $run->startedAt]));
+            @rename($pointer.'.tmp', $pointer);
+        }
     }
 
     /** @return list<array<string,mixed>> what changed recently, newest first */
@@ -88,9 +107,21 @@ class RunStore
     /** The most recently started run, which is what the admin screen opens on. */
     public function latest(): ?Run
     {
+        $pointer = (array) json_decode((string) @file_get_contents(rtrim($this->dir, '/').'/latest'), true);
+
+        if (is_string($pointer['id'] ?? null) && preg_match('/^[A-Za-z0-9_-]{1,64}$/', $pointer['id']) && ($run = $this->load($pointer['id'])) !== null) {
+            return $run;
+        }
+
+        // No pointer yet (records written before it existed), or it names a
+        // run whose record has gone: read them all, once, and point again.
         $runs = $this->all();
 
-        return $runs === [] ? null : $runs[0];
+        if ($runs !== []) {
+            $this->pointAt($runs[0], true);
+        }
+
+        return $runs[0] ?? null;
     }
 
     /** @return list<Run> newest first */
