@@ -7,7 +7,6 @@ use ErnestDefoe\Millwright\Run\Starter;
 use ErnestDefoe\Millwright\Plan\PackageName;
 use ErnestDefoe\Millwright\Host\Web;
 use ErnestDefoe\Millwright\Host\Capability;
-use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Plan\Nightly;
 use ErnestDefoe\Millwright\Plan\Repin;
 use ErnestDefoe\Millwright\Run\Run;
@@ -74,6 +73,7 @@ class UpdateCommand extends AbstractCommand
         protected Web $web,
         protected UpdateCheck $updates,
         protected Capability $capability,
+        protected Repin $repin,
     ) {
         parent::__construct();
     }
@@ -235,7 +235,7 @@ class UpdateCommand extends AbstractCommand
      */
     protected function repinFor(array $named): array|int
     {
-        $repinner = new Repin($this->paths->base.'/composer.json', $this->storagePath('updates.json'));
+        $repinner = $this->repin;
         $pins = $repinner->pins($named);
 
         if (array_diff_key($repinner->pinned($named), $pins) !== []) {
@@ -561,11 +561,6 @@ class UpdateCommand extends AbstractCommand
     protected function check(): UpdateCheck
     {
         return $this->updates;
-    }
-
-    protected function storagePath(string $file): string
-    {
-        return StorageDir::of($this->paths->storage).'/'.$file;
     }
 
     /**

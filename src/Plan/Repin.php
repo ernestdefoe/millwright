@@ -33,7 +33,7 @@ class Repin
 {
     public function __construct(
         protected string $composerJsonPath,
-        protected string $updatesJsonPath,
+        protected UpdateCheck $updates,
     ) {
     }
 
@@ -113,7 +113,7 @@ class Repin
     /** @return array<string,mixed> */
     protected function cachedUpdates(): array
     {
-        return (array) ((new UpdateCheck($this->updatesJsonPath))->cached()['updates'] ?? []);
+        return (array) ($this->updates->cached()['updates'] ?? []);
     }
 
     /** @return array<string,mixed> */

@@ -250,6 +250,10 @@ class RepinTest extends TestCase
             'base' => $this->dir, 'public' => $this->dir, 'storage' => $this->dir, 'vendor' => $this->dir,
         ]);
         $reflection->getProperty('paths')->setValue($controller, $paths);
+        $reflection->getProperty('repin')->setValue($controller, new \ErnestDefoe\Millwright\Plan\Repin(
+            $this->dir.'/composer.json',
+            new \ErnestDefoe\Millwright\Work\UpdateCheck(\ErnestDefoe\Millwright\Host\StorageDir::of($this->dir).'/updates.json')
+        ));
 
         return $reflection->getMethod('repinFor')->invoke($controller, $packages, $body, 'update');
     }

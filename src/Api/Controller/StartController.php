@@ -7,7 +7,6 @@ use ErnestDefoe\Millwright\Discover\Compatibility;
 use ErnestDefoe\Millwright\Discover\Packagist;
 use ErnestDefoe\Millwright\Exception\RefusedException;
 use ErnestDefoe\Millwright\Host\Capability;
-use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Host\Web;
 use ErnestDefoe\Millwright\Plan\Nightly;
 use ErnestDefoe\Millwright\Plan\Repin;
@@ -47,6 +46,7 @@ class StartController implements RequestHandlerInterface
         protected Packagist $packagist,
         protected Web $web,
         protected Capability $capability,
+        protected Repin $repin,
     ) {
     }
 
@@ -227,9 +227,6 @@ class StartController implements RequestHandlerInterface
          * what is allowed. What stays here is the question of PERMISSION: the
          * browser asks WHETHER, and never to what.
          */
-        return (new Repin(
-            $this->paths->base.'/composer.json',
-            StorageDir::of($this->paths->storage).'/updates.json'
-        ))->targetsFor($packages);
+        return $this->repin->targetsFor($packages);
     }
 }

@@ -2,7 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
-use ErnestDefoe\Millwright\Host\StorageDir;
+use ErnestDefoe\Millwright\Work\UpdateCheck;
 use ErnestDefoe\Millwright\Plan\CoreOverrides;
 use ErnestDefoe\Millwright\Plan\CoreUpgrade;
 use Flarum\Foundation\Application;
@@ -30,6 +30,7 @@ class CoreController implements RequestHandlerInterface
         protected TranslatorInterface $translator,
         protected Paths $paths,
         protected Application $app,
+        protected UpdateCheck $updates,
     ) {
     }
 
@@ -99,7 +100,7 @@ class CoreController implements RequestHandlerInterface
          * so the panel read "This forum runs Flarum 2.0.0" above "Update
          * Flarum to v2.0.0" until the next check (ClaudiusH, 2026-10-09).
          */
-        $updates = (new \ErnestDefoe\Millwright\Work\UpdateCheck(StorageDir::of($this->paths->storage).'/updates.json'))
+        $updates = $this->updates
             ->current($this->paths->base.'/composer.lock')['updates'] ?? [];
 
         return $updates['flarum/core'] ?? null;
