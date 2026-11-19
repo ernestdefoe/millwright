@@ -116,42 +116,42 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
 
   searchForm() {
     return (
-    <form
-      className="Millwright-search"
-      onsubmit={(e: Event) => {
-        e.preventDefault();
+      <form
+        className="Millwright-search"
+        onsubmit={(e: Event) => {
+          e.preventDefault();
 
-        /*
-         * Cancel the pending keystroke search first, or Return fires one
-         * search immediately and a second one 350ms later for the same
-         * query — two round trips and a list that redraws under the reader.
-         */
-        this.stopTyping();
+          /*
+           * Cancel the pending keystroke search first, or Return fires one
+           * search immediately and a second one 350ms later for the same
+           * query — two round trips and a list that redraws under the reader.
+           */
+          this.stopTyping();
 
-        if (submittedSearchPlan().search) this.search();
-      }}
-    >
-      <input
-        className="FormControl"
-        type="search"
-        placeholder={app.translator.trans('ernestdefoe-millwright.admin.sections.discover.search', {}, true)}
-        value={this.query}
-        oninput={(e: InputEvent) => {
-          this.query = (e.target as HTMLInputElement).value;
-          this.queueSearch();
+          if (submittedSearchPlan().search) this.search();
         }}
-      />
-      {/*
-       * Kept, and not decorative: it forces a search the typing rule
-       * declines — a one-character vendor prefix, or the same query again
-       * after an error.
-       */}
-      <Button className="Button Button--primary" type="submit" disabled={this.searching}>
-        {this.searching
-          ? app.translator.trans('ernestdefoe-millwright.admin.sections.discover.searching')
-          : app.translator.trans('ernestdefoe-millwright.admin.sections.discover.search_button')}
-      </Button>
-    </form>
+      >
+        <input
+          className="FormControl"
+          type="search"
+          placeholder={app.translator.trans('ernestdefoe-millwright.admin.sections.discover.search', {}, true)}
+          value={this.query}
+          oninput={(e: InputEvent) => {
+            this.query = (e.target as HTMLInputElement).value;
+            this.queueSearch();
+          }}
+        />
+        {/*
+         * Kept, and not decorative: it forces a search the typing rule
+         * declines — a one-character vendor prefix, or the same query again
+         * after an error.
+         */}
+        <Button className="Button Button--primary" type="submit" disabled={this.searching}>
+          {this.searching
+            ? app.translator.trans('ernestdefoe-millwright.admin.sections.discover.searching')
+            : app.translator.trans('ernestdefoe-millwright.admin.sections.discover.search_button')}
+        </Button>
+      </form>
     );
   }
 
@@ -162,28 +162,28 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
    */
   categoryChips() {
     return (
-    <div
-      className="Millwright-chips"
-      role="radiogroup"
-      aria-label={app.translator.trans('ernestdefoe-millwright.admin.sections.discover.tabs.label', {}, true)}
-    >
-      {CATEGORIES.map((c) => (
-        <button
-          type="button"
-          role="radio"
-          aria-checked={this.category === c.id ? 'true' : 'false'}
-          className={'Millwright-chip' + (this.category === c.id ? ' is-on' : '')}
-          onclick={() => {
-            if (this.category === c.id) return;
-            this.category = c.id;
-            this.stopTyping();
-            this.search();
-          }}
-        >
-          {app.translator.trans(c.label)}
-        </button>
-      ))}
-    </div>
+      <div
+        className="Millwright-chips"
+        role="radiogroup"
+        aria-label={app.translator.trans('ernestdefoe-millwright.admin.sections.discover.tabs.label', {}, true)}
+      >
+        {CATEGORIES.map((c) => (
+          <button
+            type="button"
+            role="radio"
+            aria-checked={this.category === c.id ? 'true' : 'false'}
+            className={'Millwright-chip' + (this.category === c.id ? ' is-on' : '')}
+            onclick={() => {
+              if (this.category === c.id) return;
+              this.category = c.id;
+              this.stopTyping();
+              this.search();
+            }}
+          >
+            {app.translator.trans(c.label)}
+          </button>
+        ))}
+      </div>
     );
   }
 
@@ -271,25 +271,7 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
              * "Installed as X" already says it was replaced, and by what, so
              * "replaced by X" beside it only said it twice (ClaudiusH, 2026-10-13).
              */}
-            {instead && this.installedNames.includes(instead) ? null : instead ? (
-              <span
-                className="Millwright-tag Millwright-tag--warn"
-                title={app.translator.trans('ernestdefoe-millwright.admin.sections.discover.extension.replaced_why', {}, true)}
-              >
-                {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.extension.replaced_by', { replacement: instead })}
-              </span>
-            ) : v?.replaced ? (
-              <span
-                className="Millwright-tag Millwright-tag--warn"
-                title={app.translator.trans('ernestdefoe-millwright.admin.sections.discover.extension.replaced_why', {}, true)}
-              >
-                {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.extension.replaced')}
-              </span>
-            ) : r.abandoned ? (
-              <span className="Millwright-tag Millwright-tag--warn" title={this.abandonedTitle(r)}>
-                {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.extension.badges.abandoned')}
-              </span>
-            ) : null}
+            {this.warning(r, v, instead)}
             {this.badge(v)}
           </span>
           {this.action(r, v)}
@@ -299,66 +281,69 @@ export default class DiscoverTab extends Component<DiscoverAttrs> {
   }
 
   /**
+   * At most one warning: replaced (by what, unless that is already
+   * installed, where "Installed as X" says it), or abandoned.
+   */
+  warning(r: Found, v: Verdict | undefined, instead: string | null) {
+    return instead && this.installedNames.includes(instead) ? null : instead ? (
+      <span
+        className="Millwright-tag Millwright-tag--warn"
+        title={app.translator.trans('ernestdefoe-millwright.admin.sections.discover.extension.replaced_why', {}, true)}
+      >
+        {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.extension.replaced_by', { replacement: instead })}
+      </span>
+    ) : v?.replaced ? (
+      <span
+        className="Millwright-tag Millwright-tag--warn"
+        title={app.translator.trans('ernestdefoe-millwright.admin.sections.discover.extension.replaced_why', {}, true)}
+      >
+        {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.extension.replaced')}
+      </span>
+    ) : r.abandoned ? (
+      <span className="Millwright-tag Millwright-tag--warn" title={this.abandonedTitle(r)}>
+        {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.extension.badges.abandoned')}
+      </span>
+    ) : null;
+  }
+
+  /**
    * Four states, and "we don't know yet" is one of them. Collapsing unknown
    * into "no" hides working extensions; collapsing it into "yes" offers ones
    * that cannot install. Either way somebody stops believing the badge.
    */
   badge(v?: Verdict) {
-    if (!v) {
-      return (
-        <span className="Millwright-tag Millwright-tag--muted">
-          {this.checking ? app.translator.trans('ernestdefoe-millwright.admin.sections.discover.compat.checking') : '—'}
-        </span>
-      );
-    }
+    const t = (key: string, params: Record<string, unknown> = {}) =>
+      app.translator.trans('ernestdefoe-millwright.admin.sections.discover.compat.' + key, params, true);
 
-    if (v.compatible === null) {
-      return (
-        <span className="Millwright-tag Millwright-tag--muted">
-          {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.compat.unknown')}
-        </span>
-      );
-    }
+    if (!v) return this.tag(this.checking ? t('checking') : '—');
 
-    if (!v.compatible) {
-      return (
-        <span
-          className="Millwright-tag Millwright-tag--muted"
-          title={app.translator.trans(
-            'ernestdefoe-millwright.admin.sections.discover.compat.incompatible_why',
-            { requires: v.requires || '?' },
-            true
-          )}
-        >
-          {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.compat.incompatible')}
-        </span>
-      );
-    }
+    if (v.compatible === null) return this.tag(t('unknown'));
+
+    if (!v.compatible) return this.tag(t('incompatible'), 'muted', t('incompatible_why', { requires: v.requires || '?' }));
 
     // Composer refuses a release less finished than the forum allows, with an
     // error that says the package "could not be found". Say which setting it needs.
     if (!this.allowed(v)) {
-      return (
-        <span className="Millwright-tag Millwright-tag--muted">
-          {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.compat.needs_stability', {
-            level: app.translator.trans(
-              'ernestdefoe-millwright.admin.composer.minimum_stability.options.' + (v.stability || 'stable').toLowerCase(),
-              {},
-              true
-            ),
-          })}
-        </span>
+      const level = app.translator.trans(
+        'ernestdefoe-millwright.admin.composer.minimum_stability.options.' + (v.stability || 'stable').toLowerCase(),
+        {},
+        true
       );
+
+      return this.tag(t('needs_stability', { level }));
     }
 
     // A pre-release is labelled as one, so whoever installs it knows that is
     // what they are getting.
-    return v.stability && v.stability !== 'stable' ? (
-      <span className="Millwright-tag Millwright-tag--warn">
-        {app.translator.trans('ernestdefoe-millwright.admin.sections.discover.compat.prerelease', { version: v.version })}
+    return v.stability && v.stability !== 'stable' ? this.tag(t('prerelease', { version: v.version }), 'warn') : this.tag(v.version, 'ok');
+  }
+
+  /** One of the small labels in a card's foot. */
+  tag(text: Mithril.Children, tone: 'muted' | 'warn' | 'ok' = 'muted', title?: string) {
+    return (
+      <span className={'Millwright-tag Millwright-tag--' + tone} title={title}>
+        {text}
       </span>
-    ) : (
-      <span className="Millwright-tag Millwright-tag--ok">{v.version}</span>
     );
   }
 

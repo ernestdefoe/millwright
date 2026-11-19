@@ -59,7 +59,6 @@ export default class TrashPanel extends Component {
     }
 
     const d = this.data;
-    const last = d.lastPrune;
 
     return (
       <section className="Millwright-card Millwright-trash">
@@ -68,84 +67,100 @@ export default class TrashPanel extends Component {
           <p>{app.translator.trans('ernestdefoe-millwright.admin.trash.help')}</p>
         </header>
 
-        <dl className="Millwright-trashStats">
-          <div>
-            <dt>{app.translator.trans('ernestdefoe-millwright.admin.trash.size')}</dt>
-            <dd>{app.translator.trans('ernestdefoe-millwright.admin.trash.size_value', { size: human(d.trashBytes || 0), count: d.trashCount })}</dd>
-          </div>
-          <div>
-            <dt>{app.translator.trans('ernestdefoe-millwright.admin.trash.freeable')}</dt>
-            <dd>
-              {d.removeCount > 0
-                ? app.translator.trans('ernestdefoe-millwright.admin.trash.freeable_value', { size: human(d.removeBytes), count: d.removeCount })
-                : app.translator.trans('ernestdefoe-millwright.admin.trash.freeable_none')}
-            </dd>
-          </div>
-          <div>
-            <dt>{app.translator.trans('ernestdefoe-millwright.admin.trash.last')}</dt>
-            <dd>
-              {last
-                ? app.translator.trans('ernestdefoe-millwright.admin.trash.last_value', {
-                    when: new Date(last.at * 1000).toLocaleString(),
-                    count: last.removed,
-                    size: human(last.freed || 0),
-                  })
-                : app.translator.trans('ernestdefoe-millwright.admin.trash.last_never')}
-            </dd>
-          </div>
-        </dl>
+        {this.stats(d)}
 
-        <form
-          className="Millwright-cardFoot Millwright-cardFoot--wrap Millwright-trashForm"
-          onsubmit={(e: Event) => {
-            e.preventDefault();
-            this.send(
-              'PATCH',
-              '/settings',
-              { keepDays: this.keepDays, keepRuns: this.keepRuns },
-              app.translator.trans('ernestdefoe-millwright.admin.trash.saved', {}, true)
-            );
-          }}
-        >
-          <label className="Millwright-trashField">
-            <span>{app.translator.trans('ernestdefoe-millwright.admin.trash.keep_days')}</span>
-            <input
-              className="FormControl"
-              type="number"
-              min="0"
-              max="3650"
-              value={this.keepDays}
-              oninput={(e: InputEvent) => (this.keepDays = (e.target as HTMLInputElement).value)}
-            />
-            <span>{app.translator.trans('ernestdefoe-millwright.admin.trash.days')}</span>
-          </label>
-          <label className="Millwright-trashField">
-            <span>{app.translator.trans('ernestdefoe-millwright.admin.trash.keep_runs')}</span>
-            <input
-              className="FormControl"
-              type="number"
-              min="0"
-              max="1000"
-              value={this.keepRuns}
-              oninput={(e: InputEvent) => (this.keepRuns = (e.target as HTMLInputElement).value)}
-            />
-            <span>{app.translator.trans('ernestdefoe-millwright.admin.trash.runs')}</span>
-          </label>
-          <Button className="Button" type="submit" disabled={this.busy}>
-            {app.translator.trans('ernestdefoe-millwright.admin.actions.save')}
-          </Button>
-          <span className="Millwright-trashSpacer" />
-          <Button className="Button Button--primary" disabled={this.busy || d.removeCount === 0} onclick={() => this.confirmPrune(d)}>
-            {this.busy
-              ? app.translator.trans('ernestdefoe-millwright.admin.trash.pruning')
-              : app.translator.trans('ernestdefoe-millwright.admin.trash.prune')}
-          </Button>
-        </form>
+        {this.settingsForm(d)}
 
         <div className="Millwright-callout">
           {app.translator.trans('ernestdefoe-millwright.admin.trash.rule', { days: d.settings.keepDays, runs: d.settings.keepRuns })}
         </div>
       </section>
+    );
+  }
+
+  /** How much the copies take, what a prune would free, and when one last ran. */
+  stats(d: TrashPayload) {
+    const last = d.lastPrune;
+
+    return (
+      <dl className="Millwright-trashStats">
+        <div>
+          <dt>{app.translator.trans('ernestdefoe-millwright.admin.trash.size')}</dt>
+          <dd>{app.translator.trans('ernestdefoe-millwright.admin.trash.size_value', { size: human(d.trashBytes || 0), count: d.trashCount })}</dd>
+        </div>
+        <div>
+          <dt>{app.translator.trans('ernestdefoe-millwright.admin.trash.freeable')}</dt>
+          <dd>
+            {d.removeCount > 0
+              ? app.translator.trans('ernestdefoe-millwright.admin.trash.freeable_value', { size: human(d.removeBytes), count: d.removeCount })
+              : app.translator.trans('ernestdefoe-millwright.admin.trash.freeable_none')}
+          </dd>
+        </div>
+        <div>
+          <dt>{app.translator.trans('ernestdefoe-millwright.admin.trash.last')}</dt>
+          <dd>
+            {last
+              ? app.translator.trans('ernestdefoe-millwright.admin.trash.last_value', {
+                  when: new Date(last.at * 1000).toLocaleString(),
+                  count: last.removed,
+                  size: human(last.freed || 0),
+                })
+              : app.translator.trans('ernestdefoe-millwright.admin.trash.last_never')}
+          </dd>
+        </div>
+      </dl>
+    );
+  }
+
+  /** How long copies are kept, and the button that prunes the rest now. */
+  settingsForm(d: TrashPayload) {
+    return (
+      <form
+        className="Millwright-cardFoot Millwright-cardFoot--wrap Millwright-trashForm"
+        onsubmit={(e: Event) => {
+          e.preventDefault();
+          this.send(
+            'PATCH',
+            '/settings',
+            { keepDays: this.keepDays, keepRuns: this.keepRuns },
+            app.translator.trans('ernestdefoe-millwright.admin.trash.saved', {}, true)
+          );
+        }}
+      >
+        <label className="Millwright-trashField">
+          <span>{app.translator.trans('ernestdefoe-millwright.admin.trash.keep_days')}</span>
+          <input
+            className="FormControl"
+            type="number"
+            min="0"
+            max="3650"
+            value={this.keepDays}
+            oninput={(e: InputEvent) => (this.keepDays = (e.target as HTMLInputElement).value)}
+          />
+          <span>{app.translator.trans('ernestdefoe-millwright.admin.trash.days')}</span>
+        </label>
+        <label className="Millwright-trashField">
+          <span>{app.translator.trans('ernestdefoe-millwright.admin.trash.keep_runs')}</span>
+          <input
+            className="FormControl"
+            type="number"
+            min="0"
+            max="1000"
+            value={this.keepRuns}
+            oninput={(e: InputEvent) => (this.keepRuns = (e.target as HTMLInputElement).value)}
+          />
+          <span>{app.translator.trans('ernestdefoe-millwright.admin.trash.runs')}</span>
+        </label>
+        <Button className="Button" type="submit" disabled={this.busy}>
+          {app.translator.trans('ernestdefoe-millwright.admin.actions.save')}
+        </Button>
+        <span className="Millwright-trashSpacer" />
+        <Button className="Button Button--primary" disabled={this.busy || d.removeCount === 0} onclick={() => this.confirmPrune(d)}>
+          {this.busy
+            ? app.translator.trans('ernestdefoe-millwright.admin.trash.pruning')
+            : app.translator.trans('ernestdefoe-millwright.admin.trash.prune')}
+        </Button>
+      </form>
     );
   }
 

@@ -55,6 +55,11 @@ const TYPES: Record<string, { icon: string }> = {
 
 const LADDER = ['stable', 'RC', 'beta', 'alpha', 'dev'];
 
+/** What accepting a stability level means, in a sentence. */
+function means(level: string): string {
+  return app.translator.trans('ernestdefoe-millwright.admin.composer.minimum_stability.means.' + level.toLowerCase(), {}, true) as string;
+}
+
 export default class SourcesTab extends Component {
   private loading = true;
   private saving = false;
@@ -163,30 +168,7 @@ export default class SourcesTab extends Component {
 
     return (
       <section className="Millwright-src-card" id="mw-src-repos">
-        <header className="Millwright-src-head">
-          <div className="Millwright-src-headIcon">
-            <i className="fas fa-code-branch" aria-hidden="true" />
-          </div>
-          <div className="Millwright-src-headText">
-            <h3>
-              {app.translator.trans('ernestdefoe-millwright.admin.composer.repositories.label')}{' '}
-              <span className="Millwright-src-count">{repos.length}</span>
-            </h3>
-            <p>{app.translator.trans('ernestdefoe-millwright.admin.composer.repositories.help')}</p>
-          </div>
-          {repos.length > 6 ? (
-            <label className="Millwright-src-filter">
-              <i className="fas fa-magnifying-glass" aria-hidden="true" />
-              <input
-                type="search"
-                placeholder={app.translator.trans('ernestdefoe-millwright.admin.composer.repositories.filter', {}, true)}
-                aria-label={app.translator.trans('ernestdefoe-millwright.admin.composer.repositories.filter', {}, true)}
-                value={this.filter}
-                oninput={(e: InputEvent) => (this.filter = (e.target as HTMLInputElement).value)}
-              />
-            </label>
-          ) : null}
-        </header>
+        {this.reposHead(repos)}
 
         {repos.length === 0 ? (
           <div className="Millwright-src-empty">
@@ -215,6 +197,36 @@ export default class SourcesTab extends Component {
 
         {this.addRepo(data, repos)}
       </section>
+    );
+  }
+
+  /** The card's title, with the count, and a filter once the list is long. */
+  reposHead(repos: Repo[]) {
+    return (
+      <header className="Millwright-src-head">
+        <div className="Millwright-src-headIcon">
+          <i className="fas fa-code-branch" aria-hidden="true" />
+        </div>
+        <div className="Millwright-src-headText">
+          <h3>
+            {app.translator.trans('ernestdefoe-millwright.admin.composer.repositories.label')}{' '}
+            <span className="Millwright-src-count">{repos.length}</span>
+          </h3>
+          <p>{app.translator.trans('ernestdefoe-millwright.admin.composer.repositories.help')}</p>
+        </div>
+        {repos.length > 6 ? (
+          <label className="Millwright-src-filter">
+            <i className="fas fa-magnifying-glass" aria-hidden="true" />
+            <input
+              type="search"
+              placeholder={app.translator.trans('ernestdefoe-millwright.admin.composer.repositories.filter', {}, true)}
+              aria-label={app.translator.trans('ernestdefoe-millwright.admin.composer.repositories.filter', {}, true)}
+              value={this.filter}
+              oninput={(e: InputEvent) => (this.filter = (e.target as HTMLInputElement).value)}
+            />
+          </label>
+        ) : null}
+      </header>
     );
   }
 
@@ -260,21 +272,7 @@ export default class SourcesTab extends Component {
     return (
       <li className={'Millwright-src-tile' + (confirming ? ' is-confirming' : '')} key={r.url} title={r.url}>
         {confirming ? (
-          <div className="Millwright-src-tileConfirm">
-            <span>{app.translator.trans('ernestdefoe-millwright.admin.composer.repositories.remove_named', { name: short })}</span>
-            <span>
-              <Button className="Button Button--sm" onclick={() => (this.confirmRepo = null)}>
-                {app.translator.trans('ernestdefoe-millwright.admin.actions.cancel')}
-              </Button>
-              <Button
-                className="Button Button--sm Button--danger"
-                disabled={this.saving}
-                onclick={() => this.send('DELETE', '/repositories', { url: r.url }, () => (this.confirmRepo = null))}
-              >
-                {app.translator.trans('ernestdefoe-millwright.admin.actions.remove')}
-              </Button>
-            </span>
-          </div>
+          this.confirmRemoveRepo(r, short)
         ) : (
           [
             <span className="Millwright-src-tileName">{short}</span>,
@@ -308,6 +306,27 @@ export default class SourcesTab extends Component {
     );
   }
 
+  /** Asked in place before a repository is removed. */
+  confirmRemoveRepo(r: Repo, short: string) {
+    return (
+      <div className="Millwright-src-tileConfirm">
+        <span>{app.translator.trans('ernestdefoe-millwright.admin.composer.repositories.remove_named', { name: short })}</span>
+        <span>
+          <Button className="Button Button--sm" onclick={() => (this.confirmRepo = null)}>
+            {app.translator.trans('ernestdefoe-millwright.admin.actions.cancel')}
+          </Button>
+          <Button
+            className="Button Button--sm Button--danger"
+            disabled={this.saving}
+            onclick={() => this.send('DELETE', '/repositories', { url: r.url }, () => (this.confirmRepo = null))}
+          >
+            {app.translator.trans('ernestdefoe-millwright.admin.actions.remove')}
+          </Button>
+        </span>
+      </div>
+    );
+  }
+
   /** A repository type's name: "Git repository", "Folder on this server"… */
   typeLabel(type: string): string {
     return app.translator.trans('ernestdefoe-millwright.admin.composer.repositories.types.' + type, {}, true);
@@ -330,27 +349,7 @@ export default class SourcesTab extends Component {
       >
         <div className="Millwright-src-addTitle">{app.translator.trans('ernestdefoe-millwright.admin.composer.add_repository_label')}</div>
 
-        <div
-          className="Millwright-src-choices"
-          role="radiogroup"
-          aria-label={app.translator.trans('ernestdefoe-millwright.admin.composer.add_repository_label', {}, true)}
-        >
-          {types.map((ty) => (
-            <button
-              type="button"
-              role="radio"
-              aria-checked={this.repoType === ty ? 'true' : 'false'}
-              className={'Millwright-src-choice' + (this.repoType === ty ? ' is-on' : '')}
-              onclick={() => (this.repoType = ty)}
-            >
-              <i className={(TYPES[ty] || TYPES.vcs).icon} aria-hidden="true" />
-              <span>
-                <strong>{this.typeLabel(ty)}</strong>
-                <small>{app.translator.trans('ernestdefoe-millwright.admin.composer.repositories.type_help.' + ty)}</small>
-              </span>
-            </button>
-          ))}
-        </div>
+        {this.repoTypes(types)}
 
         <div className="Millwright-src-field">
           <span className={'Millwright-src-fieldIcon' + (d ? ' Millwright-src-logo--' + d.tone : '')}>
@@ -382,14 +381,39 @@ export default class SourcesTab extends Component {
     );
   }
 
+  /** What kind of repository: one choice per kind, as a radio group. */
+  repoTypes(types: string[]) {
+    return (
+      <div
+        className="Millwright-src-choices"
+        role="radiogroup"
+        aria-label={app.translator.trans('ernestdefoe-millwright.admin.composer.add_repository_label', {}, true)}
+      >
+        {types.map((ty) => (
+          <button
+            type="button"
+            role="radio"
+            aria-checked={this.repoType === ty ? 'true' : 'false'}
+            className={'Millwright-src-choice' + (this.repoType === ty ? ' is-on' : '')}
+            onclick={() => (this.repoType = ty)}
+          >
+            <i className={(TYPES[ty] || TYPES.vcs).icon} aria-hidden="true" />
+            <span>
+              <strong>{this.typeLabel(ty)}</strong>
+              <small>{app.translator.trans('ernestdefoe-millwright.admin.composer.repositories.type_help.' + ty)}</small>
+            </span>
+          </button>
+        ))}
+      </div>
+    );
+  }
+
   // ── stability ───────────────────────────────────────────────────────────
 
   stability(data: ConfigPayload) {
     const st = data.stability || { minimumStability: 'stable', preferStable: false };
     const current = st.minimumStability || 'stable';
     const levels = st.levels || LADDER;
-    const means = (l: string) => app.translator.trans('ernestdefoe-millwright.admin.composer.minimum_stability.means.' + l.toLowerCase(), {}, true);
-
     return (
       <section className="Millwright-src-card" id="mw-src-stability">
         <header className="Millwright-src-head">
@@ -408,37 +432,7 @@ export default class SourcesTab extends Component {
            * is: everything at and above the chosen step is accepted. A select
            * hid the other four choices and the order between them.
            */}
-          <div
-            className="Millwright-src-ladder"
-            role="radiogroup"
-            aria-label={app.translator.trans('ernestdefoe-millwright.admin.composer.minimum_stability.label', {}, true)}
-          >
-            {levels.map((l, i) => {
-              const on = l === current;
-              const accepted = i <= levels.indexOf(current);
-
-              return (
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={on ? 'true' : 'false'}
-                  title={means(l)}
-                  disabled={this.saving}
-                  className={'Millwright-src-step' + (on ? ' is-on' : accepted ? ' is-accepted' : '')}
-                  onclick={() => !on && this.send('PATCH', '/stability', { minimumStability: l, preferStable: st.preferStable })}
-                >
-                  <strong>{app.translator.trans('ernestdefoe-millwright.admin.composer.minimum_stability.options.' + l.toLowerCase())}</strong>
-                  {l === 'beta' ? (
-                    <small className="Millwright-src-reco">
-                      {app.translator.trans('ernestdefoe-millwright.admin.composer.minimum_stability.recommended')}
-                    </small>
-                  ) : (
-                    <small>{app.translator.trans('ernestdefoe-millwright.admin.composer.minimum_stability.short.' + l.toLowerCase())}</small>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+          {this.ladder(levels, current, !!st.preferStable)}
 
           <div className="Millwright-src-callout">
             <i className="fas fa-lightbulb" aria-hidden="true" />
@@ -465,6 +459,43 @@ export default class SourcesTab extends Component {
           </label>
         </div>
       </section>
+    );
+  }
+
+  /** One step per level, most finished first: the chosen step and everything above it is accepted. */
+  ladder(levels: string[], current: string, preferStable: boolean) {
+    return (
+      <div
+        className="Millwright-src-ladder"
+        role="radiogroup"
+        aria-label={app.translator.trans('ernestdefoe-millwright.admin.composer.minimum_stability.label', {}, true)}
+      >
+        {levels.map((l, i) => {
+          const on = l === current;
+          const accepted = i <= levels.indexOf(current);
+
+          return (
+            <button
+              type="button"
+              role="radio"
+              aria-checked={on ? 'true' : 'false'}
+              title={means(l)}
+              disabled={this.saving}
+              className={'Millwright-src-step' + (on ? ' is-on' : accepted ? ' is-accepted' : '')}
+              onclick={() => !on && this.send('PATCH', '/stability', { minimumStability: l, preferStable })}
+            >
+              <strong>{app.translator.trans('ernestdefoe-millwright.admin.composer.minimum_stability.options.' + l.toLowerCase())}</strong>
+              {l === 'beta' ? (
+                <small className="Millwright-src-reco">
+                  {app.translator.trans('ernestdefoe-millwright.admin.composer.minimum_stability.recommended')}
+                </small>
+              ) : (
+                <small>{app.translator.trans('ernestdefoe-millwright.admin.composer.minimum_stability.short.' + l.toLowerCase())}</small>
+              )}
+            </button>
+          );
+        })}
+      </div>
     );
   }
 

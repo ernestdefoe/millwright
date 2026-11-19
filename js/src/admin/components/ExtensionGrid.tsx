@@ -92,71 +92,71 @@ export default class ExtensionGrid extends Component<ExtensionGridAttrs> {
   /** What is true of this extension: enabled or not, a library, a local checkout. */
   cardTags(e: Installed) {
     return (
-    <span className="Millwright-tags">
-      {e.library ? (
-        <span
-          className="Millwright-tag Millwright-tag--muted"
-          title={app.translator.trans('ernestdefoe-millwright.admin.extensions.library_why', {}, true)}
-        >
-          {app.translator.trans('ernestdefoe-millwright.admin.extensions.library')}
-        </span>
-      ) : (
-        <span className={'Millwright-tag' + (e.enabled ? ' Millwright-tag--ok' : '')}>
-          {e.enabled
-            ? app.translator.trans('ernestdefoe-millwright.admin.extensions.enabled')
-            : app.translator.trans('ernestdefoe-millwright.admin.extensions.disabled')}
-        </span>
-      )}
-      {e.pathInstall ? (
-        <span
-          className="Millwright-tag Millwright-tag--muted"
-          title={app.translator.trans('ernestdefoe-millwright.admin.extensions.path_install_why', {}, true)}
-        >
-          {app.translator.trans('ernestdefoe-millwright.admin.extensions.path_install')}
-        </span>
-      ) : null}
-    </span>
+      <span className="Millwright-tags">
+        {e.library ? (
+          <span
+            className="Millwright-tag Millwright-tag--muted"
+            title={app.translator.trans('ernestdefoe-millwright.admin.extensions.library_why', {}, true)}
+          >
+            {app.translator.trans('ernestdefoe-millwright.admin.extensions.library')}
+          </span>
+        ) : (
+          <span className={'Millwright-tag' + (e.enabled ? ' Millwright-tag--ok' : '')}>
+            {e.enabled
+              ? app.translator.trans('ernestdefoe-millwright.admin.extensions.enabled')
+              : app.translator.trans('ernestdefoe-millwright.admin.extensions.disabled')}
+          </span>
+        )}
+        {e.pathInstall ? (
+          <span
+            className="Millwright-tag Millwright-tag--muted"
+            title={app.translator.trans('ernestdefoe-millwright.admin.extensions.path_install_why', {}, true)}
+          >
+            {app.translator.trans('ernestdefoe-millwright.admin.extensions.path_install')}
+          </span>
+        ) : null}
+      </span>
     );
   }
 
   /** What can be done with it: read the release, update it, remove it. */
   cardActions(e: Installed) {
     return (
-    <span className="Millwright-actions">
-      {/*
-       * What the update gives you, from the release on GitHub: not
-       * every author posts changelogs anywhere else.
-       */}
-      {e.update?.notes ? (
-        <Button
-          className="Button Button--link Button--sm Millwright-notes"
-          onclick={() =>
-            app.modal.show(() => import('./ReleaseNotesModal'), {
-              name: e.name,
-              package: e.package,
-              from: e.update!.from,
-              to: e.update!.to,
-            })
-          }
-        >
-          {app.translator.trans('ernestdefoe-millwright.admin.extensions.learn_more')}
-        </Button>
-      ) : null}
-      {cardOffers(e).update ? (
-        <Button
-          className="Button Button--primary Button--sm"
-          disabled={this.attrs.starting}
-          onclick={() => this.attrs.updateOne(e)}
-        >
-          {app.translator.trans('ernestdefoe-millwright.admin.extensions.update')}
-        </Button>
-      ) : null}
-      {cardOffers(e).remove ? (
-        <Button className="Button Button--sm" disabled={this.attrs.starting} onclick={() => this.attrs.removeOne(e)}>
-          {app.translator.trans('ernestdefoe-millwright.admin.extensions.remove')}
-        </Button>
-      ) : null}
-    </span>
+      <span className="Millwright-actions">
+        {/*
+         * What the update gives you, from the release on GitHub: not
+         * every author posts changelogs anywhere else.
+         */}
+        {e.update?.notes ? (
+          <Button
+            className="Button Button--link Button--sm Millwright-notes"
+            onclick={() =>
+              app.modal.show(() => import('./ReleaseNotesModal'), {
+                name: e.name,
+                package: e.package,
+                from: e.update!.from,
+                to: e.update!.to,
+              })
+            }
+          >
+            {app.translator.trans('ernestdefoe-millwright.admin.extensions.learn_more')}
+          </Button>
+        ) : null}
+        {cardOffers(e).update ? (
+          <Button
+            className="Button Button--primary Button--sm"
+            disabled={this.attrs.starting}
+            onclick={() => this.attrs.updateOne(e)}
+          >
+            {app.translator.trans('ernestdefoe-millwright.admin.extensions.update')}
+          </Button>
+        ) : null}
+        {cardOffers(e).remove ? (
+          <Button className="Button Button--sm" disabled={this.attrs.starting} onclick={() => this.attrs.removeOne(e)}>
+            {app.translator.trans('ernestdefoe-millwright.admin.extensions.remove')}
+          </Button>
+        ) : null}
+      </span>
     );
   }
 }

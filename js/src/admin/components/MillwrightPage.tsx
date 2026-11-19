@@ -197,34 +197,10 @@ export default class MillwrightPage extends ExtensionPage<MillwrightPageAttrs> {
   }
 
   content() {
-    if (this.firstLoad) {
+    if (this.firstLoad || (this.loadError && !this.host)) {
       return (
         <div className="ExtensionPage-settings">
-          <div className="container">
-            <LoadingIndicator />
-          </div>
-        </div>
-      );
-    }
-
-    if (this.loadError && !this.host) {
-      // Nothing loaded at all. Say what happened and offer the one useful action.
-      return (
-        <div className="ExtensionPage-settings">
-          <div className="container">
-            <Alert type="error" dismissible={false} className="Millwright-alert">
-              {this.loadError}
-            </Alert>
-            <Button
-              className="Button"
-              onclick={() => {
-                this.firstLoad = true;
-                this.load();
-              }}
-            >
-              {app.translator.trans('ernestdefoe-millwright.admin.page.try_again')}
-            </Button>
-          </div>
+          <div className="container">{this.firstLoad ? <LoadingIndicator /> : this.loadFailed()}</div>
         </div>
       );
     }
@@ -240,40 +216,67 @@ export default class MillwrightPage extends ExtensionPage<MillwrightPageAttrs> {
            */}
           {this.showingRun() ? this.runPanel() : null}
 
-          {this.hidesPage() ? null : (
-            <PageTabs
-              active={this.tab}
-              tabs={[
-                { id: 'discover', label: app.translator.trans('ernestdefoe-millwright.admin.sections.discover.title'), badge: 0 },
-                {
-                  id: 'installed',
-                  label: app.translator.trans('ernestdefoe-millwright.admin.sections.installed.title', { count: this.installed.length }),
-                  badge: this.updateCount(),
-                },
-                { id: 'history', label: app.translator.trans('ernestdefoe-millwright.admin.sections.queue.title'), badge: 0 },
-                { id: 'sources', label: app.translator.trans('ernestdefoe-millwright.admin.composer.title'), badge: 0 },
-                { id: 'host', label: app.translator.trans('ernestdefoe-millwright.admin.host.title'), badge: 0 },
-              ]}
-              choose={(id: string) => (this.tab = id as Tab)}
-            />
-          )}
+          {this.hidesPage() ? null : this.tabs()}
 
-          {this.hidesPage() ? null : this.tab === 'host' ? (
-            <div>
-              <HostPanel host={this.host} onchange={() => this.load()} />
-              <TrashPanel />
-            </div>
-          ) : this.tab === 'sources' ? (
-            <SourcesTab />
-          ) : this.tab === 'history' ? (
-            <HistoryTab history={this.history} installed={this.installed} />
-          ) : this.tab === 'discover' ? (
-            <DiscoverTab starting={this.starting} oninstall={(name: string) => this.start([name], 'install')} />
-          ) : (
-            this.installedTab()
-          )}
+          {this.hidesPage() ? null : this.tabBody()}
         </div>
       </div>
+    );
+  }
+
+  /** Nothing loaded at all: say what happened and offer the one useful action. */
+  loadFailed() {
+    return [
+      <Alert type="error" dismissible={false} className="Millwright-alert">
+        {this.loadError}
+      </Alert>,
+      <Button
+        className="Button"
+        onclick={() => {
+          this.firstLoad = true;
+          this.load();
+        }}
+      >
+        {app.translator.trans('ernestdefoe-millwright.admin.page.try_again')}
+      </Button>,
+    ];
+  }
+
+  tabs() {
+    return (
+      <PageTabs
+        active={this.tab}
+        tabs={[
+          { id: 'discover', label: app.translator.trans('ernestdefoe-millwright.admin.sections.discover.title'), badge: 0 },
+          {
+            id: 'installed',
+            label: app.translator.trans('ernestdefoe-millwright.admin.sections.installed.title', { count: this.installed.length }),
+            badge: this.updateCount(),
+          },
+          { id: 'history', label: app.translator.trans('ernestdefoe-millwright.admin.sections.queue.title'), badge: 0 },
+          { id: 'sources', label: app.translator.trans('ernestdefoe-millwright.admin.composer.title'), badge: 0 },
+          { id: 'host', label: app.translator.trans('ernestdefoe-millwright.admin.host.title'), badge: 0 },
+        ]}
+        choose={(id: string) => (this.tab = id as Tab)}
+      />
+    );
+  }
+
+  /** The open tab's content. */
+  tabBody() {
+    return this.tab === 'host' ? (
+      <div>
+        <HostPanel host={this.host} onchange={() => this.load()} />
+        <TrashPanel />
+      </div>
+    ) : this.tab === 'sources' ? (
+      <SourcesTab />
+    ) : this.tab === 'history' ? (
+      <HistoryTab history={this.history} installed={this.installed} />
+    ) : this.tab === 'discover' ? (
+      <DiscoverTab starting={this.starting} oninstall={(name: string) => this.start([name], 'install')} />
+    ) : (
+      this.installedTab()
     );
   }
 
