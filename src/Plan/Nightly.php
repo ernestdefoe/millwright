@@ -2,6 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Plan;
 
+use ErnestDefoe\Millwright\Host\Web;
+
 /**
  * Moving Flarum to its nightly build: which requirements change, and to what.
  *
@@ -25,12 +27,11 @@ namespace ErnestDefoe\Millwright\Plan;
  */
 class Nightly
 {
-    /** @var callable(string):?array */
-    protected $fetch;
-
-    public function __construct(protected string $composerJsonPath, protected string $lockPath, ?callable $fetch = null)
-    {
-        $this->fetch = $fetch ?? fn (string $name) => self::devVersions($name);
+    public function __construct(
+        protected string $composerJsonPath,
+        protected string $lockPath,
+        protected Web $web,
+    ) {
     }
 
     /** The branch this forum's Flarum would track, e.g. `2.x-dev`, or null if core cannot be read. */
@@ -57,17 +58,13 @@ class Nightly
             return [];
         }
 
+        $names = array_values(array_filter(array_map('strval', array_keys($require)), fn (string $name) => str_starts_with($name, 'flarum/')));
         $out = [];
 
-        foreach (array_keys($require) as $name) {
-            if (! str_starts_with((string) $name, 'flarum/')) {
-                continue;
-            }
-
-            $versions = ($this->fetch)((string) $name);
-
+        // Every flarum/* package at once: this runs in the request that starts the run.
+        foreach ($this->devVersions($names) as $name => $versions) {
             if (is_array($versions) && in_array($branch, $versions, true)) {
-                $out[(string) $name] = $branch;
+                $out[$name] = $branch;
             }
         }
 
@@ -75,17 +72,24 @@ class Nightly
         return isset($out['flarum/core']) ? $out : [];
     }
 
-    /** @return list<string>|null the package's branch versions on Packagist, null when unreachable */
-    public static function devVersions(string $name): ?array
+    /**
+     * Each package's branch versions on Packagist, null when unreachable.
+     *
+     * @param list<string> $names
+     * @return array<string,list<string>|null>
+     */
+    protected function devVersions(array $names): array
     {
-        $ctx = stream_context_create(['http' => ['timeout' => 10, 'user_agent' => 'Millwright (+https://github.com/ernestdefoe/millwright)']]);
-        $json = @file_get_contents('https://repo.packagist.org/p2/'.$name.'~dev.json', false, $ctx);
-        $data = is_string($json) ? json_decode($json, true) : null;
+        $bodies = $this->web->getMany(array_combine($names, array_map(fn (string $name) => 'https://repo.packagist.org/p2/'.$name.'~dev.json', $names)) ?: [], 20.0, 10);
+        $out = [];
 
-        if (! is_array($data)) {
-            return null;
+        foreach ($names as $name) {
+            $data = isset($bodies[$name]) ? json_decode($bodies[$name], true) : null;
+            $out[$name] = is_array($data)
+                ? array_values(array_map(fn ($v) => (string) ($v['version'] ?? ''), (array) ($data['packages'][$name] ?? [])))
+                : null;
         }
 
-        return array_values(array_map(fn ($v) => (string) ($v['version'] ?? ''), (array) ($data['packages'][$name] ?? [])));
+        return $out;
     }
 }

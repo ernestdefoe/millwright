@@ -2,7 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Console;
 
-use GuzzleHttp\ClientInterface;
+use ErnestDefoe\Millwright\Host\Web;
 use ErnestDefoe\Millwright\Host\Capability;
 use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Plan\Nightly;
@@ -67,7 +67,7 @@ class UpdateCommand extends AbstractCommand
         protected Paths $paths,
         protected RunStore $runs,
         protected StepRunner $runner,
-        protected ClientInterface $http,
+        protected Web $web,
     ) {
         parent::__construct();
     }
@@ -455,7 +455,7 @@ class UpdateCommand extends AbstractCommand
             return 1;
         }
 
-        $targets = (new Nightly($this->paths->base.'/composer.json', $this->paths->base.'/composer.lock'))->targets();
+        $targets = (new Nightly($this->paths->base.'/composer.json', $this->paths->base.'/composer.lock', $this->web))->targets();
 
         if ($targets === []) {
             $this->error('There is no nightly build to move to: Packagist has no development branch for this Flarum, or could not be reached. Nothing was started.');
@@ -485,7 +485,7 @@ class UpdateCommand extends AbstractCommand
      */
     protected function recheck(): void
     {
-        $this->check()->refreshSite($this->translator, $this->paths->base, $this->http);
+        $this->check()->refreshSite($this->translator, $this->paths->base, $this->web, 120.0);
     }
 
     protected function check(): UpdateCheck

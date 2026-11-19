@@ -5,10 +5,8 @@ namespace ErnestDefoe\Millwright\Api\Controller;
 use Composer\Semver\VersionParser;
 use ErnestDefoe\Millwright\Config\JsonFile;
 use ErnestDefoe\Millwright\Config\Stability;
-use ErnestDefoe\Millwright\Discover\Cache;
 use ErnestDefoe\Millwright\Discover\Compatibility;
 use ErnestDefoe\Millwright\Discover\Packagist;
-use ErnestDefoe\Millwright\Host\StorageDir;
 use Flarum\Foundation\Application;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
@@ -35,6 +33,7 @@ class CompatController implements RequestHandlerInterface
         protected TranslatorInterface $translator,
         protected Paths $paths,
         protected Application $app,
+        protected Packagist $packagist,
     ) {
     }
 
@@ -68,10 +67,8 @@ class CompatController implements RequestHandlerInterface
          */
         $core = $this->targetOr($this->coreVersion(), Arr::get((array) $request->getParsedBody(), 'core'));
 
-        $packagist = new Packagist($this->translator, new Cache(StorageDir::of($this->paths->storage).'/packagist'));
-
         return new JsonResponse([
-            'verdicts' => $packagist->verdicts($names, new Compatibility($core)),
+            'verdicts' => $this->packagist->verdicts($names, new Compatibility($core)),
             'core' => $core,
             // Not part of a verdict: the verdicts are cached for every admin,
             // and this is a setting that can change between two searches.

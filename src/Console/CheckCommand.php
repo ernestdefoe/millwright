@@ -2,7 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Console;
 
-use GuzzleHttp\ClientInterface;
+use ErnestDefoe\Millwright\Host\Web;
 use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 use Flarum\Console\AbstractCommand;
@@ -26,7 +26,7 @@ class CheckCommand extends AbstractCommand
     public function __construct(
         protected TranslatorInterface $translator,
         protected Paths $paths,
-        protected ClientInterface $http,
+        protected Web $web,
     ) {
         parent::__construct();
     }
@@ -56,7 +56,7 @@ class CheckCommand extends AbstractCommand
          * was never told a new version existed. Packagist stays FIRST so a
          * protected repository can never shadow a public package.
          */
-        $result = $check->refreshSite($this->translator, $this->paths->base, $this->http);
+        $result = $check->refreshSite($this->translator, $this->paths->base, $this->web, 120.0);
 
         if ($result === null) {
             $this->error('Could not read composer.lock, so there is nothing to check.');

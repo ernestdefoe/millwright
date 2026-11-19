@@ -2,12 +2,12 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
-use ErnestDefoe\Millwright\Discover\Cache;
 use ErnestDefoe\Millwright\Discover\Compatibility;
 use ErnestDefoe\Millwright\Discover\Packagist;
 use ErnestDefoe\Millwright\Exception\RefusedException;
 use ErnestDefoe\Millwright\Host\Capability;
 use ErnestDefoe\Millwright\Host\StorageDir;
+use ErnestDefoe\Millwright\Host\Web;
 use ErnestDefoe\Millwright\Plan\Nightly;
 use ErnestDefoe\Millwright\Plan\Repin;
 use ErnestDefoe\Millwright\Run\Drivers;
@@ -44,6 +44,8 @@ class StartController implements RequestHandlerInterface
         protected Paths $paths,
         protected ExtensionManager $extensions,
         protected Application $app,
+        protected Packagist $packagist,
+        protected Web $web,
     ) {
     }
 
@@ -59,8 +61,7 @@ class StartController implements RequestHandlerInterface
      */
     protected function replaced(array $packages): ?string
     {
-        $packagist = new Packagist($this->translator, new Cache(StorageDir::of($this->paths->storage).'/packagist'));
-        $verdicts = $packagist->verdicts(array_slice($packages, 0, 5), new Compatibility(ltrim($this->app->version(), 'v')));
+        $verdicts = $this->packagist->verdicts(array_slice($packages, 0, 5), new Compatibility(ltrim($this->app->version(), 'v')));
 
         foreach ($verdicts as $name => $verdict) {
             if (! empty($verdict['replaced'])) {
@@ -131,7 +132,7 @@ class StartController implements RequestHandlerInterface
          * and to which branch. See Plan\Nightly.
          */
         $nightly = filter_var(Arr::get($body, 'nightly', false), FILTER_VALIDATE_BOOL)
-            ? (new Nightly($this->paths->base.'/composer.json', $this->paths->base.'/composer.lock'))->targets()
+            ? (new Nightly($this->paths->base.'/composer.json', $this->paths->base.'/composer.lock', $this->web))->targets()
             : null;
 
         if ($nightly === []) {

@@ -2,9 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
-use ErnestDefoe\Millwright\Discover\Cache;
 use ErnestDefoe\Millwright\Discover\Packagist;
-use ErnestDefoe\Millwright\Host\StorageDir;
 use Flarum\Extension\ExtensionManager;
 use Flarum\Foundation\Paths;
 use Flarum\Http\RequestUtil;
@@ -29,6 +27,7 @@ class DiscoverController implements RequestHandlerInterface
         protected TranslatorInterface $translator,
         protected Paths $paths,
         protected ExtensionManager $extensions,
+        protected Packagist $packagist,
     ) {
     }
 
@@ -50,7 +49,7 @@ class DiscoverController implements RequestHandlerInterface
          * The page number is clamped: it reaches an outbound URL, and twenty
          * pages is more than anybody browses before searching instead.
          */
-        $found = (new Packagist($this->translator, $this->cache()))->search($query, 12, $page, (string) ($params['category'] ?? ''));
+        $found = $this->packagist->search($query, 12, $page, (string) ($params['category'] ?? ''));
 
         /*
          * Marked rather than filtered out. Somebody searching for an
@@ -73,10 +72,5 @@ class DiscoverController implements RequestHandlerInterface
         $found['installedNames'] = array_keys($installed);
 
         return new JsonResponse($found);
-    }
-
-    protected function cache(): Cache
-    {
-        return new Cache(StorageDir::of($this->paths->storage).'/packagist');
     }
 }

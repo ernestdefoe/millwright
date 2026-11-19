@@ -460,7 +460,7 @@ class UpdateCommandTest extends TestCase
             public function __construct(Paths $paths, RunStore $runs, StepRunner $runner, callable $recheck)
             {
                 $this->recheckWith = $recheck;
-                parent::__construct(EnglishTranslator::make(), $paths, $runs, $runner, new \GuzzleHttp\Client());
+                parent::__construct(EnglishTranslator::make(), $paths, $runs, $runner, new \ErnestDefoe\Millwright\Host\Web(new \GuzzleHttp\Client()));
             }
 
             protected function recheck(): void

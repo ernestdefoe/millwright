@@ -6,7 +6,7 @@ use ErnestDefoe\Millwright\Config\AuthTokens;
 use ErnestDefoe\Millwright\Config\JsonFile;
 use ErnestDefoe\Millwright\Config\Repositories;
 use Flarum\Locale\TranslatorInterface;
-use GuzzleHttp\ClientInterface;
+use ErnestDefoe\Millwright\Host\Web;
 
 /**
  * Whether anything newer exists, asked cheaply.
@@ -32,7 +32,7 @@ class UpdateCheck
 {
     /**
      * Where each version's release notes live, as read from Packagist while
-     * checking: package => version => URL. Filled by fromPackagist(), so a
+     * checking: package => version => URL. Filled by readPackagist(), so a
      * check costs no request beyond the one it already makes.
      *
      * @var array<string,array<string,string>>
@@ -107,16 +107,14 @@ class UpdateCheck
 
     /**
      * @param array<string,string> $installed package => installed version
-     * @param callable(string):?array $fetch  overridable so this is testable
-     *                                        without a network
+     * @param callable(string):?array $fetch  a package's published versions,
+     *                                        null when it could not be asked
      * @param callable(string):array<string,string>|null $notesFor release links
      *        for packages Packagist does not know, version => URL
      * @return array<string,mixed>
      */
-    public function refresh(array $installed, ?callable $fetch = null, ?callable $notesFor = null): array
+    public function refresh(array $installed, callable $fetch, ?callable $notesFor = null): array
     {
-        $fetch ??= fn (string $name) => $this->fromPackagist($name);
-
         $found = [];
         $unknown = [];
         $tracking = [];
@@ -208,12 +206,25 @@ class UpdateCheck
      * @param array<string,string> $installed
      * @return array<string,mixed>
      */
-    public function refreshWith(array $installed, PrivateIndex $protected): array
+    public function refreshWith(array $installed, PrivateIndex $protected, Web $web, float $seconds): array
     {
+        $deadline = microtime(true) + $seconds;
+        $asked = array_filter($installed, fn (string $version) => ! self::tracksABranch($version));
+
+        // Packagist for every package at once, within the time limit.
+        $bodies = $web->getMany(array_combine(
+            array_keys($asked),
+            array_map(fn (string $name) => 'https://repo.packagist.org/p2/'.$name.'.json', array_keys($asked))
+        ) ?: [], $seconds);
+
+        // Protected repositories one by one, only while time is left: a slow
+        // GitHub then costs those packages a "could not check", not the request.
+        $inTime = fn () => microtime(true) < $deadline;
+
         return $this->refresh(
             $installed,
-            fn (string $name) => $this->fromPackagist($name) ?? $protected->versionsFor($name),
-            fn (string $name) => $protected->releaseNotesFor($name),
+            fn (string $name) => $this->readPackagist($name, $bodies[$name] ?? null) ?? ($inTime() ? $protected->versionsFor($name) : null),
+            fn (string $name) => $inTime() ? $protected->releaseNotesFor($name) : [],
         );
     }
 
@@ -225,9 +236,11 @@ class UpdateCheck
      * One place for "Check now", millwright:check and the re-check
      * millwright:update makes before giving up on a pin.
      *
+     * $seconds bounds the whole check: "Check now" runs inside a web request.
+     *
      * @return array<string,mixed>|null
      */
-    public function refreshSite(TranslatorInterface $translator, string $base, ClientInterface $http): ?array
+    public function refreshSite(TranslatorInterface $translator, string $base, Web $web, float $seconds): ?array
     {
         $lock = (array) json_decode((string) @file_get_contents($base.'/composer.lock'), true);
         $packages = array_merge(array_values((array) ($lock['packages'] ?? [])), array_values((array) ($lock['packages-dev'] ?? [])));
@@ -239,8 +252,8 @@ class UpdateCheck
         return $this->refreshWith($this->interesting($packages, self::directRequires($base.'/composer.json')), new PrivateIndex(
             new Repositories($translator, new JsonFile($translator, $base.'/composer.json')),
             new AuthTokens($translator, new JsonFile($translator, $base.'/auth.json')),
-            $http,
-        ));
+            $web->client(),
+        ), $web, $seconds);
     }
 
     /** @return array<string,mixed> */
@@ -296,6 +309,12 @@ class UpdateCheck
         return $at === null || (time() - (int) $at) > $this->freshFor;
     }
 
+    /** A branch install: `dev-main`, `1.x-dev`. */
+    public static function tracksABranch(string $version): bool
+    {
+        return str_starts_with($version, 'dev-') || str_contains($version, '-dev');
+    }
+
     /**
      * The newest version worth comparing against what is installed.
      *
@@ -306,12 +325,6 @@ class UpdateCheck
      *
      * @param list<string> $versions
      */
-    /** A branch install: `dev-main`, `1.x-dev`. */
-    public static function tracksABranch(string $version): bool
-    {
-        return str_starts_with($version, 'dev-') || str_contains($version, '-dev');
-    }
-
     protected function newestComparable(array $versions, string $installed): ?string
     {
         $installedIsDev = self::tracksABranch($installed);
@@ -349,28 +362,16 @@ class UpdateCheck
         return ltrim($version, 'v');
     }
 
-    /** @return list<string>|null */
     /**
-     * Public so a caller can compose it — Packagist first, then whatever
-     * protected repositories the site has — without reimplementing it.
+     * A package's versions from its Packagist p2 file, null when there was no
+     * answer or the package is not on Packagist. Notes the release pages seen
+     * on the way, so a check costs no request beyond the one it already makes.
+     *
+     * @return list<string>|null
      */
-    public function fromPackagist(string $name): ?array
+    protected function readPackagist(string $name, ?string $body): ?array
     {
-        $url = 'https://repo.packagist.org/p2/'.$name.'.json';
-
-        $context = stream_context_create(['http' => [
-            'timeout' => 15,
-            'header' => "User-Agent: Millwright\r\n",
-        ]]);
-
-        $body = @file_get_contents($url, false, $context);
-
-        if ($body === false) {
-            return null;
-        }
-
-        $data = json_decode($body, true);
-        $versions = $data['packages'][$name] ?? null;
+        $versions = $body === null ? null : (json_decode($body, true)['packages'][$name] ?? null);
 
         if (! is_array($versions)) {
             return null;

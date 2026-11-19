@@ -92,12 +92,21 @@ class MillwrightServiceProvider extends AbstractServiceProvider
          * Guzzle's shared ClientInterface would hand this one to every other
          * extension that asks for it.
          */
-        $this->container->when([
-            \ErnestDefoe\Millwright\Api\Controller\CheckController::class,
-            \ErnestDefoe\Millwright\Api\Controller\ReleaseNotesController::class,
-            \ErnestDefoe\Millwright\Console\CheckCommand::class,
-            \ErnestDefoe\Millwright\Console\UpdateCommand::class,
-        ])->needs(\GuzzleHttp\ClientInterface::class)->give(Client::class);
+        // One search cache under storage/, shared by Find, the compatibility
+        // check and the start-time refusal of a replaced package.
+        $this->container->singleton(\ErnestDefoe\Millwright\Discover\Packagist::class, function ($container) {
+            $web = $container->make(\ErnestDefoe\Millwright\Host\Web::class);
+
+            return new \ErnestDefoe\Millwright\Discover\Packagist(
+                $container->make(TranslatorInterface::class),
+                new \ErnestDefoe\Millwright\Discover\Cache(StorageDir::of($container->make(Paths::class)->storage).'/packagist'),
+                fn (string $url) => $web->get($url)
+            );
+        });
+
+        $this->container->when(\ErnestDefoe\Millwright\Host\Web::class)
+            ->needs(\GuzzleHttp\ClientInterface::class)
+            ->give(Client::class);
 
         /*
          * The lock directory is what stops two drivers doing the same item.

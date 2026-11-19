@@ -36,13 +36,16 @@ class Packagist
         'widget' => ['tags' => ['widget', 'widgets']],
     ];
 
-    /** @param ?callable(string):?string $get overridable so tests never touch a network */
+    /** @var callable(string):?string */
+    protected $get;
+
+    /** @param callable(string):?string $get a URL's body, or null (Web::get on a forum; a stub in tests) */
     public function __construct(
         protected TranslatorInterface $translator,
         protected Cache $cache,
-        protected $get = null,
+        callable $get,
     ) {
-        $this->get ??= fn (string $url) => $this->fetch($url);
+        $this->get = $get;
     }
 
     /**
@@ -244,17 +247,5 @@ class Packagist
         return preg_match('#^[a-z0-9]([_.-]?[a-z0-9]+)*/[a-z0-9](([_.]|-{1,2})?[a-z0-9]+)*$#', $real) && $real !== strtolower($name)
             ? $real
             : null;
-    }
-
-    protected function fetch(string $url): ?string
-    {
-        $context = stream_context_create(['http' => [
-            'timeout' => 15,
-            'header' => "User-Agent: Millwright (Flarum extension updater)\r\n",
-        ]]);
-
-        $body = @file_get_contents($url, false, $context);
-
-        return $body === false ? null : $body;
     }
 }
