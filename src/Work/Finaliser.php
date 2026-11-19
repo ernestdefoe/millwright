@@ -39,7 +39,7 @@ class Finaliser
         return match ($item) {
             'register' => $this->register(),
             'migrations' => $this->migrate(),
-            'assets' => $this->flarum('assets:publish', $this->run->translator->trans('ernestdefoe-millwright.api.composer.assets_published')),
+            'assets' => $this->assetsPublished(),
             'caches' => $this->clearCaches(),
             'check the site again' => $this->site->verify($run),
             'tidy the trash' => $this->tidyTrash(),
@@ -117,7 +117,7 @@ class Finaliser
 
         if ($run->composer->canSpawn()) {
             $this->registerWith(null);
-            $this->flarum('migrate', '');
+            $this->flarum('migrate');
         } else {
             (new FlarumUpdater($run->translator, $this->http, $run->siteUrl, $run->storagePath))->migrate();
         }
@@ -195,8 +195,8 @@ class Finaliser
         // this run waited) would fail the clear below; see StaleCache.
         $setAside = StaleCache::describe(StaleCache::setAside($run->storagePath), $run->translator);
 
-        $this->flarum('cache:clear', 'cleared');
-        $this->flarum('millwright:repair-formatter', 'formatter rebuilt');
+        $this->flarum('cache:clear');
+        $this->flarum('millwright:repair-formatter');
         // Before Flarum 2.0.0, cache:clear leaves the compiled bundles as they
         // were: the update's new screen never reached the browser.
         $run->needsFreshCode();
@@ -357,7 +357,7 @@ class Finaliser
         $ledger = new MigrationLedger($run->translator, $run->workDir);
 
         $ledger->before($run->forum);
-        $this->flarum('migrate', 'migrations run');
+        $this->flarum('migrate');
         $added = $ledger->after($run->forum->db, $run->forum->extensions, $run->vendorPath, $run->forum->log);
 
         return $added === []
@@ -365,7 +365,7 @@ class Finaliser
             : $run->translator->trans('ernestdefoe-millwright.api.composer.migrations_run', ['count' => count($added)]);
     }
 
-    protected function flarum(string $command, string $note): string
+    protected function flarum(string $command): void
     {
         /*
          * After the swap, and in a process that has the new code: its own
@@ -388,7 +388,12 @@ class Finaliser
         if ($result['code'] !== 0) {
             throw new RuntimeException($this->run->translator->trans('ernestdefoe-millwright.api.composer.flarum_command_failed', ['command' => $command])."\n".FlarumCommand::excerpt($result['output']));
         }
+    }
 
-        return $note;
+    protected function assetsPublished(): string
+    {
+        $this->flarum('assets:publish');
+
+        return $this->run->translator->trans('ernestdefoe-millwright.api.composer.assets_published');
     }
 }

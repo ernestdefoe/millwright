@@ -242,7 +242,6 @@ export interface TrashPayload {
   settings: { keepDays: number; keepRuns: number };
   trashBytes: number;
   trashCount: number;
-  keptCount: number;
   removeCount: number;
   removeBytes: number;
   lastPrune: { at: number; removed: number; freed: number } | null;

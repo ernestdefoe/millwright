@@ -32,26 +32,65 @@ class Process
      */
     public static function run(TranslatorInterface $translator, array $command, string $cwd, array $env = [], int $timeout = 600): array
     {
-        $descriptors = [1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
-        $process = @proc_open($command, $descriptors, $pipes, $cwd, $env ?: null);
+        // stderr folded into the output on purpose: most tools say what matters
+        // there, and somebody reading a failure wants all of it, in order.
+        $result = self::drain($command, $cwd, $env, $timeout, true);
+
+        if ($result['code'] === self::NOT_STARTED) {
+            throw new RuntimeException($translator->trans('ernestdefoe-millwright.api.process.start_failed', ['command' => $command[0] ?? $translator->trans('ernestdefoe-millwright.api.process.the_command')]));
+        }
+
+        if ($result['code'] === self::TIMED_OUT) {
+            throw new RuntimeException($translator->trans('ernestdefoe-millwright.api.process.timeout', ['command' => $command[0] ?? $translator->trans('ernestdefoe-millwright.api.process.the_command_start'), 'seconds' => (string) $timeout]));
+        }
+
+        return ['code' => $result['code'], 'output' => trim($result['out'])];
+    }
+
+    /**
+     * The same, keeping stdout and stderr apart and never throwing: a probe
+     * that cannot start, or hangs, is simply a binary that does not work.
+     *
+     * @param list<string> $command
+     * @return array{code:int, out:string, err:string} code -1 when it could not start or ran out of time
+     */
+    public static function capture(array $command, int $timeout = 10): array
+    {
+        $result = self::drain($command, null, [], $timeout, false);
+
+        return in_array($result['code'], [self::NOT_STARTED, self::TIMED_OUT], true) ? ['code' => -1] + $result : $result;
+    }
+
+    /** Out of range for an exit code, so neither can be mistaken for one. */
+    protected const NOT_STARTED = PHP_INT_MIN;
+
+    protected const TIMED_OUT = PHP_INT_MIN + 1;
+
+    /**
+     * @param list<string> $command
+     * @param array<string,string> $env
+     * @return array{code:int, out:string, err:string}
+     */
+    protected static function drain(array $command, ?string $cwd, array $env, int $timeout, bool $merge): array
+    {
+        $process = @proc_open($command, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, $cwd, $env ?: null);
 
         if (! is_resource($process)) {
-            throw new RuntimeException($translator->trans('ernestdefoe-millwright.api.process.start_failed', ['command' => $command[0] ?? $translator->trans('ernestdefoe-millwright.api.process.the_command')]));
+            return ['code' => self::NOT_STARTED, 'out' => '', 'err' => ''];
         }
 
         foreach ($pipes as $pipe) {
             stream_set_blocking($pipe, false);
         }
 
-        // stderr folded into the output on purpose: most tools say what matters
-        // there, and somebody reading a failure wants all of it, in order.
-        $output = '';
+        $out = '';
+        $err = '';
         $deadline = time() + $timeout;
 
         while (true) {
             $status = proc_get_status($process);
-            $output .= (string) stream_get_contents($pipes[1]);
-            $output .= (string) stream_get_contents($pipes[2]);
+            $out .= (string) stream_get_contents($pipes[1]);
+            $merge ? $out .= (string) stream_get_contents($pipes[2]) : $err .= (string) stream_get_contents($pipes[2]);
 
             if (! $status['running']) {
                 break;
@@ -60,7 +99,7 @@ class Process
             if (time() > $deadline) {
                 proc_terminate($process, 9);
 
-                throw new RuntimeException($translator->trans('ernestdefoe-millwright.api.process.timeout', ['command' => $command[0] ?? $translator->trans('ernestdefoe-millwright.api.process.the_command_start'), 'seconds' => (string) $timeout]));
+                return ['code' => self::TIMED_OUT, 'out' => $out, 'err' => $err];
             }
 
             usleep(50000);
@@ -70,6 +109,6 @@ class Process
             fclose($pipe);
         }
 
-        return ['code' => proc_close($process), 'output' => trim($output)];
+        return ['code' => proc_close($process), 'out' => $out, 'err' => $err];
     }
 }

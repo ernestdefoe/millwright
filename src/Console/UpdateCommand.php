@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Console;
 
+use ErnestDefoe\Millwright\Host\PhpBinary;
 use ErnestDefoe\Millwright\Host\StateFile;
 use ErnestDefoe\Millwright\Exception\RefusedException;
 use ErnestDefoe\Millwright\Run\Starter;
@@ -299,9 +300,7 @@ class UpdateCommand extends AbstractCommand
      */
     protected function handOver(Run $run): int
     {
-        $disabled = array_map('trim', explode(',', (string) ini_get('disable_functions')));
-
-        if (! function_exists('proc_open') || in_array('proc_open', $disabled, true)) {
+        if (! PhpBinary::forStorage($this->translator, $this->paths->storage)->canSpawn()) {
             $this->error("This update replaced the updater itself, so {$run->id} has to finish with the new code. "
                 .'Run `php flarum millwright:update --resume`, or open Millwright in the admin panel.');
 
@@ -310,6 +309,8 @@ class UpdateCommand extends AbstractCommand
 
         $this->info('This update replaced the updater itself, so a fresh process finishes it with the new code.');
 
+        // Its own output goes straight to this terminal, so the run's progress
+        // stays visible: the one process Millwright starts that is not captured.
         $process = proc_open(
             [PHP_BINARY, $this->paths->base.'/flarum', 'millwright:update', '--resume', '--timeout='.(int) $this->input->getOption('timeout')],
             [STDIN, STDOUT, STDERR],

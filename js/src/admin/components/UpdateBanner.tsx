@@ -5,6 +5,7 @@ import Component, { type ComponentAttrs } from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import LinkButton from 'flarum/common/components/LinkButton';
 import type Mithril from 'mithril';
+import ago from '../ago';
 
 interface Pending {
   package: string;
@@ -103,7 +104,7 @@ export default class UpdateBanner extends Component {
           <div className="Millwright-banner-body">
             {app.translator.trans('ernestdefoe-millwright.admin.updater.banner.body')}
             {this.checkedAt
-              ? ' ' + app.translator.trans('ernestdefoe-millwright.admin.updater.banner.checked', { when: this.ago(this.checkedAt) }, true)
+              ? ' ' + app.translator.trans('ernestdefoe-millwright.admin.updater.banner.checked', { when: ago(this.checkedAt) }, true)
               : ''}
             {this.uncheckable > 0
               ? ' ' + app.translator.trans('ernestdefoe-millwright.admin.updater.banner.uncheckable', { count: this.uncheckable }, true)
@@ -172,32 +173,13 @@ export default class UpdateBanner extends Component {
   private dismiss() {
     this.dismissed = true;
 
-    app
-      .request<StatePayload>({ method: 'GET', url: apiUrl() + '/millwright/state', errorHandler: () => {} })
-      .then((data) => {
-        try {
-          localStorage.setItem(this.key(Object.keys(data.updates?.available || {})), '1');
-        } catch {
-          // Private browsing. It reappears next load, which is the safe way round.
-        }
-      })
-      .catch(() => {
-        // Remembering the dismissal is a nicety: if the state cannot be read,
-        // the banner is still hidden for this visit and simply returns next load.
-      });
+    // The packages this banner already loaded: a new update brings it back.
+    try {
+      localStorage.setItem(this.key(this.pending.map((p) => p.package)), '1');
+    } catch {
+      // Private browsing. It reappears next load, which is the safe way round.
+    }
 
     m.redraw();
-  }
-
-  private ago(unix: number): string {
-    const mins = Math.max(1, Math.round((Date.now() / 1000 - unix) / 60));
-
-    if (mins < 60) return app.translator.trans('ernestdefoe-millwright.admin.updater.ago.minutes', { count: mins }, true);
-
-    const hours = Math.round(mins / 60);
-
-    return hours < 48
-      ? app.translator.trans('ernestdefoe-millwright.admin.updater.ago.hours', { count: hours }, true)
-      : app.translator.trans('ernestdefoe-millwright.admin.updater.ago.days', { count: Math.round(hours / 24) }, true);
   }
 }

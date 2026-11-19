@@ -49,12 +49,14 @@ class StateController implements RequestHandlerInterface
         $run = $this->runs->latest();
         $undoError = PendingUndo::finish($this->translator, $run, $this->paths, $this->forum);
 
-        $check = $this->check;
-        $cached = $check->current($this->paths->base.'/composer.lock');
+        // Read once for the update check and the cards alike: this is polled.
+        $lock = StateFile::read($this->paths->base.'/composer.lock');
+        $composerJson = StateFile::read($this->paths->base.'/composer.json');
+        $cached = $this->check->currentFor($lock, $composerJson);
 
         return new JsonResponse([
             'host' => $this->capability->report(),
-            'installed' => $this->installed($cached['updates'] ?? []),
+            'installed' => $this->installed($cached['updates'] ?? [], $lock, $composerJson),
             'run' => $this->runs->present($run),
             'undoError' => $undoError,
             'history' => $this->runs->history(),
@@ -68,7 +70,7 @@ class StateController implements RequestHandlerInterface
             'updates' => [
                 'available' => $cached['updates'] ?? [],
                 'checkedAt' => $cached['checkedAt'] ?? null,
-                'stale' => $check->isStale(),
+                'stale' => $this->check->isStale(),
                 'uncheckable' => $cached['uncheckable'] ?? [],
                 /*
                  * Separate from uncheckable on purpose: a branch install has no
@@ -81,10 +83,14 @@ class StateController implements RequestHandlerInterface
         ]);
     }
 
-    /** @return list<array<string,mixed>> */
-    protected function installed(array $updates): array
+    /**
+     * @param array<string,mixed> $lock
+     * @param array<string,mixed> $composerJson
+     * @return list<array<string,mixed>>
+     */
+    protected function installed(array $updates, array $lock, array $composerJson): array
     {
-        $require = (array) ($this->readJson($this->paths->base.'/composer.json')['require'] ?? []);
+        $require = (array) ($composerJson['require'] ?? []);
         $out = [];
 
         foreach ($this->extensions->getExtensions() as $extension) {
@@ -130,7 +136,6 @@ class StateController implements RequestHandlerInterface
          * packages are left out: nobody chose those.
          */
         $extensions = array_flip(array_column($out, 'package'));
-        $lock = $this->readJson($this->paths->base.'/composer.lock');
 
         foreach (array_merge((array) ($lock['packages'] ?? []), (array) ($lock['packages-dev'] ?? [])) as $package) {
             $name = (string) ($package['name'] ?? '');
@@ -156,11 +161,5 @@ class StateController implements RequestHandlerInterface
         usort($out, fn ($a, $b) => strcasecmp($a['name'], $b['name']));
 
         return $out;
-    }
-
-    /** @return array<string,mixed> */
-    protected function readJson(string $path): array
-    {
-        return StateFile::read($path);
     }
 }

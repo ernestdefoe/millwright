@@ -445,17 +445,8 @@ class PhpBinary
             return ($this->runner)($command[0]);
         }
 
-        $process = @proc_open($command, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
-
-        if (! is_resource($process)) {
-            return ['code' => -1, 'out' => '', 'err' => ''];
-        }
-
-        $out = (string) stream_get_contents($pipes[1]);
-        $err = (string) stream_get_contents($pipes[2]);
-        fclose($pipes[1]);
-        fclose($pipes[2]);
-
-        return ['code' => proc_close($process), 'out' => $out, 'err' => $err];
+        // Bounded: a binary that hangs is one that does not work, not a reason
+        // to hold the admin page open.
+        return \ErnestDefoe\Millwright\Work\Process::capture($command, 10);
     }
 }

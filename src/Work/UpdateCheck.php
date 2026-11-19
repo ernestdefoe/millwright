@@ -286,11 +286,23 @@ class UpdateCheck
      */
     public function current(string $lockPath): array
     {
+        return $this->currentFor(StateFile::read($lockPath), StateFile::read(dirname($lockPath).'/composer.json'));
+    }
+
+    /**
+     * The same, for a caller that has already read the forum's lock and
+     * composer.json and need not read them twice.
+     *
+     * @param array<string,mixed> $lock
+     * @param array<string,mixed> $composerJson
+     * @return array<string,mixed>
+     */
+    public function currentFor(array $lock, array $composerJson): array
+    {
         $cached = $this->cached();
-        $lock = StateFile::read($lockPath);
         $now = $this->interesting(
             array_merge((array) ($lock['packages'] ?? []), (array) ($lock['packages-dev'] ?? [])),
-            self::directRequires(dirname($lockPath).'/composer.json')
+            array_values(array_filter(array_keys((array) ($composerJson['require'] ?? [])), fn ($name) => is_string($name) && str_contains($name, '/')))
         );
 
         $updates = [];

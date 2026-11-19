@@ -2,6 +2,7 @@ import app from 'flarum/admin/app';
 import Component, { type ComponentAttrs } from 'flarum/common/Component';
 import Button from 'flarum/common/components/Button';
 import type { Updates } from '../types';
+import ago from '../ago';
 
 type CheckAge = 'fresh' | 'recent' | 'overdue';
 
@@ -57,7 +58,7 @@ export default class CheckLine extends Component<CheckLineAttrs> {
                   this.attrs.coreNewer ? ' ' + app.translator.trans('ernestdefoe-millwright.admin.updater.core_newer_too', {}, true) : '',
                 ]}
           </b>{' '}
-          {app.translator.trans('ernestdefoe-millwright.admin.updater.last_update_checked_at', { when: this.ago(checkedAt) })}
+          {app.translator.trans('ernestdefoe-millwright.admin.updater.last_update_checked_at', { when: ago(checkedAt) })}
           {uncheckable > 0 ? ' ' + app.translator.trans('ernestdefoe-millwright.admin.updater.uncheckable', { count: uncheckable }, true) : ''}
           {tracking > 0 ? ' ' + app.translator.trans('ernestdefoe-millwright.admin.updater.tracking', { count: tracking }, true) : ''}
         </span>
@@ -99,14 +100,5 @@ export default class CheckLine extends Component<CheckLineAttrs> {
           : app.translator.trans('ernestdefoe-millwright.admin.updater.check_for_updates')}
       </Button>
     );
-  }
-
-  ago(unix: number): string {
-    const mins = Math.max(1, Math.round(Date.now() / 1000 - unix) / 60);
-    if (mins < 60) return app.translator.trans('ernestdefoe-millwright.admin.updater.ago.minutes', { count: Math.round(mins) }, true);
-    const hours = Math.round(mins / 60);
-    return hours < 48
-      ? app.translator.trans('ernestdefoe-millwright.admin.updater.ago.hours', { count: hours }, true)
-      : app.translator.trans('ernestdefoe-millwright.admin.updater.ago.days', { count: Math.round(hours / 24) }, true);
   }
 }

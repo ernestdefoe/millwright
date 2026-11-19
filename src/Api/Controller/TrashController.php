@@ -57,12 +57,8 @@ class TrashController implements RequestHandlerInterface
             'settings' => $plan['settings'],
             'trashBytes' => $plan['trashBytes'],
             'trashCount' => count($keptTrash) + count(array_filter($plan['remove'], fn ($r) => $r['kind'] === 'trash')),
-            'keptCount' => count($keptTrash),
             'removeCount' => count($plan['remove']),
             'removeBytes' => $plan['removeBytes'],
-            'remove' => array_map(fn ($r) => [
-                'kind' => $r['kind'], 'name' => $r['name'], 'bytes' => $r['bytes'], 'why' => $r['why'],
-            ], $plan['remove']),
             'lastPrune' => $retention->lastPrune(),
             'pruned' => $pruned,
         ]);
