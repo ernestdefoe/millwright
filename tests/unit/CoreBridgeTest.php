@@ -11,7 +11,6 @@ use ErnestDefoe\Millwright\Work\ComposerRunner;
 use ErnestDefoe\Millwright\Work\ComposerSteps;
 use ErnestDefoe\Millwright\Work\Fetcher;
 use Illuminate\Container\Container;
-use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Database\ConnectionInterface;
 use ErnestDefoe\Millwright\Tests\unit\Fakes;
 use ErnestDefoe\Millwright\Work\SiteCheck;
@@ -74,9 +73,7 @@ class CoreBridgeTest extends TestCase
             "<?php\n\nnamespace Flarum\\Foundation;\n\nclass Application\n{\n    public const VERSION = '$onDisk';\n}\n"
         );
 
-        $capsule = new Capsule();
-        $capsule->addConnection(['driver' => 'sqlite', 'database' => ':memory:']);
-        $db = $capsule->getConnection();
+        $db = Fakes::db(['settings', 'migrations']);
         $db->getSchemaBuilder()->create('settings', function ($table) {
             $table->string('key')->primary();
             $table->text('value')->nullable();

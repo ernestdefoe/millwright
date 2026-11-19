@@ -23,17 +23,55 @@ use ReflectionClass;
 class Fakes
 {
     /**
-     * A Forum on an in-memory SQLite database (or the one given). The
+     * A database for the tests that need one: in-memory SQLite by default, or
+     * the MySQL or PostgreSQL that MW_TEST_DB names (`mysql`, `pgsql`), with
+     * a table prefix as a real forum has. The tables a test creates are
+     * dropped first, so each test starts clean.
+     *
+     * Set MW_TEST_DB_HOST, _PORT, _USER, _PASSWORD and _NAME to point it
+     * elsewhere. The defaults are a local MySQL (root, no password) and a
+     * throwaway PostgreSQL:
+     *   docker run -d --name millwright_pg_test -e POSTGRES_PASSWORD=mwtest \
+     *     -e POSTGRES_DB=millwright_test -p 127.0.0.1:56718:5432 postgres:18-alpine
+     *
+     * @param list<string> $tables dropped before the test creates them
+     */
+    public static function db(array $tables = []): ConnectionInterface
+    {
+        $driver = getenv('MW_TEST_DB') ?: 'sqlite';
+        $env = fn (string $k, string $default) => getenv('MW_TEST_DB_'.$k) ?: $default;
+
+        $config = match ($driver) {
+            'mysql' => ['driver' => 'mysql', 'host' => $env('HOST', '127.0.0.1'), 'port' => $env('PORT', '3306'), 'database' => $env('NAME', 'millwright_test'),
+                'username' => $env('USER', 'root'), 'password' => $env('PASSWORD', ''), 'charset' => 'utf8mb4', 'collation' => 'utf8mb4_unicode_ci', 'prefix' => 'mw_'],
+            'pgsql' => ['driver' => 'pgsql', 'host' => $env('HOST', '127.0.0.1'), 'port' => $env('PORT', '56718'), 'database' => $env('NAME', 'millwright_test'),
+                'username' => $env('USER', 'postgres'), 'password' => $env('PASSWORD', 'mwtest'), 'charset' => 'utf8', 'prefix' => 'mw_', 'schema' => 'public'],
+            default => ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => 'mw_'],
+        };
+
+        $capsule = new Capsule();
+        $capsule->addConnection($config);
+        $db = $capsule->getConnection();
+
+        if ($db->getDriverName() !== $config['driver']) {
+            throw new \RuntimeException("Asked for {$config['driver']}, got {$db->getDriverName()}");
+        }
+
+        foreach ($tables as $table) {
+            $db->getSchemaBuilder()->dropIfExists($table);
+        }
+
+        return $db;
+    }
+
+    /**
+     * A Forum on the test database (see db()), or the one given. The
      * migrator and extension manager are inert: a test that reaches them is a
      * test that needs a real forum, and should build one.
      */
     public static function forum(?ConnectionInterface $db = null): Forum
     {
-        if ($db === null) {
-            $capsule = new Capsule();
-            $capsule->addConnection(['driver' => 'sqlite', 'database' => ':memory:']);
-            $db = $capsule->getConnection();
-        }
+        $db ??= self::db();
 
         return new Forum(
             $db,

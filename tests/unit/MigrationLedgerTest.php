@@ -4,11 +4,11 @@ namespace ErnestDefoe\Millwright\Tests\Unit;
 
 use ErnestDefoe\Millwright\Apply\Tree;
 use ErnestDefoe\Millwright\Tests\unit\EnglishTranslator;
+use ErnestDefoe\Millwright\Tests\unit\Fakes;
 use ErnestDefoe\Millwright\Work\MigrationLedger;
 use Flarum\Database\DatabaseMigrationRepository;
 use Flarum\Database\Migrator;
 use Flarum\Extension\ExtensionManager;
-use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Filesystem\Filesystem;
 use PHPUnit\Framework\TestCase;
@@ -35,9 +35,7 @@ class MigrationLedgerTest extends TestCase
         $this->dir = sys_get_temp_dir().'/mw-ledger-'.bin2hex(random_bytes(4));
         mkdir($this->dir.'/work/migrations/acme-widget', 0775, true);
 
-        $capsule = new Capsule();
-        $capsule->addConnection(['driver' => 'sqlite', 'database' => ':memory:']);
-        $this->db = $capsule->getConnection();
+        $this->db = Fakes::db(['migrations']);
         $this->db->getSchemaBuilder()->create('migrations', function ($table) {
             $table->string('migration');
             $table->string('extension')->nullable();
