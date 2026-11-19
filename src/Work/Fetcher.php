@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Host\StateFile;
 use ErnestDefoe\Millwright\Apply\Tree;
 use ErnestDefoe\Millwright\Config\AuthTokens;
 use Flarum\Locale\TranslatorInterface;
@@ -143,7 +144,7 @@ class Fetcher
             return [];
         }
 
-        return (array) json_decode((string) file_get_contents($this->authPath), true);
+        return StateFile::read($this->authPath);
     }
 
     /**

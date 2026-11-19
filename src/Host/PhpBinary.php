@@ -191,7 +191,7 @@ class PhpBinary
             return null;
         }
 
-        $entry = ((array) json_decode((string) @file_get_contents($this->probeCache), true))[$candidate] ?? null;
+        $entry = (StateFile::read($this->probeCache))[$candidate] ?? null;
 
         return is_array($entry)
             && (int) ($entry['at'] ?? 0) > time() - self::PROBE_FOR
@@ -208,7 +208,7 @@ class PhpBinary
     protected function remember(string $candidate, array $result): array
     {
         if ($this->probeCache !== null) {
-            $all = (array) json_decode((string) @file_get_contents($this->probeCache), true);
+            $all = StateFile::read($this->probeCache);
             $all[$candidate] = ['at' => time(), 'mtime' => @filemtime($candidate), 'result' => $result];
             // Best effort: a cache that cannot be written only means the next visit probes again.
             @file_put_contents($this->probeCache, json_encode($all), LOCK_EX);

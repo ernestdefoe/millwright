@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Console;
 
+use ErnestDefoe\Millwright\Host\StateFile;
 use ErnestDefoe\Millwright\Exception\RefusedException;
 use ErnestDefoe\Millwright\Run\Starter;
 use ErnestDefoe\Millwright\Plan\PackageName;
@@ -546,7 +547,7 @@ class UpdateCommand extends AbstractCommand
     {
         $plan = (new WorkDir($this->translator, $this->paths->storage, $run->id))->root().'/plan.json';
 
-        return is_file($plan) && (((array) json_decode((string) file_get_contents($plan), true))['changes'] ?? null) === [];
+        return is_file($plan) && ((StateFile::read($plan))['changes'] ?? null) === [];
     }
 
     /**

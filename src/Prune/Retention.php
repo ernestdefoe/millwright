@@ -78,9 +78,6 @@ class Retention
     /** @return array<string,mixed> */
     protected function read(string $file): array
     {
-        $path = $this->dir.'/'.$file;
-        $data = is_file($path) ? json_decode((string) file_get_contents($path), true) : null;
-
-        return is_array($data) ? $data : [];
+        return StateFile::read($this->dir.'/'.$file);
     }
 }

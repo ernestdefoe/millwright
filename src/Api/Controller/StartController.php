@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use ErnestDefoe\Millwright\Host\StateFile;
 use ErnestDefoe\Millwright\Plan\PackageName;
 use ErnestDefoe\Millwright\Discover\Compatibility;
 use ErnestDefoe\Millwright\Discover\Packagist;
@@ -82,7 +83,7 @@ class StartController implements RequestHandlerInterface
      */
     protected function cannotRemove(array $packages): ?string
     {
-        $json = (array) json_decode((string) @file_get_contents($this->paths->base.'/composer.json'), true);
+        $json = StateFile::read($this->paths->base.'/composer.json');
         $direct = array_merge((array) ($json['require'] ?? []), (array) ($json['require-dev'] ?? []));
 
         foreach ($packages as $package) {

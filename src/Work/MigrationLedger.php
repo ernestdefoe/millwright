@@ -121,7 +121,7 @@ class MigrationLedger
     /** @return list<array{migration:string, extension:?string}> what this update ran */
     public function ran(): array
     {
-        return array_values((array) json_decode((string) @file_get_contents($this->workDir.'/migrations.json'), true));
+        return array_values(StateFile::read($this->workDir.'/migrations.json'));
     }
 
     /**
@@ -267,7 +267,7 @@ class MigrationLedger
     /** @return array{migrations: list<array{migration:string, extension:?string}>, version: ?string} */
     protected function beforeState(): array
     {
-        $raw = (array) json_decode((string) @file_get_contents($this->workDir.'/migrations.before.json'), true);
+        $raw = StateFile::read($this->workDir.'/migrations.before.json');
 
         // A run recorded before the version was kept stored the bare list.
         return array_is_list($raw)

@@ -148,12 +148,6 @@ class WorkDir
     {
         $path = $this->root().'/requested.json';
 
-        if (! is_file($path)) {
-            return [];
-        }
-
-        $data = json_decode((string) file_get_contents($path), true);
-
-        return is_array($data) ? $data : [];
+        return StateFile::read($path);
     }
 }

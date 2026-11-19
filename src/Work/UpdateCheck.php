@@ -56,8 +56,7 @@ class UpdateCheck
      */
     public static function directRequires(string $composerJson): array
     {
-        $data = is_file($composerJson) ? json_decode((string) file_get_contents($composerJson), true) : null;
-        $names = array_keys((array) (is_array($data) ? ($data['require'] ?? []) : []));
+        $names = array_keys((array) (StateFile::read($composerJson)['require'] ?? []));
 
         return array_values(array_filter($names, fn ($name) => is_string($name) && str_contains($name, '/')));
     }
@@ -241,7 +240,7 @@ class UpdateCheck
      */
     public function refreshSite(TranslatorInterface $translator, string $base, Web $web, float $seconds): ?array
     {
-        $lock = (array) json_decode((string) @file_get_contents($base.'/composer.lock'), true);
+        $lock = StateFile::read($base.'/composer.lock');
         $packages = array_merge(array_values((array) ($lock['packages'] ?? [])), array_values((array) ($lock['packages-dev'] ?? [])));
 
         if ($packages === []) {
@@ -270,7 +269,7 @@ class UpdateCheck
             return ['checkedAt' => null, 'updates' => [], 'uncheckable' => [], 'tracking' => []];
         }
 
-        return (array) json_decode((string) file_get_contents($this->cachePath), true);
+        return StateFile::read($this->cachePath);
     }
 
     /**
@@ -288,7 +287,7 @@ class UpdateCheck
     public function current(string $lockPath): array
     {
         $cached = $this->cached();
-        $lock = (array) json_decode((string) @file_get_contents($lockPath), true);
+        $lock = StateFile::read($lockPath);
         $now = $this->interesting(
             array_merge((array) ($lock['packages'] ?? []), (array) ($lock['packages-dev'] ?? [])),
             self::directRequires(dirname($lockPath).'/composer.json')

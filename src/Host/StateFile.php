@@ -17,6 +17,21 @@ use RuntimeException;
  */
 class StateFile
 {
+    /**
+     * A JSON file read for information: missing, unreadable or not JSON reads
+     * as empty, because every caller treats "nothing there" the same way.
+     * Never for a file that is about to be rewritten: that is JsonFile, which
+     * refuses a file it cannot understand rather than replace it with nothing.
+     *
+     * @return array<mixed>
+     */
+    public static function read(string $path): array
+    {
+        $data = is_file($path) ? json_decode((string) @file_get_contents($path), true) : null;
+
+        return is_array($data) ? $data : [];
+    }
+
     /** True when $path now holds exactly $data. */
     public static function write(string $path, mixed $data): bool
     {

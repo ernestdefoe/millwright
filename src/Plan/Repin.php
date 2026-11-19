@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Plan;
 
+use ErnestDefoe\Millwright\Host\StateFile;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 
 /**
@@ -119,8 +120,6 @@ class Repin
     /** @return array<string,mixed> */
     protected function readJson(string $path): array
     {
-        $data = is_file($path) ? json_decode((string) file_get_contents($path), true) : null;
-
-        return is_array($data) ? $data : [];
+        return StateFile::read($path);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use ErnestDefoe\Millwright\Host\StateFile;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 use ErnestDefoe\Millwright\Plan\CoreOverrides;
 use ErnestDefoe\Millwright\Plan\CoreUpgrade;
@@ -41,7 +42,7 @@ class CoreController implements RequestHandlerInterface
         $current = ltrim($this->app->version(), 'v');
         $target = trim((string) ($request->getQueryParams()['target'] ?? ''));
 
-        $lock = (array) json_decode((string) @file_get_contents($this->paths->base.'/composer.lock'), true);
+        $lock = StateFile::read($this->paths->base.'/composer.lock');
         $packages = array_values((array) ($lock['packages'] ?? []));
 
         if ($packages === []) {

@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Run;
 
+use ErnestDefoe\Millwright\Host\StateFile;
 use Flarum\Locale\TranslatorInterface;
 use RuntimeException;
 
@@ -76,7 +77,7 @@ class RunStore
     protected function pointAt(Run $run, bool $force = false): void
     {
         $pointer = rtrim($this->dir, '/').'/latest';
-        $current = (array) json_decode((string) @file_get_contents($pointer), true);
+        $current = StateFile::read($pointer);
 
         if ($force || (int) ($current['startedAt'] ?? -1) <= $run->startedAt) {
             // Best effort: without it, latest() falls back to reading them all.
@@ -107,7 +108,7 @@ class RunStore
     /** The most recently started run, which is what the admin screen opens on. */
     public function latest(): ?Run
     {
-        $pointer = (array) json_decode((string) @file_get_contents(rtrim($this->dir, '/').'/latest'), true);
+        $pointer = StateFile::read(rtrim($this->dir, '/').'/latest');
 
         if (is_string($pointer['id'] ?? null) && preg_match('/^[A-Za-z0-9_-]{1,64}$/', $pointer['id']) && ($run = $this->load($pointer['id'])) !== null) {
             return $run;
@@ -161,9 +162,9 @@ class RunStore
         }
 
         $this->path($run->id);   // validates the id before it reaches a path
-        $manifest = json_decode((string) @file_get_contents(rtrim($this->dir, '/').'/'.$run->id.'/requested.json'), true);
+        $manifest = StateFile::read(rtrim($this->dir, '/').'/'.$run->id.'/requested.json');
 
-        $migrations = json_decode((string) @file_get_contents(rtrim($this->dir, '/').'/'.$run->id.'/migrations.json'), true);
+        $migrations = StateFile::read(rtrim($this->dir, '/').'/'.$run->id.'/migrations.json');
 
         return $run->toArray() + [
             'packages' => array_values(array_filter((array) ($manifest['packages'] ?? []), 'is_string')),

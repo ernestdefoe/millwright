@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Plan;
 
+use ErnestDefoe\Millwright\Host\StateFile;
 use ErnestDefoe\Millwright\Host\Web;
 
 /**
@@ -37,7 +38,7 @@ class Nightly
     /** The branch this forum's Flarum would track, e.g. `2.x-dev`, or null if core cannot be read. */
     public function branch(): ?string
     {
-        $lock = (array) json_decode((string) @file_get_contents($this->lockPath), true);
+        $lock = StateFile::read($this->lockPath);
 
         foreach ((array) ($lock['packages'] ?? []) as $package) {
             if (($package['name'] ?? '') === 'flarum/core' && preg_match('/^v?(\d+)\./', (string) ($package['version'] ?? ''), $m)) {
@@ -52,7 +53,7 @@ class Nightly
     public function targets(): array
     {
         $branch = $this->branch();
-        $require = (array) (json_decode((string) @file_get_contents($this->composerJsonPath), true)['require'] ?? []);
+        $require = (array) (StateFile::read($this->composerJsonPath)['require'] ?? []);
 
         if ($branch === null || ! isset($require['flarum/core'])) {
             return [];

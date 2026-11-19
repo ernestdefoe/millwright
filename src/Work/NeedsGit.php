@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Host\StateFile;
 use ErnestDefoe\Millwright\Config\Repositories;
 use Flarum\Locale\TranslatorInterface;
 
@@ -175,8 +176,6 @@ class NeedsGit
     /** @return array<string,mixed> */
     protected function read(string $path): array
     {
-        $data = is_file($path) ? json_decode((string) @file_get_contents($path), true) : null;
-
-        return is_array($data) ? $data : [];
+        return StateFile::read($path);
     }
 }

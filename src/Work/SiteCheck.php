@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Work;
 
+use ErnestDefoe\Millwright\Host\StateFile;
 use ErnestDefoe\Millwright\Host\ErrorLog;
 use ErnestDefoe\Millwright\Host\Opcache;
 use ErnestDefoe\Millwright\Host\SiteHealth;
@@ -190,7 +191,7 @@ class SiteCheck
     /** @return list<array{package:string, classes:list<string>}> */
     protected function coreOverrides(): array
     {
-        $lock = (array) json_decode((string) @file_get_contents($this->run->installPath.'/composer.lock'), true);
+        $lock = StateFile::read($this->run->installPath.'/composer.lock');
 
         return (new CoreOverrides())->find(array_values((array) ($lock['packages'] ?? [])), $this->run->vendor());
     }

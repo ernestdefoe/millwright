@@ -263,7 +263,7 @@ class Planner
 
             $error = error_get_last();
             $message = (string) ($error['message'] ?? '');
-            $record = (array) json_decode((string) @file_get_contents($path), true);
+            $record = StateFile::read($path);
             $record['stopped'] = match (true) {
                 str_contains($message, 'Maximum execution time') => 'time',
                 str_contains($message, 'Allowed memory size') => 'memory',

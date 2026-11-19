@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Api\Controller;
 
+use ErnestDefoe\Millwright\Host\StateFile;
 use ErnestDefoe\Millwright\Host\Capability;
 use ErnestDefoe\Millwright\Run\RunStore;
 use ErnestDefoe\Millwright\Work\Forum;
@@ -160,8 +161,6 @@ class StateController implements RequestHandlerInterface
     /** @return array<string,mixed> */
     protected function readJson(string $path): array
     {
-        $data = is_file($path) ? json_decode((string) file_get_contents($path), true) : null;
-
-        return is_array($data) ? $data : [];
+        return StateFile::read($path);
     }
 }
