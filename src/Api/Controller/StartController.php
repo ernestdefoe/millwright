@@ -12,6 +12,7 @@ use ErnestDefoe\Millwright\Host\Web;
 use ErnestDefoe\Millwright\Plan\Nightly;
 use ErnestDefoe\Millwright\Plan\Repin;
 use ErnestDefoe\Millwright\Run\Drivers;
+use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Run\RunStore;
 use ErnestDefoe\Millwright\Run\StepRunner;
 use ErnestDefoe\Millwright\Work\WorkDir;
@@ -148,13 +149,38 @@ class StartController implements RequestHandlerInterface
             ? (string) Arr::get($body, 'mode')
             : 'update';
 
+        $this->refuseWhatCannotRun($packages, $mode);
+
+        $run = $this->runner->whileHolding(
+            'site',
+            $this->translator->trans('ernestdefoe-millwright.api.start.busy'),
+            fn () => $this->begin($packages, $mode, $nightly, $body)
+        );
+
+        // A worker if there is one; the page keeps polling either way.
+        $queued = $this->drivers->nudge($run->id);
+
+        return new JsonResponse([
+            'run' => $this->runs->present($run),
+            'queued' => $queued,
+            'driver' => $this->drivers->describe(),
+        ]);
+    }
+
+    /**
+     * Refuse, changing nothing, a request that names something other than a
+     * package, names nothing, or asks for what this forum cannot do.
+     *
+     * @param list<string> $packages
+     */
+    protected function refuseWhatCannotRun(array $packages, string $mode): void
+    {
         foreach ($packages as $package) {
             // The only user-supplied value that reaches a command line.
             if (! PackageName::valid((string) $package)) {
                 throw new ValidationException(['packages' => $this->translator->trans('ernestdefoe-millwright.api.start.not_a_package', ['package' => (string) $package])]);
             }
         }
-
 
         if ($packages === []) {
             throw new ValidationException(['packages' => $this->translator->trans('ernestdefoe-millwright.api.start.nothing_selected')]);
@@ -171,39 +197,39 @@ class StartController implements RequestHandlerInterface
         if ($this->capability->resolveTier() === Capability::NONE) {
             throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.start.not_enough_memory'), 'not_enough_memory');
         }
+    }
 
-        $run = $this->runner->whileHolding('site', $this->translator->trans('ernestdefoe-millwright.api.start.busy'), function () use ($packages, $nightly, $mode, $body) {
-            $existing = $this->runs->latest();
+    /**
+     * Start the run, unless one is still going. Called holding the 'site'
+     * lock, so two tabs cannot both see "nothing running" and both start.
+     *
+     * @param list<string> $packages
+     * @param array<string,string>|null $nightly the branch each package moves to, for a nightly run
+     * @param array<string,mixed> $body the request, which says whether pins may be raised
+     */
+    protected function begin(array $packages, string $mode, ?array $nightly, array $body): Run
+    {
+        $existing = $this->runs->latest();
 
-            if ($existing !== null && ! $existing->isFinished()) {
-                /*
-                 * Refused, but loudly, and with the age of the thing in the way so
-                 * the admin can tell a working update from a dead one. The screen
-                 * reloads the state, which carries the run, and offers to abandon
-                 * it; this endpoint never decides that for them.
-                 */
-                $age = time() - $existing->movedAt;
+        if ($existing !== null && ! $existing->isFinished()) {
+            /*
+             * Refused, but loudly, and with the age of the thing in the way so
+             * the admin can tell a working update from a dead one. The screen
+             * reloads the state, which carries the run, and offers to abandon
+             * it; this endpoint never decides that for them.
+             */
+            $age = time() - $existing->movedAt;
 
-                throw new RefusedException($age > 120
-                    ? $this->translator->trans('ernestdefoe-millwright.api.start.in_progress_stale', ['minutes' => round($age / 60)])
-                    : $this->translator->trans('ernestdefoe-millwright.api.start.in_progress'), 'run_in_progress', 409);
-            }
+            throw new RefusedException($age > 120
+                ? $this->translator->trans('ernestdefoe-millwright.api.start.in_progress_stale', ['minutes' => round($age / 60)])
+                : $this->translator->trans('ernestdefoe-millwright.api.start.in_progress'), 'run_in_progress', 409);
+        }
 
-            $id = 'r'.date('Ymd-His').'-'.bin2hex(random_bytes(3));
+        $id = 'r'.date('Ymd-His').'-'.bin2hex(random_bytes(3));
 
-            (new WorkDir($this->translator, $this->paths->storage, $id))->create()->remember($packages, $nightly !== null ? 'update' : $mode, $nightly ?? $this->repinFor($packages, $body, $mode));
+        (new WorkDir($this->translator, $this->paths->storage, $id))->create()->remember($packages, $nightly !== null ? 'update' : $mode, $nightly ?? $this->repinFor($packages, $body, $mode));
 
-            return $this->runner->begin($id);
-        });
-
-        // A worker if there is one; the page keeps polling either way.
-        $queued = $this->drivers->nudge($run->id);
-
-        return new JsonResponse([
-            'run' => $this->runs->present($run),
-            'queued' => $queued,
-            'driver' => $this->drivers->describe(),
-        ]);
+        return $this->runner->begin($id);
     }
 
     /**

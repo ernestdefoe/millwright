@@ -321,6 +321,33 @@ class Capability
             ]];
         }
 
+        [$what, $lines] = $this->whyNoPhp($d);
+
+        $lines[] = ['key' => 'host.ssh_differs'];
+        $lines[] = ['key' => 'host.php_override_hint'];
+
+        // Not a blocker: without it, Composer and Flarum's commands run inside
+        // the web request instead (the row above says what that means).
+        return [[
+            'id' => 'php',
+            'ok' => true,
+            'warn' => true,
+            'whatKey' => $what[0],
+            'whatParams' => $what[1],
+            'whyKeys' => $lines,
+            'override' => $d['override'],
+        ]];
+    }
+
+    /**
+     * What the PHP row says when no working command-line PHP was found, and
+     * the lines explaining it, most specific first.
+     *
+     * @param array<string,mixed> $d PhpBinary::diagnose()
+     * @return array{0: array{0:string, 1:array<string,string>}, 1: list<array<string,mixed>>}
+     */
+    protected function whyNoPhp(array $d): array
+    {
         $lines = [];
 
         if ($d['override'] !== null) {
@@ -347,20 +374,7 @@ class Capability
             $lines[] = ['key' => 'host.php_missing_why'];
         }
 
-        $lines[] = ['key' => 'host.ssh_differs'];
-        $lines[] = ['key' => 'host.php_override_hint'];
-
-        // Not a blocker: without it, Composer and Flarum's commands run inside
-        // the web request instead (the row above says what that means).
-        return [[
-            'id' => 'php',
-            'ok' => true,
-            'warn' => true,
-            'whatKey' => $what[0],
-            'whatParams' => $what[1],
-            'whyKeys' => $lines,
-            'override' => $d['override'],
-        ]];
+        return [$what, $lines];
     }
 
     /**

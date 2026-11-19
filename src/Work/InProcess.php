@@ -43,16 +43,7 @@ class InProcess
         $memory = ini_get('memory_limit');
         $time = (int) ini_get('max_execution_time');
 
-        $saved = [];
-        foreach (array_unique([...self::WATCHED_ENV, ...array_keys($env)]) as $name) {
-            $saved[$name] = [
-                getenv($name),
-                array_key_exists($name, $_SERVER) ? $_SERVER[$name] : null,
-                array_key_exists($name, $_SERVER),
-                array_key_exists($name, $_ENV) ? $_ENV[$name] : null,
-                array_key_exists($name, $_ENV),
-            ];
-        }
+        $saved = self::saveEnv(array_unique([...self::WATCHED_ENV, ...array_keys($env)]));
 
         foreach ($env as $name => $value) {
             self::putEnv($name, $value);
@@ -67,23 +58,7 @@ class InProcess
                 @chdir($cwd);
             }
 
-            foreach ($saved as $name => [$value, $server, $hadServer, $envValue, $hadEnv]) {
-                if (function_exists('putenv')) {
-                    @putenv($value === false ? $name : "$name=$value");
-                }
-
-                if ($hadServer) {
-                    $_SERVER[$name] = $server;
-                } else {
-                    unset($_SERVER[$name]);
-                }
-
-                if ($hadEnv) {
-                    $_ENV[$name] = $envValue;
-                } else {
-                    unset($_ENV[$name]);
-                }
-            }
+            self::restoreEnv($saved);
 
             self::restoreErrorHandler($errorHandler);
             self::restoreExceptionHandler($exceptionHandler);
@@ -101,6 +76,55 @@ class InProcess
              */
             if (function_exists('set_time_limit')) {
                 @set_time_limit($time);
+            }
+        }
+    }
+
+    /**
+     * Each variable as getenv(), $_SERVER and $_ENV have it now.
+     *
+     * @param list<string> $names
+     * @return array<string, array{0: string|false, 1: mixed, 2: bool, 3: mixed, 4: bool}>
+     */
+    protected static function saveEnv(array $names): array
+    {
+        $saved = [];
+
+        foreach ($names as $name) {
+            $saved[$name] = [
+                getenv($name),
+                array_key_exists($name, $_SERVER) ? $_SERVER[$name] : null,
+                array_key_exists($name, $_SERVER),
+                array_key_exists($name, $_ENV) ? $_ENV[$name] : null,
+                array_key_exists($name, $_ENV),
+            ];
+        }
+
+        return $saved;
+    }
+
+    /**
+     * Put each variable back in all three places, removing what was not there.
+     *
+     * @param array<string, array{0: string|false, 1: mixed, 2: bool, 3: mixed, 4: bool}> $saved
+     */
+    protected static function restoreEnv(array $saved): void
+    {
+        foreach ($saved as $name => [$value, $server, $hadServer, $envValue, $hadEnv]) {
+            if (function_exists('putenv')) {
+                @putenv($value === false ? $name : "$name=$value");
+            }
+
+            if ($hadServer) {
+                $_SERVER[$name] = $server;
+            } else {
+                unset($_SERVER[$name]);
+            }
+
+            if ($hadEnv) {
+                $_ENV[$name] = $envValue;
+            } else {
+                unset($_ENV[$name]);
             }
         }
     }

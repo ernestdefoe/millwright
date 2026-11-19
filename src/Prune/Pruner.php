@@ -93,7 +93,50 @@ class Pruner
 
         [$runs, $unreadable] = $this->runs();
         $protected = $this->protectedRuns($runs, $unreadable, $settings, $now);
+        [$protectedRefs, $otherRefs] = $this->allReferences($runs, $unreadable, $protected);
 
+        $rows = [];
+
+        foreach ($this->trashEntries($now, $protectedRefs, $otherRefs, $protected) as $row) {
+            $rows[] = ['kind' => 'trash'] + $row;
+        }
+
+        foreach ($this->runDirs($now, $runs, $protected) as $row) {
+            $rows[] = ['kind' => 'run'] + $row;
+        }
+
+        $remove = array_values(array_filter($rows, fn (array $row) => $row['remove']));
+        $keep = array_values(array_filter($rows, fn (array $row) => ! $row['remove']));
+
+        [$remove, $keep, $removeBytes, $trashBytes] = $this->measure($remove, $keep, $measure);
+
+        $strip = fn (array $rows) => array_values(array_map(function (array $row) {
+            unset($row['remove']);
+
+            return $row;
+        }, $rows));
+
+        return [
+            'remove' => $strip($remove),
+            'keep' => $strip($keep),
+            'protectedRuns' => $protected,
+            'settings' => $settings,
+            'trashBytes' => $trashBytes,
+            'removeBytes' => $removeBytes,
+        ];
+    }
+
+    /**
+     * Every trash name a journal refers to: those of protected runs (and of
+     * runs whose record cannot be read), and those of the rest.
+     *
+     * @param list<Run> $runs
+     * @param array<string,true> $unreadable
+     * @param array<string,string> $protected
+     * @return array{0: array<string,string>, 1: array<string,string>} name => run id
+     */
+    protected function allReferences(array $runs, array $unreadable, array $protected): array
+    {
         $protectedRefs = [];
         $otherRefs = [];
 
@@ -116,29 +159,18 @@ class Pruner
             }
         }
 
-        $remove = [];
-        $keep = [];
+        return [$protectedRefs, $otherRefs];
+    }
 
-        foreach ($this->trashEntries($now, $protectedRefs, $otherRefs, $protected) as $row) {
-            $row['kind'] = 'trash';
-
-            if ($row['remove']) {
-                $remove[] = $row;
-            } else {
-                $keep[] = $row;
-            }
-        }
-
-        foreach ($this->runDirs($now, $runs, $protected) as $row) {
-            $row['kind'] = 'run';
-
-            if ($row['remove']) {
-                $remove[] = $row;
-            } else {
-                $keep[] = $row;
-            }
-        }
-
+    /**
+     * Size what would be removed and, when asked, what is kept in the trash.
+     *
+     * @param list<array<string,mixed>> $remove
+     * @param list<array<string,mixed>> $keep
+     * @return array{0: list<array<string,mixed>>, 1: list<array<string,mixed>>, 2: int, 3: ?int}
+     */
+    protected function measure(array $remove, array $keep, bool $measure): array
+    {
         $trash = is_dir($this->trashDir()) ? new Contained($this->translator, $this->trashDir()) : null;
         $runsDir = is_dir($this->runsDir()) ? new Contained($this->translator, $this->runsDir()) : null;
 
@@ -150,37 +182,24 @@ class Pruner
             $removeBytes += $remove[$i]['bytes'];
         }
 
-        $trashBytes = null;
+        if (! $measure) {
+            return [$remove, $keep, $removeBytes, null];
+        }
 
-        if ($measure) {
-            $trashBytes = 0;
+        $trashBytes = 0;
 
-            foreach ($remove as $row) {
-                $trashBytes += $row['kind'] === 'trash' ? $row['bytes'] : 0;
-            }
+        foreach ($remove as $row) {
+            $trashBytes += $row['kind'] === 'trash' ? $row['bytes'] : 0;
+        }
 
-            foreach ($keep as $i => $row) {
-                if ($row['kind'] === 'trash') {
-                    $keep[$i]['bytes'] = $trash?->size($row['name']) ?? 0;
-                    $trashBytes += $keep[$i]['bytes'];
-                }
+        foreach ($keep as $i => $row) {
+            if ($row['kind'] === 'trash') {
+                $keep[$i]['bytes'] = $trash?->size($row['name']) ?? 0;
+                $trashBytes += $keep[$i]['bytes'];
             }
         }
 
-        $strip = fn (array $rows) => array_values(array_map(function (array $row) {
-            unset($row['remove']);
-
-            return $row;
-        }, $rows));
-
-        return [
-            'remove' => $strip($remove),
-            'keep' => $strip($keep),
-            'protectedRuns' => $protected,
-            'settings' => $settings,
-            'trashBytes' => $trashBytes,
-            'removeBytes' => $removeBytes,
-        ];
+        return [$remove, $keep, $removeBytes, $trashBytes];
     }
 
     /**
