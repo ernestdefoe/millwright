@@ -11,6 +11,13 @@ use ErnestDefoe\Millwright\Exception\RefusedExceptionHandler;
 use ErnestDefoe\Millwright\MillwrightServiceProvider;
 use Flarum\Extend;
 
+/*
+ * Plain files, not a Flarum filesystem disk, for everything Millwright keeps:
+ * it moves packages in and out of vendor/, and keeps its own run state under
+ * storage/millwright, written beside each file and renamed into place
+ * (Host\StateFile) so a kill never leaves half a file. Both have to be readable
+ * by whichever process carries a run on, some before Flarum has booted.
+ */
 return [
     (new Extend\ServiceProvider())
         ->register(MillwrightServiceProvider::class),
