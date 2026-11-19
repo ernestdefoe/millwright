@@ -12,7 +12,7 @@ use Illuminate\Contracts\Bus\Dispatcher;
  * An option, never the path. When the queue is the only way work happens, a job
  * that dies takes the update with it, leaves its record saying `running`, and
  * every later update is silently refused. Here the queue is one of three interchangeable drivers — the admin
- * page polling and a cron tick are the others — and the run is complete state on
+ * page polling and `millwright:update --resume` are the others — and the run is complete state on
  * disk that any of them can pick up. Kill this job and an admin refreshing the
  * page finishes the update.
  *

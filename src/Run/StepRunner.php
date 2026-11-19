@@ -14,7 +14,7 @@ use Throwable;
  * and every other limit that punishes one long operation. So nothing here loops:
  * a call does one item and returns. Progress becomes a function of how many
  * times something calls step(), and it stops mattering whether that something is
- * the admin screen polling, a cron tick, or a queue worker.
+ * the admin screen polling, the command line, or a queue worker.
  *
  * A host with a thirty second ceiling can therefore complete an update that
  * takes ten minutes, which no amount of optimisation would have achieved.
@@ -123,7 +123,7 @@ class StepRunner
          * One driver at a time.
          *
          * The whole point of the design is that anything can turn the handle —
-         * the admin page polling, a cron tick, a queue worker — and on a forum
+         * the admin page polling, the command line, a queue worker — and on a forum
          * that has a queue, two of them WILL run at once. Without this, both
          * read the same index, both do the same item, and a package gets applied
          * twice.

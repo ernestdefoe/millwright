@@ -15,8 +15,8 @@ use Flarum\Locale\TranslatorInterface;
  * resolve.
  *
  * Every phase class reads from here and none of them keeps state of its own
- * between items. That is what lets a driver holding only a run id (a cron
- * tick, a queue worker, an admin page that was just reopened) rebuild all of
+ * between items. That is what lets a driver holding only a run id (a queue
+ * worker, `millwright:update --resume`, an admin page that was just reopened) rebuild all of
  * this and carry on where another process stopped.
  */
 class RunContext

@@ -95,8 +95,9 @@ class CoreUpgrade
     }
 
     /**
-     * Blocked first, then needs-update, then the rest — and re-applied after
-     * a merge, not only when the rows are built.
+     * Blocked first, then needs-update, then the rest — and applied again by
+     * the screen as each batch of verdicts arrives (CorePanel.applyVerdicts),
+     * not only when the rows are built.
      *
      * The list exists to answer "what stops me", and burying two blockers among
      * thirty ready rows is the same as not answering. Sorting only in

@@ -18,8 +18,8 @@ use Flarum\Locale\TranslatorInterface;
  *
  * Everything here is derived from the id, and nothing is remembered between
  * calls: hand it a run id and it builds the whole apparatus for that run, which
- * is what lets a driver holding nothing but an id — a cron tick, a worker, an
- * admin page that has just been reopened — pick up work it did not start.
+ * is what lets a driver holding nothing but an id — a queue worker, the
+ * command line, an admin page that has just been reopened — pick up work it did not start.
  */
 class ComposerStepsFactory implements StepsFactory
 {

@@ -13,7 +13,7 @@ use RuntimeException;
  *
  * Everything a run needs lives together and survives the process. That is
  * what makes a run resumable by a driver that knows nothing except its id — the
- * admin page, a cron tick, or a worker can each pick up a run none of them
+ * admin page, the command line, or a worker can each pick up a run none of them
  * started, because the whole of it is on disk in one place.
  *
  * Under storage/, which is already writable and already outside the web root.

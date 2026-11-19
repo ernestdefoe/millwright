@@ -12,7 +12,7 @@ use RuntimeException;
  * In its own process where the host allows; otherwise through Flarum's own
  * console command registry, in this process. The in-process path is only safe
  * at the start of a request that loaded the new code, which is the caller's to
- * guarantee (ComposerSteps asks FreshCode first).
+ * guarantee (RunContext::needsFreshCode() asks FreshCode first).
  *
  * One place for both, because there are two callers — the update's finish
  * and Restore — and the copy of "how to run a flarum command" that drifted

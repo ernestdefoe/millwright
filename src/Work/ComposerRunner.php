@@ -22,7 +22,7 @@ use RuntimeException;
  * lets Composer touch a package directory. Composer only RESOLVES (`--no-install`
  * writes composer.lock and nothing else), Fetcher downloads, and Applier swaps
  * directories with journalled renames. The one write Composer makes here is the
- * autoloader at the register step, and ComposerSteps guards that separately.
+ * autoloader at the register step, and Finaliser guards that separately.
  * So running the resolver in the request costs memory and time, both of which
  * are asked for and reported, and nothing that a kill can break.
  *

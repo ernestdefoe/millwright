@@ -20,7 +20,7 @@ use RuntimeException;
  *
  * A step throwing this keeps the run in progress at the same item. Every driver
  * already calls step() again — the admin page polls, the job re-dispatches, the
- * cron ticks — so waiting costs nothing and needs no new machinery.
+ * command line loops — so waiting costs nothing and needs no new machinery.
  */
 class NotYet extends RuntimeException
 {

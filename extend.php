@@ -72,7 +72,9 @@ return [
      * Two of them matter most, and the split between them is deliberate.
      *
      * `state` is a read: the admin screen polls it, and it must stay cheap
-     * enough to poll every second or two without being noticed.
+     * enough to poll every second or two without being noticed. The one thing
+     * it finishes is the database half of an undo the admin already asked for
+     * (see StateController).
      *
      * `step` does exactly one unit of work and returns. That is the whole
      * design — progress is a function of how many times this is called, so a
