@@ -41,7 +41,7 @@ The full list is in the Command Center notes: `side-session-notes/…/millwright
   - Every new route returns 403 for guests and works for admins.
 - **Env matrix** (`tests/env-matrix/run.sh --remote root@103.195.100.103`), at 4d50ef6:
   - fiab, docker, zip, composer-cli and composer-web all pass.
-  - The final run on 5299351 was in flight at the pause (result below).
+  - The final run on 5299351: **all 134 checks passed** across those five environments.
 - **Nightly scenarios fail, already on v1.25.6.** Flarum's current 2.x-dev `flarum/lang-english` calls `LanguagePack::code()`, which only exists in the new core. Core is applied last, so the forum 500s mid-run. This is a separate fix.
 - **Pre-floxum round 2** ran at 8c0bde9; every finding has since been fixed. No third pass has been run (paused).
 
