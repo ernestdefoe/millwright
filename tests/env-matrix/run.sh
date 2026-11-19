@@ -57,7 +57,7 @@ done
 pack() {
   # The checkout as it stands, uncommitted work included: what is being tested
   # is this tree, not the last release.
-  COPYFILE_DISABLE=1 tar czf "$1" -C "$ROOT" src js/dist resources less extend.php composer.json
+  COPYFILE_DISABLE=1 tar czf "$1" -C "$ROOT" src bootstrap js/dist resources less extend.php composer.json
 }
 
 if [ -n "$REMOTE" ]; then

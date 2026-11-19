@@ -465,6 +465,7 @@ class UpdateCommandTest extends TestCase
                     $paths,
                     $runs,
                     $runner,
+                    new \ErnestDefoe\Millwright\Run\Starter(EnglishTranslator::make(), $runs, $runner, $paths),
                     new \ErnestDefoe\Millwright\Host\Web(new \GuzzleHttp\Client()),
                     new \ErnestDefoe\Millwright\Work\UpdateCheck(\ErnestDefoe\Millwright\Host\StorageDir::of($paths->storage).'/updates.json'),
                     new \ErnestDefoe\Millwright\Host\Capability(EnglishTranslator::make(), $paths->base, \ErnestDefoe\Millwright\Host\PhpBinary::forStorage(EnglishTranslator::make(), $paths->storage), $paths->storage.'/.composer'),

@@ -2,6 +2,8 @@
 
 namespace ErnestDefoe\Millwright\Console;
 
+use ErnestDefoe\Millwright\Exception\RefusedException;
+use ErnestDefoe\Millwright\Run\Starter;
 use ErnestDefoe\Millwright\Plan\PackageName;
 use ErnestDefoe\Millwright\Host\Web;
 use ErnestDefoe\Millwright\Host\Capability;
@@ -68,6 +70,7 @@ class UpdateCommand extends AbstractCommand
         protected Paths $paths,
         protected RunStore $runs,
         protected StepRunner $runner,
+        protected Starter $starter,
         protected Web $web,
         protected UpdateCheck $updates,
         protected Capability $capability,
@@ -122,13 +125,9 @@ class UpdateCommand extends AbstractCommand
             return $repin;
         }
 
-        $id = 'r'.date('Ymd-His').'-'.bin2hex(random_bytes(3));
-
-        (new WorkDir($this->translator, $this->paths->storage, $id))->create()->remember($named, 'update', $repin);
-
         $this->info('Updating '.implode(', ', $named));
 
-        return $this->pump($this->runner->begin($id));
+        return $this->begin($named, fn () => $repin);
     }
 
     /**
@@ -517,12 +516,29 @@ class UpdateCommand extends AbstractCommand
             return 1;
         }
 
-        $id = 'r'.date('Ymd-His').'-'.bin2hex(random_bytes(3));
-        (new WorkDir($this->translator, $this->paths->storage, $id))->create()->remember(array_keys($targets), 'update', $targets);
-
         $this->info('Moving '.count($targets).' Flarum package(s) to '.reset($targets).': '.implode(', ', array_keys($targets)));
 
-        return $this->pump($this->runner->begin($id));
+        return $this->begin(array_keys($targets), fn () => $targets);
+    }
+
+    /**
+     * Start through the same Starter as the admin screen, under the same lock,
+     * then drive the run here.
+     *
+     * @param list<string> $packages
+     * @param \Closure(): array<string,string> $repin
+     */
+    protected function begin(array $packages, \Closure $repin): int
+    {
+        try {
+            $run = $this->starter->start($packages, 'update', $repin);
+        } catch (RefusedException $e) {
+            $this->error($e->getMessage().' Nothing was started.');
+
+            return 1;
+        }
+
+        return $this->pump($run);
     }
 
     /** An update whose plan was worked out and came to nothing. */
