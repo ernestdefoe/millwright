@@ -80,6 +80,7 @@ class WiringTest extends TestCase
         $this->container->instance(\Flarum\Database\Migrator::class, $forum->migrator);
         $this->container->instance(\Flarum\Extension\ExtensionManager::class, $forum->extensions);
         $this->container->instance(\Psr\Log\LoggerInterface::class, $forum->log);
+        $this->container->instance(\Illuminate\Contracts\Container\Container::class, $this->container);
 
         /*
          * Flarum's AbstractServiceProvider takes the Application contract and

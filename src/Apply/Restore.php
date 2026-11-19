@@ -142,7 +142,7 @@ class Restore
             $undone[] = $setAside;
         }
 
-        $flarum = new FlarumCommand($this->translator, $this->basePath, $this->composer);
+        $flarum = new FlarumCommand($this->translator, $this->basePath, $this->composer, $this->forum->container);
         $inProcess = ! $this->composer->processes();
         $commands = [
             ['assets:publish', []],

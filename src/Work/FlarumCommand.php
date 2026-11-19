@@ -3,6 +3,7 @@
 namespace ErnestDefoe\Millwright\Work;
 
 use Flarum\Locale\TranslatorInterface;
+use Illuminate\Contracts\Container\Container;
 use RuntimeException;
 
 /**
@@ -23,6 +24,7 @@ class FlarumCommand
         protected TranslatorInterface $translator,
         protected string $installPath,
         protected ComposerRunner $composer,
+        protected Container $container,
     ) {
     }
 
@@ -83,7 +85,7 @@ class FlarumCommand
      */
     protected function inProcess(string $command, array $options): array
     {
-        $container = \Illuminate\Container\Container::getInstance();
+        $container = $this->container;
 
         if (! $container->bound('flarum.console.commands')) {
             throw new RuntimeException($this->translator->trans('ernestdefoe-millwright.api.flarum_command.no_console', ['command' => $command]));

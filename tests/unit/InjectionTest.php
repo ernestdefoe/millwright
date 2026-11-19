@@ -41,7 +41,7 @@ class InjectionTest extends TestCase
 
             foreach (file($file->getPathname()) ?: [] as $n => $line) {
                 // The global helper only: not ->resolve(), ::resolve() or a method named resolve.
-                if (preg_match('/(?<![\w>:$])resolve\(/', $line) && ! preg_match('/function\s+resolve\(/', $line)) {
+                if ((preg_match('/(?<![\w>:$])resolve\(/', $line) && ! preg_match('/function\s+resolve\(/', $line)) || str_contains($line, 'Container::getInstance(')) {
                     $offenders[] = $relative.':'.($n + 1).': '.trim($line);
                 }
             }

@@ -41,7 +41,8 @@ class Fakes
             (new ReflectionClass(Migrator::class))->newInstanceWithoutConstructor(),
             (new ReflectionClass(ExtensionManager::class))->newInstanceWithoutConstructor(),
             new Config(['url' => 'https://example.test']),
-            new \Psr\Log\NullLogger()
+            new \Psr\Log\NullLogger(),
+            new \Illuminate\Container\Container()
         );
     }
 

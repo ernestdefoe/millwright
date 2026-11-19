@@ -201,7 +201,7 @@ class Finaliser
         // Before Flarum 2.0.0, cache:clear leaves the compiled bundles as they
         // were: the update's new screen never reached the browser.
         $run->needsFreshCode();
-        $rebuilt = (new FlarumCommand($run->translator, $run->installPath, $run->composer))->run('millwright:rebuild-assets');
+        $rebuilt = (new FlarumCommand($run->translator, $run->installPath, $run->composer, $run->forum->container))->run('millwright:rebuild-assets');
         $warnings = array_values(array_filter(
             array_map('trim', explode("\n", (string) $rebuilt['output'])),
             fn (string $line) => str_starts_with($line, 'Warning:')
@@ -384,7 +384,7 @@ class Finaliser
          */
         $this->run->needsFreshCode();
 
-        $result = (new FlarumCommand($this->run->translator, $this->run->installPath, $this->run->composer))->run($command);
+        $result = (new FlarumCommand($this->run->translator, $this->run->installPath, $this->run->composer, $this->run->forum->container))->run($command);
 
         if ($result['code'] !== 0) {
             throw new RuntimeException($this->run->translator->trans('ernestdefoe-millwright.api.composer.flarum_command_failed', ['command' => $command])."\n".FlarumCommand::excerpt($result['output']));
