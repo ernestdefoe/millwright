@@ -10,7 +10,6 @@ use ErnestDefoe\Millwright\Config\Repositories;
 use ErnestDefoe\Millwright\Config\StabilityRule;
 use ErnestDefoe\Millwright\Discover\Compatibility;
 use ErnestDefoe\Millwright\Host\Web;
-use Composer\Semver\Semver;
 use Flarum\Locale\TranslatorInterface;
 
 /**
@@ -44,13 +43,14 @@ class UpdateCheck
      */
     protected array $releaseNotes = [];
 
-    /**
-     * Each version's flarum/core requirement, read from the same Packagist
-     * response: package => version => constraint.
-     *
-     * @var array<string,array<string,string>>
-     */
+    /** @var array<string,array<string,string>> package => version => its flarum/core constraint */
     protected array $coreRequires = [];
+
+    /**
+     * Saved with each check. A check saved before its updates were held to the
+     * installed core counts as stale, so the scheduler replaces it at once.
+     */
+    public const RULES = 2;
 
     /** The forum's stability rules; null until forRoot(), and then nothing is filtered. */
     protected ?StabilityRule $stability = null;
@@ -190,22 +190,13 @@ class UpdateCheck
             $newest = $this->newestComparable($versions, $version, $name, $installed['flarum/core'] ?? null);
 
             if ($newest !== null && $this->isNewer($newest, $version)) {
-                $found[$name] = ['from' => $version, 'to' => $newest];
-
-                // "What does this update give me?" (ClaudiusH, 2026-10-09). A
-                // link to the release, never a guess: absent when the package
-                // is not on GitHub.
-                $notes = $this->releaseNotes[$name][$newest]
-                    ?? ($notesFor ? ($notesFor($name)[$newest] ?? null) : null);
-
-                if ($notes !== null) {
-                    $found[$name]['notes'] = $notes;
-                }
+                $found[$name] = $this->offer($name, $version, $newest, $notesFor);
             }
         }
 
         $result = [
             'checkedAt' => time(),
+            'rules' => self::RULES,
             'updates' => $found,
             'uncheckable' => $unknown,
             'tracking' => $tracking,
@@ -216,6 +207,33 @@ class UpdateCheck
         }
 
         return $result;
+    }
+
+    /**
+     * One update as the check saves it. Its core requirement is kept so a saved
+     * check can be held against the core installed when it is read. Its
+     * release notes answer "what does this update give me?" (ClaudiusH,
+     * 2026-10-09): a link to the release, never a guess, absent when the
+     * package is not on GitHub.
+     *
+     * @param callable(string):array<string,string>|null $notesFor
+     * @return array<string,string>
+     */
+    protected function offer(string $name, string $from, string $to, ?callable $notesFor): array
+    {
+        $update = ['from' => $from, 'to' => $to];
+
+        if (isset($this->coreRequires[$name][$to])) {
+            $update['core'] = $this->coreRequires[$name][$to];
+        }
+
+        $notes = $this->releaseNotes[$name][$to] ?? ($notesFor ? ($notesFor($name)[$to] ?? null) : null);
+
+        if ($notes !== null) {
+            $update['notes'] = $notes;
+        }
+
+        return $update;
     }
 
     /**
@@ -246,7 +264,18 @@ class UpdateCheck
 
         return $this->refresh(
             $installed,
-            fn (string $name) => $this->readPackagist($name, $bodies[$name] ?? null) ?? $protected->versionsFor($name),
+            function (string $name) use ($protected, $bodies) {
+                $versions = $this->readPackagist($name, $bodies[$name] ?? null);
+
+                if ($versions !== null) {
+                    return $versions;
+                }
+
+                $versions = $protected->versionsFor($name);
+                $this->coreRequires[$name] = $protected->coreRequirementsFor($name);
+
+                return $versions;
+            },
             fn (string $name) => $protected->releaseNotesFor($name),
         );
     }
@@ -305,7 +334,8 @@ class UpdateCheck
      * "2.0.0 → 2.0.1" (ClaudiusH, 2026-10-07), and Millwright offered itself the
      * version it was already running. Each entry is measured against what
      * composer.lock says now: dropped once reached, and its "from" kept true
-     * when only part of the way.
+     * when only part of the way. Dropped too when the forum's stability rules
+     * or its installed core no longer allow the target.
      *
      * @return array<string,mixed>
      */
@@ -330,10 +360,17 @@ class UpdateCheck
             array_values(array_filter(array_keys((array) ($composerJson['require'] ?? [])), fn ($name) => is_string($name) && str_contains($name, '/')))
         );
 
+        $rule = $composerJson === [] ? null : StabilityRule::fromArray($composerJson);
         $updates = [];
 
         foreach ((array) ($cached['updates'] ?? []) as $name => $update) {
             $installed = $now[$name] ?? null;
+
+            // Saved before the rules held it, or under another core: Update could not deliver it.
+            if (($rule !== null && ! $rule->allows($name, (string) ($update['to'] ?? '')))
+                || ! self::coreRuns($now['flarum/core'] ?? null, is_string($update['core'] ?? null) ? $update['core'] : null)) {
+                continue;
+            }
 
             if ($installed === null || self::tracksABranch($installed)) {
                 $updates[$name] = $update;
@@ -347,9 +384,10 @@ class UpdateCheck
 
     public function isStale(): bool
     {
-        $at = $this->cached()['checkedAt'] ?? null;
+        $cached = $this->cached();
+        $at = $cached['checkedAt'] ?? null;
 
-        return $at === null || (time() - (int) $at) > $this->freshFor;
+        return $at === null || (int) ($cached['rules'] ?? 1) < self::RULES || (time() - (int) $at) > $this->freshFor;
     }
 
     /** A branch install: `dev-main`, `1.x-dev`. */
@@ -409,17 +447,22 @@ class UpdateCheck
             return false;
         }
 
-        $needs = $this->coreRequires[$name][$version] ?? null;
+        return self::coreRuns($core, $this->coreRequires[$name][$version] ?? null);
+    }
 
-        if ($needs === null || $core === null || $name === 'flarum/core' || self::tracksABranch($core)) {
+    /**
+     * No constraint (a GitHub tag carries none) counts as yes, and so does a
+     * core on a named branch, which has no version to compare. A numbered
+     * branch such as 2.x-dev is compared, as Composer does, and a constraint
+     * Composer cannot read is a no, as it is for install.
+     */
+    public static function coreRuns(?string $installedCore, ?string $constraint): bool
+    {
+        if ($constraint === null || $installedCore === null || $installedCore === '' || str_starts_with($installedCore, 'dev-')) {
             return true;
         }
 
-        try {
-            return Semver::satisfies($this->normalise($core), $needs);
-        } catch (\UnexpectedValueException) {
-            return true;
-        }
+        return (new Compatibility(ltrim($installedCore, 'v')))->admitsCore($constraint);
     }
 
     protected function isNewer(string $candidate, string $installed): bool
@@ -503,8 +546,8 @@ class UpdateCheck
             $version = (string) $entry['version'];
             $versions[] = $version;
 
-            if (is_string($entry['require']['flarum/core'] ?? null)) {
-                $core[$version] = $entry['require']['flarum/core'];
+            if (is_string($needs = $entry['require']['flarum/core'] ?? null)) {
+                $core[$version] = $needs === 'self.version' ? $version : $needs;
             }
 
             $url = self::releaseUrl((string) ($entry['source']['url'] ?? ''), $version);

@@ -45,8 +45,13 @@ class StabilityRule
     public static function fromComposerJson(string $path): self
     {
         $data = is_file($path) ? json_decode((string) file_get_contents($path), true) : null;
-        $data = is_array($data) ? $data : [];
 
+        return self::fromArray(is_array($data) ? $data : []);
+    }
+
+    /** @param array<string,mixed> $data a composer.json, already read */
+    public static function fromArray(array $data): self
+    {
         $minimum = self::RANK[VersionParser::normalizeStability((string) ($data['minimum-stability'] ?? 'stable'))] ?? 0;
         $requires = array_merge((array) ($data['require'] ?? []), (array) ($data['require-dev'] ?? []));
 

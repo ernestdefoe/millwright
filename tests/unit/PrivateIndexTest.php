@@ -116,6 +116,25 @@ class PrivateIndexTest extends TestCase
         $this->assertArrayNotHasKey('vendor/broken', $parsed);
     }
 
+    public function test_it_keeps_each_versions_core_requirement_and_the_first_repository_wins(): void
+    {
+        $index = $this->index([]);
+
+        $this->parse($index, [
+            'packages' => [
+                'vendor/paid' => [
+                    '1.0.0' => ['version' => '1.0.0', 'require' => ['flarum/core' => '^2.0']],
+                    '1.1.0' => ['version' => '1.1.0', 'require' => ['flarum/core' => '^2.1']],
+                    '1.2.0' => ['version' => '1.2.0', 'require' => ['flarum/core' => 'self.version']],
+                    '1.3.0' => ['version' => '1.3.0'],
+                ],
+            ],
+        ]);
+        $this->parse($index, ['packages' => ['vendor/paid' => ['1.1.0' => ['version' => '1.1.0', 'require' => ['flarum/core' => '^2.0']]]]]);
+
+        $this->assertSame(['1.0.0' => '^2.0', '1.1.0' => '^2.1', '1.2.0' => '1.2.0'], $index->coreRequirementsFor('vendor/paid'));
+    }
+
     /**
      * Unknown must stay null, never an empty list.
      *

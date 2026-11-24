@@ -3,7 +3,13 @@
 namespace ErnestDefoe\Millwright\Tests\Unit;
 
 use ErnestDefoe\Millwright\Config\StabilityRule;
+use ErnestDefoe\Millwright\Host\Web;
+use ErnestDefoe\Millwright\Work\PrivateIndex;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
+use GuzzleHttp\Client;
+use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -378,7 +384,7 @@ class UpdateCheckTest extends TestCase
 
     public function test_a_version_whose_core_requirement_the_forum_cannot_meet_is_not_offered(): void
     {
-        $this->assertSame(['from' => '1.0.0', 'to' => '1.0.1'], $this->siteCheck(['minimum-stability' => 'stable'])['acme/ext']);
+        $this->assertSame(['from' => '1.0.0', 'to' => '1.0.1', 'core' => '^2.0'], $this->siteCheck(['minimum-stability' => 'stable'])['acme/ext']);
         $this->assertArrayNotHasKey('acme/ext', $this->siteCheck(['minimum-stability' => 'stable'], '1.0.1'));
     }
 
@@ -405,5 +411,111 @@ class UpdateCheckTest extends TestCase
         $result = $check->refresh(['flarum/core' => '2.0.2', 'acme/ext' => '1.0.0'], fn (string $name) => $name === 'acme/ext' ? $check->remember($name, $this->entries()) : null);
 
         $this->assertSame('1.2.0-beta.1', $result['updates']['acme/ext']['to']);
+    }
+
+    public function test_a_requirement_removed_with_unset_no_longer_holds_a_version_back(): void
+    {
+        $check = $this->check();
+        $versions = $check->remember('acme/ext', [
+            ['name' => 'acme/ext', 'version' => '1.2.0', 'require' => ['flarum/core' => '^2.1']],
+            ['version' => '1.1.0', 'require' => '__unset'],
+            ['version' => '1.0.0', 'require' => ['flarum/core' => '^2.0']],
+        ]);
+        $check->forRoot(new StabilityRule());
+
+        $result = $check->refresh(['flarum/core' => '2.0.2', 'acme/ext' => '1.0.0'], fn (string $name) => $name === 'acme/ext' ? $versions : null);
+
+        $this->assertSame('1.1.0', $result['updates']['acme/ext']['to']);
+    }
+
+    public function test_a_numbered_core_branch_is_compared_and_a_named_one_is_not(): void
+    {
+        $this->assertTrue(UpdateCheck::coreRuns('2.x-dev', '^2.1'));
+        $this->assertFalse(UpdateCheck::coreRuns('2.x-dev', '^3.0'));
+        $this->assertTrue(UpdateCheck::coreRuns('dev-main', '^3.0'));
+        $this->assertFalse(UpdateCheck::coreRuns('v2.0.2', '^2.1'));
+        $this->assertTrue(UpdateCheck::coreRuns('v2.0.2', null));
+    }
+
+    public function test_a_constraint_composer_cannot_read_is_a_no(): void
+    {
+        $this->assertFalse(UpdateCheck::coreRuns('2.0.2', 'not a constraint'));
+    }
+
+    public function test_self_version_means_the_version_itself(): void
+    {
+        [, , $core] = UpdateCheck::readP2([['name' => 'flarum/tags', 'version' => 'v2.1.0', 'require' => ['flarum/core' => 'self.version']]]);
+
+        $this->assertSame(['v2.1.0' => 'v2.1.0'], $core);
+        $this->assertFalse(UpdateCheck::coreRuns('2.0.2', $core['v2.1.0']));
+    }
+
+    public function test_a_protected_release_the_core_cannot_run_is_not_offered(): void
+    {
+        $protected = new class extends PrivateIndex {
+            public function __construct()
+            {
+            }
+
+            public function versionsFor(string $package): ?array
+            {
+                return $package === 'acme/paid' ? ['1.0.0', '1.1.0', '1.2.0'] : null;
+            }
+
+            public function coreRequirementsFor(string $package): array
+            {
+                return ['1.2.0' => '^2.1', '1.1.0' => '^2.0'];
+            }
+
+            public function releaseNotesFor(string $package): array
+            {
+                return [];
+            }
+        };
+
+        // Packagist does not know it, so the protected repository answers.
+        $web = new Web(new Client(['handler' => HandlerStack::create(new MockHandler([new Response(404), new Response(404)]))]));
+
+        $result = $this->check()->forRoot(new StabilityRule())->refreshWith(['flarum/core' => '2.0.2', 'acme/paid' => '1.0.0'], $protected, $web, 5.0);
+
+        $this->assertSame(['from' => '1.0.0', 'to' => '1.1.0', 'core' => '^2.0'], $result['updates']['acme/paid']);
+    }
+
+    /** The dashboard, the Installed tab and release notes read the saved check, not a fresh one. */
+    public function test_a_saved_update_the_forum_cannot_install_is_dropped_when_read(): void
+    {
+        $dir = dirname($this->cache).'/mw-site-'.bin2hex(random_bytes(4));
+        mkdir($dir);
+        file_put_contents($dir.'/composer.json', json_encode(['require' => ['acme/a' => '^1.0', 'acme/b' => '^1.0', 'acme/c' => '^1.0']]));
+        file_put_contents($this->cache, json_encode(['checkedAt' => time(), 'rules' => UpdateCheck::RULES, 'updates' => [
+            'acme/a' => ['from' => '1.0.0', 'to' => '1.1.0', 'core' => '^2.1'],
+            'acme/b' => ['from' => '1.0.0', 'to' => '1.1.0-beta.1'],
+            'acme/c' => ['from' => '1.0.0', 'to' => '1.0.1', 'core' => '^2.0'],
+        ]]));
+
+        $lock = fn (string $core) => file_put_contents($dir.'/composer.lock', json_encode(['packages' => [
+            ['name' => 'flarum/core', 'version' => $core, 'type' => 'library'],
+            ['name' => 'acme/a', 'version' => '1.0.0', 'type' => 'flarum-extension'],
+            ['name' => 'acme/b', 'version' => '1.0.0', 'type' => 'flarum-extension'],
+            ['name' => 'acme/c', 'version' => '1.0.0', 'type' => 'flarum-extension'],
+        ]]));
+
+        $lock('v2.0.2');
+        $this->assertSame(['acme/c'], array_keys($this->check()->current($dir.'/composer.lock')['updates']));
+
+        $lock('v2.1.0');
+        $this->assertSame(['acme/a', 'acme/c'], array_keys($this->check()->current($dir.'/composer.lock')['updates']));
+
+        array_map('unlink', glob($dir.'/*') ?: []);
+        rmdir($dir);
+    }
+
+    public function test_a_check_saved_before_these_rules_is_stale(): void
+    {
+        file_put_contents($this->cache, json_encode(['checkedAt' => time(), 'updates' => []]));
+        $this->assertTrue($this->check()->isStale());
+
+        file_put_contents($this->cache, json_encode(['checkedAt' => time(), 'rules' => UpdateCheck::RULES, 'updates' => []]));
+        $this->assertFalse($this->check()->isStale());
     }
 }

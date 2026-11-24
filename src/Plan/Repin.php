@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Plan;
 
+use ErnestDefoe\Millwright\Config\StabilityRule;
 use ErnestDefoe\Millwright\Host\StateFile;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 
@@ -49,10 +50,19 @@ class Repin
     public function pins(array $packages): array
     {
         $available = (array) $this->cachedUpdates();
+        $rule = StabilityRule::fromComposerJson($this->composerJsonPath);
+        $core = $this->installedCore();
         $out = [];
 
         foreach ($this->pinned($packages) as $package => $constraint) {
             $to = $available[$package]['to'] ?? null;
+
+            // A check saved before the rules held it, or under another core:
+            // raising the pin to it would only make the resolve fail.
+            if (is_string($to) && (! $rule->allows($package, $to)
+                || ! UpdateCheck::coreRuns($core, is_string($available[$package]['core'] ?? null) ? $available[$package]['core'] : null))) {
+                continue;
+            }
 
             /*
              * Only a target NEWER than the pin. The check is saved when it
@@ -115,6 +125,19 @@ class Repin
     protected function cachedUpdates(): array
     {
         return (array) ($this->updates->cached()['updates'] ?? []);
+    }
+
+    protected function installedCore(): ?string
+    {
+        $lock = $this->readJson(dirname($this->composerJsonPath).'/composer.lock');
+
+        foreach ((array) ($lock['packages'] ?? []) as $package) {
+            if (is_array($package) && ($package['name'] ?? null) === 'flarum/core') {
+                return (string) ($package['version'] ?? '');
+            }
+        }
+
+        return null;
     }
 
     /** @return array<string,mixed> */
