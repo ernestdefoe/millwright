@@ -5,6 +5,8 @@ namespace ErnestDefoe\Millwright\Work;
 use ErnestDefoe\Millwright\Config\AuthTokens;
 use ErnestDefoe\Millwright\Config\JsonFile;
 use ErnestDefoe\Millwright\Config\Repositories;
+use ErnestDefoe\Millwright\Config\StabilityRule;
+use Composer\Semver\Semver;
 use Flarum\Locale\TranslatorInterface;
 use GuzzleHttp\Client;
 
@@ -39,10 +41,36 @@ class UpdateCheck
      */
     protected array $releaseNotes = [];
 
+    /**
+     * Each version's flarum/core requirement, read from the same Packagist
+     * response: package => version => constraint.
+     *
+     * @var array<string,array<string,string>>
+     */
+    protected array $coreRequires = [];
+
+    /** The forum's stability rules; null until forRoot(), and then nothing is filtered. */
+    protected ?StabilityRule $stability = null;
+
     public function __construct(
         protected string $cachePath,
         protected int $freshFor = 21600,        // six hours
     ) {
+    }
+
+    /**
+     * Offer only what an install could have: a version its stability rules
+     * allow (minimum-stability, and a package's own `@beta` flag), and whose
+     * flarum/core requirement the installed core meets. Install resolves with
+     * exactly these rules, so without them the check offered a version that
+     * needs flarum/core ^2.1 to a 2.0 forum on stable, which install had just
+     * correctly declined (Claudius, 2026-11-23).
+     */
+    public function forRoot(StabilityRule $stability): static
+    {
+        $this->stability = $stability;
+
+        return $this;
     }
 
     /**
@@ -154,7 +182,10 @@ class UpdateCheck
                 continue;
             }
 
-            $newest = $this->newestComparable($versions, $version);
+            $newest = $this->newestComparable(
+                array_values(array_filter($versions, fn (string $v) => $this->installable($name, $v, $installed['flarum/core'] ?? null))),
+                $version
+            );
 
             if ($newest !== null && $this->isNewer($newest, $version)) {
                 $found[$name] = ['from' => $version, 'to' => $newest];
@@ -236,7 +267,7 @@ class UpdateCheck
             return null;
         }
 
-        return $this->refreshWith($this->interesting($packages, self::directRequires($base.'/composer.json')), new PrivateIndex(
+        return $this->forRoot(StabilityRule::fromComposerJson($base.'/composer.json'))->refreshWith($this->interesting($packages, self::directRequires($base.'/composer.json')), new PrivateIndex(
             new Repositories($translator, new JsonFile($translator, $base.'/composer.json')),
             new AuthTokens($translator, new JsonFile($translator, $base.'/auth.json')),
             new Client(),
@@ -324,12 +355,46 @@ class UpdateCheck
             return null;
         }
 
+        // Under prefer-stable, Composer picks the most stable release there is.
+        if ($this->stability?->prefersStable()) {
+            $best = min(array_map(StabilityRule::rank(...), $candidates));
+            $candidates = array_values(array_filter($candidates, fn (string $v) => StabilityRule::rank($v) === $best));
+        }
+
         usort($candidates, fn (string $a, string $b) => version_compare(
             $this->normalise($a),
             $this->normalise($b)
         ));
 
         return end($candidates) ?: null;
+    }
+
+    /**
+     * Whether install could pick this version, by the rules forRoot() read.
+     * A version whose core requirement is unknown (a GitHub tag) is judged on
+     * stability alone.
+     */
+    protected function installable(string $name, string $version, ?string $core): bool
+    {
+        if ($this->stability === null) {
+            return true;
+        }
+
+        if (! $this->stability->allows($name, $version)) {
+            return false;
+        }
+
+        $needs = $this->coreRequires[$name][$version] ?? null;
+
+        if ($needs === null || $core === null || $name === 'flarum/core' || self::tracksABranch($core)) {
+            return true;
+        }
+
+        try {
+            return Semver::satisfies($this->normalise($core), $needs);
+        } catch (\UnexpectedValueException) {
+            return true;
+        }
     }
 
     protected function isNewer(string $candidate, string $installed): bool
@@ -376,8 +441,21 @@ class UpdateCheck
             return null;
         }
 
-        [$list, $notes] = self::readP2($versions);
+        return $this->remember($name, $versions);
+    }
+
+    /**
+     * A package's Packagist entries read and kept: its release links and each
+     * version's core requirement, for the check that follows.
+     *
+     * @param list<array<string,mixed>> $entries
+     * @return list<string> the versions
+     */
+    public function remember(string $name, array $entries): array
+    {
+        [$list, $notes, $core] = self::readP2($entries);
         $this->releaseNotes[$name] = $notes;
+        $this->coreRequires[$name] = $core;
 
         return $list;
     }
@@ -395,12 +473,14 @@ class UpdateCheck
      * name Packagist read from the repository.
      *
      * @param list<array<string,mixed>> $entries
-     * @return array{0: list<string>, 1: array<string,string>}
+     * @return array{0: list<string>, 1: array<string,string>, 2: array<string,string>} versions, release
+     *         links, and each version's flarum/core requirement
      */
     public static function readP2(array $entries): array
     {
         $versions = [];
         $notes = [];
+        $core = [];
         $current = [];
 
         foreach ($entries as $entry) {
@@ -423,6 +503,10 @@ class UpdateCheck
             $version = (string) $current['version'];
             $versions[] = $version;
 
+            if (is_string($current['require']['flarum/core'] ?? null)) {
+                $core[$version] = $current['require']['flarum/core'];
+            }
+
             $url = self::releaseUrl((string) ($current['source']['url'] ?? ''), $version);
 
             if ($url !== null) {
@@ -430,7 +514,7 @@ class UpdateCheck
             }
         }
 
-        return [$versions, $notes];
+        return [$versions, $notes, $core];
     }
 
     /**
