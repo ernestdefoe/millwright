@@ -45,6 +45,9 @@ The full list is in the Command Center notes: `side-session-notes/…/millwright
 - **Nightly scenarios fail, already on v1.25.6.** Flarum's current 2.x-dev `flarum/lang-english` calls `LanguagePack::code()`, which only exists in the new core. Core is applied last, so the forum 500s mid-run. This is a separate fix.
 - **Pre-floxum round 2** ran at 8c0bde9; every finding has since been fixed. No third pass has been run (paused).
 
+## Released from v1.25.6 during the pause
+- **1.25.7 (2026-11-24), the update-check fix** (Claudius, edonline d/83 post 2233): Check for updates offers only versions the forum could install (stability rules plus each version's flarum/core requirement). It was tagged from `fix/update-check-core-constraint` and cherry-picked into main as `f186a7b`, already resolved against the wave. The wave's range now includes it, so the wave's release follows 1.25.7, and its notes shouldn't list this fix again.
+
 ## Left, in order, after Nov 26
 1. Confirm CI is green on main (the GitHub API was rate-limited at the pause).
 2. Optionally, one more pre-floxum pass to confirm the list is empty.
