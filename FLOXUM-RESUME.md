@@ -47,6 +47,7 @@ The full list is in the Command Center notes: `side-session-notes/…/millwright
 
 ## Released from v1.25.6 during the pause
 - **1.25.7 (2026-11-24), the update-check fix** (Claudius, edonline d/83 post 2233): Check for updates offers only versions the forum could install (stability rules plus each version's flarum/core requirement). It was tagged from `fix/update-check-core-constraint` and cherry-picked into main as `f186a7b`, already resolved against the wave. The wave's range now includes it, so the wave's release follows 1.25.7, and its notes shouldn't list this fix again.
+- **1.25.8 (2026-11-24)**, after Ian's review of flarum/framework#5604: private-repository versions and the saved check (current(), Repin) are held to the installed core and the stability rules too, an unparseable constraint is a no, 2.x-dev cores are compared, and a check saved before RULES = 2 counts as stale. It was tagged from `fix/update-check-saved-and-private` and cherry-picked into main as `442a085`, resolved against the wave (parallel Packagist read, `currentFor()` via the new `StabilityRule::fromArray()`, offer() and noteVersion() split out for the 50-line rule).
 
 ## Left, in order, after Nov 26
 1. Confirm CI is green on main (the GitHub API was rate-limited at the pause).
