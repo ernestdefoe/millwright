@@ -2,6 +2,7 @@
 
 namespace ErnestDefoe\Millwright\Tests\Unit;
 
+use ErnestDefoe\Millwright\Config\StabilityRule;
 use ErnestDefoe\Millwright\Work\UpdateCheck;
 use PHPUnit\Framework\TestCase;
 
@@ -343,5 +344,66 @@ class UpdateCheckTest extends TestCase
         );
 
         $this->assertSame('https://github.com/acme/paid/releases/tag/1.1.0', $result['updates']['acme/paid']['notes']);
+    }
+
+    /**
+     * Claudius, 2026-11-23: a 2.0.2 forum on stable installed the 2.0 version
+     * of an extension whose newest release needs flarum/core ^2.1, and the
+     * check then offered that release anyway.
+     *
+     * @return list<array<string,mixed>> Packagist p2 entries, minified
+     */
+    private function entries(): array
+    {
+        return [
+            ['name' => 'acme/ext', 'version' => '1.2.0-beta.1', 'require' => ['flarum/core' => '^2.1.0-beta.1']],
+            ['version' => '1.1.0', 'require' => ['flarum/core' => '^2.1']],
+            ['version' => '1.0.1', 'require' => ['flarum/core' => '^2.0']],
+            ['version' => '1.0.0'],
+        ];
+    }
+
+    private function siteCheck(array $root, string $installed = '1.0.0', string $core = '2.0.2'): array
+    {
+        $path = $this->cache.'.composer.json';
+        file_put_contents($path, json_encode($root));
+        $check = $this->check()->forRoot(StabilityRule::fromComposerJson($path));
+        unlink($path);
+
+        return $check->refresh(
+            ['flarum/core' => $core, 'acme/ext' => $installed],
+            fn (string $name) => $name === 'acme/ext' ? $check->remember($name, $this->entries()) : null
+        )['updates'];
+    }
+
+    public function test_a_version_whose_core_requirement_the_forum_cannot_meet_is_not_offered(): void
+    {
+        $this->assertSame(['from' => '1.0.0', 'to' => '1.0.1'], $this->siteCheck(['minimum-stability' => 'stable'])['acme/ext']);
+        $this->assertArrayNotHasKey('acme/ext', $this->siteCheck(['minimum-stability' => 'stable'], '1.0.1'));
+    }
+
+    public function test_the_same_version_is_offered_once_core_meets_it(): void
+    {
+        $this->assertSame('1.1.0', $this->siteCheck(['minimum-stability' => 'stable'], '1.0.1', '2.1.0')['acme/ext']['to']);
+    }
+
+    public function test_a_beta_is_offered_only_where_the_forum_allows_betas(): void
+    {
+        $this->assertSame('1.1.0', $this->siteCheck(['minimum-stability' => 'stable'], '1.0.1', '2.1.0-beta.1')['acme/ext']['to']);
+        $this->assertSame('1.2.0-beta.1', $this->siteCheck(['minimum-stability' => 'beta'], '1.0.1', '2.1.0-beta.1')['acme/ext']['to']);
+        $this->assertSame('1.2.0-beta.1', $this->siteCheck(['require' => ['acme/ext' => '^1.0@beta']], '1.0.1', '2.1.0-beta.1')['acme/ext']['to']);
+    }
+
+    public function test_under_prefer_stable_a_newer_beta_waits_for_its_stable_release(): void
+    {
+        $this->assertSame('1.1.0', $this->siteCheck(['minimum-stability' => 'beta', 'prefer-stable' => true], '1.0.1', '2.1.0-beta.1')['acme/ext']['to']);
+    }
+
+    public function test_without_the_forum_s_composer_json_nothing_is_filtered(): void
+    {
+        $check = $this->check();
+        $result = $check->refresh(['flarum/core' => '2.0.2', 'acme/ext' => '1.0.0'], fn (string $name) => $name === 'acme/ext' ? $check->remember($name, $this->entries()) : null);
+
+        $this->assertSame('1.2.0-beta.1', $result['updates']['acme/ext']['to']);
     }
 }
