@@ -233,6 +233,25 @@ class RepinTest extends TestCase
     // ── helpers ──────────────────────────────────────────────────────────────
 
     /** @return array<string,string> */
+    public function test_a_saved_target_the_installed_core_cannot_run_is_not_raised_to(): void
+    {
+        file_put_contents($this->dir.'/composer.lock', json_encode(['packages' => [['name' => 'flarum/core', 'version' => 'v2.0.2']]]));
+
+        $this->assertSame([], $this->repinFor(
+            ['acme/a', 'acme/b'],
+            ['repin' => true],
+            ['acme/a' => '1.0.0', 'acme/b' => '1.0.0'],
+            ['acme/a' => ['from' => '1.0.0', 'to' => '1.1.0', 'core' => '^2.1'], 'acme/b' => ['from' => '1.0.0', 'to' => '1.1.0-beta.1']]
+        ));
+
+        $this->assertSame(['acme/a' => '1.0.1'], $this->repinFor(
+            ['acme/a'],
+            ['repin' => true],
+            ['acme/a' => '1.0.0'],
+            ['acme/a' => ['from' => '1.0.0', 'to' => '1.0.1', 'core' => '^2.0']]
+        ));
+    }
+
     private function repinFor(array $packages, array $body, array $require, array $updates): array
     {
         file_put_contents($this->dir.'/composer.json', json_encode(['require' => $require]));
