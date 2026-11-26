@@ -96,6 +96,12 @@ class UpdateCommand extends AbstractCommand
                 InputOption::VALUE_NONE,
                 'Allow raising a requirement this site pins to an exact version. Without it, a pinned package is refused rather than silently skipped.'
             )
+            ->addOption(
+                'allow-prereleases',
+                null,
+                InputOption::VALUE_NONE,
+                'Allow installed pre-releases that the minimum stability no longer allows, by adding a stability flag to their requirements (for example ^2.0@beta). Without it, such a forum is refused, because Composer will not update anything while they are installed.'
+            )
             ->addOption('nightly', null, InputOption::VALUE_NONE, 'Move Flarum and its bundled extensions to the nightly build ({major}.x-dev). Undo returns them to the release they were on.')
             ->addOption('resume', null, InputOption::VALUE_NONE, 'Drive the run already in progress instead of starting a new one.')
             ->addOption('timeout', null, InputOption::VALUE_REQUIRED, 'Stop waiting after this many seconds.', '3600');
@@ -534,9 +540,14 @@ class UpdateCommand extends AbstractCommand
     protected function begin(array $packages, \Closure $repin): int
     {
         try {
-            $run = $this->starter->start($packages, 'update', $repin);
+            $run = $this->starter->start($packages, 'update', $repin, (bool) $this->input->getOption('allow-prereleases'));
         } catch (RefusedException $e) {
-            $this->error($e->getMessage().' Nothing was started.');
+            $message = $e->getMessage();
+            $this->error(str_ends_with($message, 'Nothing was started.') ? $message : $message.' Nothing was started.');
+
+            if ($e->getType() === 'locked_prereleases') {
+                $this->error('Pass --allow-prereleases to continue.');
+            }
 
             return 1;
         }

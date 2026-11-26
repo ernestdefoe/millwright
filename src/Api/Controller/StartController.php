@@ -153,7 +153,8 @@ class StartController implements RequestHandlerInterface
         $run = $this->starter->start(
             $packages,
             $nightly !== null ? 'update' : $mode,
-            fn () => $nightly ?? $this->repinFor($packages, $body, $mode)
+            fn () => $nightly ?? $this->repinFor($packages, $body, $mode),
+            filter_var(Arr::get($body, 'allowPrereleases', false), FILTER_VALIDATE_BOOL)
         );
 
         // A worker if there is one; the page keeps polling either way.

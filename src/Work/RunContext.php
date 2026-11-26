@@ -52,6 +52,14 @@ class RunContext
          * @var array<string,string>
          */
         public readonly array $repin = [],
+        /**
+         * Installed pre-releases the admin agreed to keep allowed, package =>
+         * stability (see Plan\LockedPrereleases). Edits composer.json, so it
+         * is never inferred either.
+         *
+         * @var array<string,string>
+         */
+        public readonly array $allow = [],
     ) {
     }
 

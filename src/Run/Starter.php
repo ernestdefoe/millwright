@@ -4,6 +4,8 @@ namespace ErnestDefoe\Millwright\Run;
 
 use Closure;
 use ErnestDefoe\Millwright\Exception\RefusedException;
+use ErnestDefoe\Millwright\Host\StateFile;
+use ErnestDefoe\Millwright\Plan\LockedPrereleases;
 use ErnestDefoe\Millwright\Work\WorkDir;
 use Flarum\Foundation\Paths;
 use Flarum\Locale\TranslatorInterface;
@@ -29,18 +31,53 @@ class Starter
      * @param list<string> $packages
      * @param Closure(): array<string,string> $repin the requirements this run may raise, worked
      *        out inside the lock, after the in-progress check, because it can refuse too
+     * @param bool $allowPrereleases the admin's yes to keeping installed betas
+     *        the minimum stability no longer allows (see prereleases())
      */
-    public function start(array $packages, string $mode, Closure $repin): Run
+    public function start(array $packages, string $mode, Closure $repin, bool $allowPrereleases = false): Run
     {
-        return $this->runner->whileHolding('site', $this->translator->trans('ernestdefoe-millwright.api.start.busy'), function () use ($packages, $mode, $repin) {
+        return $this->runner->whileHolding('site', $this->translator->trans('ernestdefoe-millwright.api.start.busy'), function () use ($packages, $mode, $repin, $allowPrereleases) {
             $this->refuseWhileRunning();
+            $allow = $this->prereleases($allowPrereleases);
 
             $id = 'r'.date('Ymd-His').'-'.bin2hex(random_bytes(3));
 
-            (new WorkDir($this->translator, $this->paths->storage, $id))->create()->remember($packages, $mode, $repin());
+            (new WorkDir($this->translator, $this->paths->storage, $id))->create()->remember($packages, $mode, $repin(), $allow);
 
             return $this->runner->begin($id);
         });
+    }
+
+    /**
+     * Installed betas the forum's minimum-stability no longer allows, which
+     * Composer will not leave alone in a partial update (Claudius,
+     * 2026-11-24). Refused by name unless the admin agreed to keep them
+     * allowed; a dependency the forum does not require itself cannot carry
+     * the flag, so that is refused with what to change instead.
+     *
+     * @return array<string,string> package => the flag to add
+     */
+    protected function prereleases(bool $allowed): array
+    {
+        $composerJson = StateFile::read($this->paths->base.'/composer.json');
+        $found = LockedPrereleases::find($composerJson, StateFile::read($this->paths->base.'/composer.lock'));
+
+        if ($found === []) {
+            return [];
+        }
+
+        $list = implode(', ', array_map(fn (string $p, string $s) => "$p ($s)", array_keys($found), $found));
+        $flaggable = LockedPrereleases::flaggable($found, $composerJson);
+
+        if (count($flaggable) < count($found)) {
+            throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.start.prereleases_dependency', ['list' => $list]), 'locked_prereleases_dependency');
+        }
+
+        if (! $allowed) {
+            throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.start.prereleases_locked', ['list' => $list]), 'locked_prereleases');
+        }
+
+        return $flaggable;
     }
 
     /**

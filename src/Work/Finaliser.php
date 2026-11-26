@@ -236,7 +236,7 @@ class Finaliser
     {
         $this->run->needsFreshCode();
 
-        $this->planner->raisePins();
+        $this->planner->editRequirements();
 
         $snapshot = $this->run->composer->inProcess() ? $this->snapshotAutoloader() : null;
 

@@ -75,6 +75,40 @@ class StarterTest extends TestCase
         }
     }
 
+    /** Claudius, 2026-11-24: Stable forum, an installed beta, every partial update refused by Composer. */
+    public function test_an_installed_beta_the_forum_no_longer_allows_is_asked_about_by_name(): void
+    {
+        file_put_contents($this->dir.'/composer.json', json_encode(['require' => ['acme/beta' => '^2.0', 'acme/widget' => '^1.0']]));
+        file_put_contents($this->dir.'/composer.lock', json_encode(['packages' => [['name' => 'acme/beta', 'version' => '2.0.0-beta.1']]]));
+
+        try {
+            $this->starter()->start(['acme/widget'], 'update', fn () => []);
+            $this->fail('Started without asking.');
+        } catch (RefusedException $e) {
+            $this->assertSame('locked_prereleases', $e->getType());
+            $this->assertStringContainsString('acme/beta (beta)', $e->getMessage());
+            $this->assertNull($this->store()->latest(), 'Nothing was started.');
+        }
+
+        $run = $this->starter()->start(['acme/widget'], 'update', fn () => [], true);
+        $manifest = json_decode((string) file_get_contents($this->dir.'/storage/millwright/runs/'.$run->id.'/requested.json'), true);
+        $this->assertSame(['acme/beta' => 'beta'], $manifest['allow']);
+    }
+
+    public function test_a_beta_dependency_is_refused_with_what_to_change_instead(): void
+    {
+        file_put_contents($this->dir.'/composer.json', json_encode(['require' => ['acme/ext' => '^1.0']]));
+        file_put_contents($this->dir.'/composer.lock', json_encode(['packages' => [['name' => 'acme/lib', 'version' => '2.0.0-beta.1']]]));
+
+        try {
+            $this->starter()->start(['acme/ext'], 'update', fn () => [], true);
+            $this->fail('A dependency cannot carry a flag.');
+        } catch (RefusedException $e) {
+            $this->assertSame('locked_prereleases_dependency', $e->getType());
+            $this->assertStringContainsString('minimum stability to Beta', $e->getMessage());
+        }
+    }
+
     private function store(): RunStore
     {
         return new RunStore(EnglishTranslator::make(), $this->dir.'/storage/millwright/runs');

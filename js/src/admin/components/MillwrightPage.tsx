@@ -1,7 +1,8 @@
 import app from 'flarum/admin/app';
 import type RequestError from 'flarum/common/utils/RequestError';
 import apiUrl from '../apiUrl';
-import { alertError, errorPayload, serverMessage } from '../errors';
+import { serverMessage } from '../errors';
+import { startRefused } from '../prereleaseQuestion';
 import { cardOffers, dismissalApplies, hidesPage, runIsLive, showingRun } from '../runState';
 import type {
   CheckPayload,
@@ -472,7 +473,7 @@ export default class MillwrightPage extends ExtensionPage<MillwrightPageAttrs> {
    *        and exits 0, so a run in the wrong mode would pass every phase,
    *        change nothing, and report success.
    */
-  start(packages: string[], mode: RunMode = 'update', repin = false, nightly = false) {
+  start(packages: string[], mode: RunMode = 'update', repin = false, nightly = false, allowPrereleases = false) {
     this.starting = true;
     this.rollbackNote = null;
     m.redraw();
@@ -481,14 +482,12 @@ export default class MillwrightPage extends ExtensionPage<MillwrightPageAttrs> {
       .request<StartPayload>({
         method: 'POST',
         url: apiUrl() + '/millwright/update',
-        body: { packages, mode, repin, nightly },
+        body: { packages, mode, repin, nightly, allowPrereleases },
         /*
-         * The server's own words. Every refusal it sends names the situation
-         * — a host too small, a run already going and how long since it moved —
-         * and paraphrasing that into "could not start" throws away the only
-         * part anybody can act on.
+         * The server's own words, never a paraphrase: every refusal names the
+         * situation. Installed betas are a question instead (prereleaseQuestion).
          */
-        errorHandler: alertError('ernestdefoe-millwright.admin.run.start_failed'),
+        errorHandler: startRefused(() => this.start(packages, mode, repin, nightly, true)),
       })
       .then((data) => {
         this.starting = false;

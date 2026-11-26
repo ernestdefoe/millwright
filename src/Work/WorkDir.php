@@ -75,8 +75,10 @@ class WorkDir
      *        survive the request that chose it.
      * @param array<string,string> $repin package => the exact version its
      *        requirement should be raised to, for packages the site has pinned
+     * @param array<string,string> $allow package => the stability flag the
+     *        admin agreed to add to its requirement (see LockedPrereleases)
      */
-    public function remember(array $packages, string $mode = 'update', array $repin = []): void
+    public function remember(array $packages, string $mode = 'update', array $repin = [], array $allow = []): void
     {
         // A run that cannot remember what it was asked for must not start: an
         // empty package list would make the resolve update the whole site.
@@ -91,6 +93,7 @@ class WorkDir
              * refreshed since.
              */
             'repin' => $repin,
+            'allow' => $allow,
         ], $this->translator);
     }
 
@@ -137,6 +140,24 @@ class WorkDir
         foreach ((array) ($this->manifest()['repin'] ?? []) as $package => $version) {
             if (is_string($package) && is_string($version) && $version !== '') {
                 $out[$package] = $version;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * The stability flags this run was authorised to add, by package.
+     *
+     * @return array<string,string>
+     */
+    public function allow(): array
+    {
+        $out = [];
+
+        foreach ((array) ($this->manifest()['allow'] ?? []) as $package => $stability) {
+            if (is_string($package) && in_array($stability, ['RC', 'beta', 'alpha', 'dev'], true)) {
+                $out[$package] = $stability;
             }
         }
 

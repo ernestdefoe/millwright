@@ -7,6 +7,7 @@ use ErnestDefoe\Millwright\Host\StateFile;
 use ErnestDefoe\Millwright\Config\JsonFile;
 use ErnestDefoe\Millwright\Plan\Change;
 use ErnestDefoe\Millwright\Plan\LockDiff;
+use ErnestDefoe\Millwright\Plan\LockedPrereleases;
 use ErnestDefoe\Millwright\Plan\PackageName;
 use ErnestDefoe\Millwright\Run\NotYet;
 use RuntimeException;
@@ -78,7 +79,7 @@ class Planner
             }
         }
 
-        $raised = $this->raisePins();
+        $raised = $this->editRequirements();
 
         $result = $inProcess ? $this->resolveInProcess($this->arguments()) : $run->composer->run($this->arguments());
         $after = RunContext::readJson($run->installPath.'/composer.lock');
@@ -390,6 +391,54 @@ class Planner
         $file->write($json);
 
         return $raised;
+    }
+
+    /**
+     * The composer.json edits this run was authorised to make, made after the
+     * manifests are saved aside so Undo puts them back.
+     *
+     * @return list<string> what was changed, for the plan's note
+     */
+    public function editRequirements(): array
+    {
+        return array_merge($this->raisePins(), $this->allowPrereleases());
+    }
+
+    /**
+     * Keep the installed betas the admin agreed to keep: a stability flag on
+     * each one's own requirement, so a partial update can leave them where
+     * they are while everything else stays on the forum's minimum-stability.
+     *
+     * @return list<string>
+     */
+    protected function allowPrereleases(): array
+    {
+        $run = $this->run;
+
+        if ($run->allow === []) {
+            return [];
+        }
+
+        $file = new JsonFile($run->translator, $run->installPath.'/composer.json');
+        $json = $file->read();
+        $done = [];
+
+        foreach ($run->allow as $package => $stability) {
+            $current = $json['require'][$package] ?? null;
+
+            if (! is_string($current) || ($flagged = LockedPrereleases::withFlag($current, $stability)) === $current) {
+                continue;
+            }
+
+            $json['require'][$package] = $flagged;
+            $done[] = $run->translator->trans('ernestdefoe-millwright.api.composer.prerelease_allowed', ['package' => $package, 'constraint' => $flagged]);
+        }
+
+        if ($done !== []) {
+            $file->write($json);
+        }
+
+        return $done;
     }
 
     /**

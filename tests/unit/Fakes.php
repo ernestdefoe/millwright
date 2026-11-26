@@ -98,6 +98,7 @@ class Fakes
         array $repin = [],
         ?Forum $forum = null,
         string $installPath = '',
+        array $allow = [],
     ): RunContext {
         return new RunContext(
             EnglishTranslator::make(),
@@ -110,6 +111,7 @@ class Fakes
             $mode,
             $vendorPath,
             repin: $repin,
+            allow: $allow,
         );
     }
 
