@@ -101,6 +101,7 @@ ernestdefoe-millwright:
         one cannot be installed until that requirement is changed. Continue, and
         composer.json will be updated to require the new version before anything
         is downloaded. A rollback puts the requirement back too.
+      prereleases_confirm: Allow and continue
       remove: Remove
       # "Remove files", not "Uninstall". Flarum already has an Uninstall button
       # on the extension's page that purges its DATA; this one takes the code off
@@ -599,6 +600,7 @@ ernestdefoe-millwright:
       permissions_not_checked: "File permissions not checked on this host"
       permissions_ok: "Every file this update changes is writable"
       pin_raised: "{package} required at {version} instead of {current}"
+      prerelease_allowed: "{package} required as {constraint}, so its installed pre-release stays allowed"
       pinned_to: "{package} is pinned to {constraint}"
       registered: "Composer now knows about the change"
       reread_done: "The web server has re-read the new files."
@@ -792,6 +794,8 @@ ernestdefoe-millwright:
     start:
       in_progress: "An update is already in progress."
       in_progress_stale: "An update is already in progress, though nothing has moved for {minutes} minutes."
+      prereleases_locked: "These installed extensions are pre-releases, which your minimum stability (Sources) no longer allows: {list}. Composer won't update anything while they're installed. Continue, and Millwright will allow those versions for just these extensions in composer.json (for example ^2.0@beta), so everything else stays on your setting. Undo puts composer.json back. Or set minimum stability to Beta under Sources. Nothing was started."
+      prereleases_dependency: "These installed packages are pre-releases, which your minimum stability (Sources) no longer allows: {list}. Some of them are dependencies, not extensions your forum requires itself, so they can't be allowed one by one. Set minimum stability to Beta under Sources (with \"prefer stable\" on, stable releases are still chosen where they exist). Nothing was started."
       no_nightly: "There is no nightly build to move to: Packagist has no development branch for this Flarum, or could not be reached. Nothing was started."
       not_a_package: "That is not a package name: {package}"
       not_direct: "{package} is not something this site requires directly — it was installed because another extension depends on it. Removing that extension will take this one with it."

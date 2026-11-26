@@ -5,6 +5,7 @@ namespace ErnestDefoe\Millwright\Console;
 use ErnestDefoe\Millwright\Host\Capability;
 use ErnestDefoe\Millwright\Host\StorageDir;
 use ErnestDefoe\Millwright\Plan\Nightly;
+use ErnestDefoe\Millwright\Plan\LockedPrereleases;
 use ErnestDefoe\Millwright\Plan\Repin;
 use ErnestDefoe\Millwright\Run\Run;
 use ErnestDefoe\Millwright\Run\RunStore;
@@ -85,6 +86,12 @@ class UpdateCommand extends AbstractCommand
                 null,
                 InputOption::VALUE_NONE,
                 'Allow raising a requirement this site pins to an exact version. Without it, a pinned package is refused rather than silently skipped.'
+            )
+            ->addOption(
+                'allow-prereleases',
+                null,
+                InputOption::VALUE_NONE,
+                'Allow installed pre-releases that the minimum stability no longer allows, by adding a stability flag to their requirements (for example ^2.0@beta). Without it, such a forum is refused, because Composer will not update anything while they are installed.'
             )
             ->addOption('nightly', null, InputOption::VALUE_NONE, 'Move Flarum and its bundled extensions to the nightly build ({major}.x-dev). Undo returns them to the release they were on.')
             ->addOption('resume', null, InputOption::VALUE_NONE, 'Drive the run already in progress instead of starting a new one.')
@@ -229,9 +236,13 @@ class UpdateCommand extends AbstractCommand
             }
         }
 
+        if (($allow = $this->prereleases()) === null) {
+            return 1;
+        }
+
         $id = 'r'.date('Ymd-His').'-'.bin2hex(random_bytes(3));
 
-        (new WorkDir($this->translator, $this->paths->storage, $id))->create()->remember($named, 'update', $repin);
+        (new WorkDir($this->translator, $this->paths->storage, $id))->create()->remember($named, 'update', $repin, $allow);
 
         $this->info('Updating '.implode(', ', $named));
 
@@ -461,8 +472,12 @@ class UpdateCommand extends AbstractCommand
             return 1;
         }
 
+        if (($allow = $this->prereleases()) === null) {
+            return 1;
+        }
+
         $id = 'r'.date('Ymd-His').'-'.bin2hex(random_bytes(3));
-        (new WorkDir($this->translator, $this->paths->storage, $id))->create()->remember(array_keys($targets), 'update', $targets);
+        (new WorkDir($this->translator, $this->paths->storage, $id))->create()->remember(array_keys($targets), 'update', $targets, $allow);
 
         $this->info('Moving '.count($targets).' Flarum package(s) to '.reset($targets).': '.implode(', ', array_keys($targets)));
 
@@ -502,5 +517,37 @@ class UpdateCommand extends AbstractCommand
     protected function pause(): void
     {
         usleep(500_000);
+    }
+
+    /**
+     * The same question the screen asks (see StartController::prereleasesFor()).
+     *
+     * @return array<string,string>|null the flags to add, or null when refused
+     */
+    protected function prereleases(): ?array
+    {
+        $composerJson = (array) json_decode((string) @file_get_contents($this->paths->base.'/composer.json'), true);
+        $found = LockedPrereleases::find($composerJson, (array) json_decode((string) @file_get_contents($this->paths->base.'/composer.lock'), true));
+        $flaggable = LockedPrereleases::flaggable($found, $composerJson);
+        $list = implode(', ', array_map(fn (string $p, string $s) => "$p ($s)", array_keys($found), $found));
+
+        if (count($flaggable) < count($found)) {
+            $this->error($this->translator->trans('ernestdefoe-millwright.api.start.prereleases_dependency', ['list' => $list]));
+
+            return null;
+        }
+
+        if ($found !== [] && ! $this->input->getOption('allow-prereleases')) {
+            $this->error($this->translator->trans('ernestdefoe-millwright.api.start.prereleases_locked', ['list' => $list]));
+            $this->error('Pass --allow-prereleases to continue.');
+
+            return null;
+        }
+
+        foreach ($flaggable as $package => $stability) {
+            $this->info("Allowing the installed $stability of $package.");
+        }
+
+        return $flaggable;
     }
 }

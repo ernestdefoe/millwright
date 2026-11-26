@@ -420,6 +420,27 @@ class UpdateCommandTest extends TestCase
      * @param array<string,string> $installed  what composer.lock says is there
      * @param array<string,array{from:string,to:string}> $updates what the check found
      */
+    public function test_an_installed_beta_the_forum_no_longer_allows_needs_allow_prereleases(): void
+    {
+        $this->site(
+            require: ['a/thing' => '^1.0', 'b/beta' => '^2.0'],
+            installed: ['a/thing' => '1.0.0', 'b/beta' => '2.0.0-beta.1'],
+            updates: ['a/thing' => ['from' => '1.0.0', 'to' => '1.1.0']]
+        );
+
+        $refused = $this->runCommand(['packages' => ['a/thing']]);
+        $this->assertSame(1, $refused->getStatusCode());
+        $this->assertStringContainsString('b/beta (beta)', $refused->getDisplay());
+        $this->assertStringContainsString('--allow-prereleases', $refused->getDisplay());
+        $this->assertNull($this->store()->latest(), 'Nothing was started.');
+
+        $tester = $this->runCommand(['packages' => ['a/thing'], '--allow-prereleases' => true], ['plan' => ['work out the change']]);
+        $this->assertSame(0, $tester->getStatusCode());
+
+        $id = $this->store()->latest()?->id ?? '';
+        $this->assertSame(['b/beta' => 'beta'], (new WorkDir(EnglishTranslator::make(), $this->dir, $id))->allow());
+    }
+
     private function site(array $require, array $installed, array $updates = []): void
     {
         file_put_contents($this->dir.'/composer.json', json_encode(['require' => $require]));

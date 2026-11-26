@@ -8,6 +8,7 @@ use ErnestDefoe\Millwright\Discover\Packagist;
 use ErnestDefoe\Millwright\Exception\RefusedException;
 use ErnestDefoe\Millwright\Host\Capability;
 use ErnestDefoe\Millwright\Host\StorageDir;
+use ErnestDefoe\Millwright\Plan\LockedPrereleases;
 use ErnestDefoe\Millwright\Plan\Nightly;
 use ErnestDefoe\Millwright\Plan\Repin;
 use ErnestDefoe\Millwright\Run\Drivers;
@@ -186,9 +187,10 @@ class StartController implements RequestHandlerInterface
                 : $this->translator->trans('ernestdefoe-millwright.api.start.in_progress'), 'run_in_progress', 409);
         }
 
+        $allow = $this->prereleasesFor($body);
         $id = 'r'.date('Ymd-His').'-'.bin2hex(random_bytes(3));
 
-        (new WorkDir($this->translator, $this->paths->storage, $id))->create()->remember($packages, $nightly !== null ? 'update' : $mode, $nightly ?? $this->repinFor($packages, $body, $mode));
+        (new WorkDir($this->translator, $this->paths->storage, $id))->create()->remember($packages, $nightly !== null ? 'update' : $mode, $nightly ?? $this->repinFor($packages, $body, $mode), $allow);
 
         $run = $this->runner->begin($id);
 
@@ -200,6 +202,39 @@ class StartController implements RequestHandlerInterface
             'queued' => $queued,
             'driver' => $this->drivers->describe(),
         ]);
+    }
+
+    /**
+     * Installed betas the forum's minimum-stability no longer allows, which
+     * Composer will not leave alone in a partial update. Refused by name
+     * unless the admin agreed to keep them allowed (`allowPrereleases`); a
+     * dependency the forum does not require itself cannot carry the flag, so
+     * that is refused with what to change instead.
+     *
+     * @param array<string,mixed> $body
+     * @return array<string,string> package => the flag to add
+     */
+    protected function prereleasesFor(array $body): array
+    {
+        $composerJson = (array) json_decode((string) @file_get_contents($this->paths->base.'/composer.json'), true);
+        $found = LockedPrereleases::find($composerJson, (array) json_decode((string) @file_get_contents($this->paths->base.'/composer.lock'), true));
+
+        if ($found === []) {
+            return [];
+        }
+
+        $list = implode(', ', array_map(fn (string $p, string $s) => "$p ($s)", array_keys($found), $found));
+        $flaggable = LockedPrereleases::flaggable($found, $composerJson);
+
+        if (count($flaggable) < count($found)) {
+            throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.start.prereleases_dependency', ['list' => $list]), 'locked_prereleases_dependency');
+        }
+
+        if (! filter_var(Arr::get($body, 'allowPrereleases', false), FILTER_VALIDATE_BOOL)) {
+            throw new RefusedException($this->translator->trans('ernestdefoe-millwright.api.start.prereleases_locked', ['list' => $list]), 'locked_prereleases');
+        }
+
+        return $flaggable;
     }
 
     /**

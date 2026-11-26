@@ -485,7 +485,7 @@ export default class MillwrightPage extends ExtensionPage<MillwrightPageAttrs> {
    *        and exits 0, so a run in the wrong mode would pass every phase,
    *        change nothing, and report success.
    */
-  start(packages: string[], mode: RunMode = 'update', repin = false, nightly = false) {
+  start(packages: string[], mode: RunMode = 'update', repin = false, nightly = false, allowPrereleases = false) {
     this.starting = true;
     this.rollbackNote = null;
     m.redraw();
@@ -494,14 +494,28 @@ export default class MillwrightPage extends ExtensionPage<MillwrightPageAttrs> {
       .request<StartPayload>({
         method: 'POST',
         url: apiUrl() + '/millwright/update',
-        body: { packages, mode, repin, nightly },
+        body: { packages, mode, repin, nightly, allowPrereleases },
         /*
          * The server's own words. Every refusal it sends names the situation
          * — a host too small, a run already going and how long since it moved —
          * and paraphrasing that into "could not start" throws away the only
          * part anybody can act on.
          */
-        errorHandler: alertError('ernestdefoe-millwright.admin.run.start_failed'),
+        errorHandler: (e: RequestError) => {
+          // Installed betas the forum's stability no longer allows: the server
+          // explains, and only the admin's yes adds the flags (see LockedPrereleases).
+          if (errorPayload(e).errors?.[0]?.code === 'locked_prereleases') {
+            confirmAction({
+              title: app.translator.trans('ernestdefoe-millwright.admin.extensions.update'),
+              message: serverMessage(e) || '',
+              confirmText: app.translator.trans('ernestdefoe-millwright.admin.extensions.prereleases_confirm'),
+              onconfirm: () => this.start(packages, mode, repin, nightly, true),
+            });
+            return;
+          }
+
+          alertError('ernestdefoe-millwright.admin.run.start_failed')(e);
+        },
       })
       .then((data) => {
         this.starting = false;

@@ -16,6 +16,7 @@ use ErnestDefoe\Millwright\Host\Verdict;
 use ErnestDefoe\Millwright\Plan\Change;
 use ErnestDefoe\Millwright\Plan\CoreOverrides;
 use ErnestDefoe\Millwright\Plan\LockDiff;
+use ErnestDefoe\Millwright\Plan\LockedPrereleases;
 use ErnestDefoe\Millwright\Prune\Pruner;
 use ErnestDefoe\Millwright\Prune\Retention;
 use ErnestDefoe\Millwright\Run\NotYet;
@@ -78,6 +79,14 @@ class ComposerSteps implements Steps
          * @var array<string,string>
          */
         protected array $repin = [],
+        /**
+         * Installed pre-releases the admin agreed to keep allowed, package =>
+         * stability (see Plan\LockedPrereleases). Edits composer.json, so it
+         * is never inferred either.
+         *
+         * @var array<string,string>
+         */
+        protected array $allow = [],
     ) {
     }
 
@@ -210,7 +219,7 @@ class ComposerSteps implements Steps
             default => array_merge(['update'], $this->requested, ['--with-dependencies', '--no-install']),
         };
 
-        $raised = $this->raisePins();
+        $raised = $this->editRequirements();
 
         $result = $inProcess ? $this->resolveInProcess($args) : $this->composer->run($args);
         $after = $this->readJson($lockPath);
@@ -427,6 +436,52 @@ class ComposerSteps implements Steps
      *
      * @return list<string> what changed, for the log
      */
+    /**
+     * The composer.json edits this run was authorised to make, made after the
+     * manifests are saved aside so Undo puts them back.
+     *
+     * @return list<string> what was changed, for the plan's note
+     */
+    protected function editRequirements(): array
+    {
+        return array_merge($this->raisePins(), $this->allowPrereleases());
+    }
+
+    /**
+     * Keep the installed betas the admin agreed to keep: a stability flag on
+     * each one's own requirement, so a partial update can leave them where
+     * they are while everything else stays on the forum's minimum-stability.
+     *
+     * @return list<string>
+     */
+    protected function allowPrereleases(): array
+    {
+        if ($this->allow === []) {
+            return [];
+        }
+
+        $file = new JsonFile($this->translator, $this->installPath.'/composer.json');
+        $json = $file->read();
+        $done = [];
+
+        foreach ($this->allow as $package => $stability) {
+            $current = $json['require'][$package] ?? null;
+
+            if (! is_string($current) || ($flagged = LockedPrereleases::withFlag($current, $stability)) === $current) {
+                continue;
+            }
+
+            $json['require'][$package] = $flagged;
+            $done[] = $this->translator->trans('ernestdefoe-millwright.api.composer.prerelease_allowed', ['package' => $package, 'constraint' => $flagged]);
+        }
+
+        if ($done !== []) {
+            $file->write($json);
+        }
+
+        return $done;
+    }
+
     protected function raisePins(): array
     {
         if ($this->repin === [] || $this->mode !== 'update') {
@@ -1188,7 +1243,7 @@ class ComposerSteps implements Steps
     {
         $this->needsFreshCode();
 
-        $this->raisePins();
+        $this->editRequirements();
 
         $inProcess = $this->composer->inProcess();
         $snapshot = $inProcess ? $this->snapshotAutoloader() : null;

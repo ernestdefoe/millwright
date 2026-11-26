@@ -76,8 +76,10 @@ class WorkDir
     /**
      * @param array<string,string> $repin package => the exact version its
      *        requirement should be raised to, for packages the site has pinned
+     * @param array<string,string> $allow package => the stability flag the
+     *        admin agreed to add to its requirement (see LockedPrereleases)
      */
-    public function remember(array $packages, string $mode = 'update', array $repin = []): void
+    public function remember(array $packages, string $mode = 'update', array $repin = [], array $allow = []): void
     {
         file_put_contents($this->root().'/requested.json', json_encode([
             'mode' => in_array($mode, ['install', 'remove'], true) ? $mode : 'update',
@@ -90,6 +92,7 @@ class WorkDir
              * refreshed since.
              */
             'repin' => $repin,
+            'allow' => $allow,
         ]));
     }
 
@@ -136,6 +139,24 @@ class WorkDir
         foreach ((array) ($this->manifest()['repin'] ?? []) as $package => $version) {
             if (is_string($package) && is_string($version) && $version !== '') {
                 $out[$package] = $version;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * The stability flags this run was authorised to add, by package.
+     *
+     * @return array<string,string>
+     */
+    public function allow(): array
+    {
+        $out = [];
+
+        foreach ((array) ($this->manifest()['allow'] ?? []) as $package => $stability) {
+            if (is_string($package) && in_array($stability, ['RC', 'beta', 'alpha', 'dev'], true)) {
+                $out[$package] = $stability;
             }
         }
 

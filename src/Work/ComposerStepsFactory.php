@@ -83,7 +83,8 @@ class ComposerStepsFactory implements StepsFactory
             $this->paths->vendor,
             $this->paths->storage,
             $this->siteUrl(),
-            $workDir->repin()
+            $workDir->repin(),
+            $workDir->allow()
         );
     }
 }
